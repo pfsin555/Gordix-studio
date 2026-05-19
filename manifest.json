@@ -2,7 +2,7 @@
   "name": "Gordix Studio",
   "short_name": "GordixStudio",
   "description": "Gordix Studio CNC & Laser Web Tools",
-  "start_url": "./Gordix Studio.html",
+  "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#0f172a",
   "theme_color": "#0f172a",
