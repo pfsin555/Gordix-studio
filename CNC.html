@@ -1,0 +1,1142 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CNC_V1.3</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/clipper-lib@6.4.2/clipper.js"></script>
+    <!-- DXF 解析庫 -->
+    <script src="https://cdn.jsdelivr.net/npm/dxf-parser@1.1.2/dist/dxf-parser.min.js"></script>
+
+    <style>
+        body { background: #0f172a; color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        .panel { background: #1e293b; border: 1px solid #334155; }
+        #three-container { width: 100%; height: 400px; border-radius: 8px; overflow: hidden; background: #020617; position: relative; }
+        @media (min-width: 1024px) { #three-container { height: 600px; } }
+        
+        input, select { background: #0f172a; border: 1px solid #475569; color: white; border-radius: 6px; padding: 8px 12px; font-size: 14px; width: 100%; }
+        input:focus { border-color: #ea580c; outline: none; ring: 1px solid #ea580c; }
+        
+        .btn-orange { background: #ea580c; color: white; transition: background 0.2s; }
+        .btn-orange:hover { background: #f97316; }
+        .btn-gray { background: #475569; color: white; transition: background 0.2s; }
+        .btn-gray:hover { background: #64748b; }
+        
+        .active-part { border-left: 4px solid #22c55e; background: rgba(34, 197, 94, 0.1); }
+        .dimension-badge { font-size: 11px; background: #020617; padding: 2px 8px; border-radius: 4px; color: #94a3b8; }
+        .method-badge { font-size: 11px; background: #334155; padding: 2px 8px; border-radius: 4px; color: #fb923c; font-weight: bold; }
+        
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #1e293b; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 10px; }
+
+        #file-input { display: none; }
+        .file-custom-label { 
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            background: #ea580c; color: white; padding: 10px; border-radius: 8px;
+            font-weight: bold; cursor: pointer; font-size: 13px; transition: 0.2s;
+        }
+        .file-custom-label:hover { background: #f97316; }
+    </style>
+
+    <!-- PWA Meta Tags -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="icon-192.png">
+
+</head>
+<body class="flex flex-col min-h-screen">
+    
+    <header class="w-full bg-orange-600 shadow-md py-3 px-6 flex items-center justify-between sticky top-0 z-50">
+        <div class="flex items-center gap-3">
+            <h1 class="text-white font-black text-lg tracking-wider" data-i18n="appTitle">轉檔工具 (切割)</h1>
+        </div>
+        <div class="flex items-center gap-4">
+            <button id="lang-toggle" class="bg-orange-800 hover:bg-orange-900 text-white text-[10px] font-bold py-1 px-3 rounded-full border border-orange-400 transition-colors">
+                中文 / EN
+            </button>
+            <span class="text-orange-100 text-xs font-mono hidden md:block">V1.3</span>
+        </div>
+    </header>
+
+    <main class="p-4 md:p-8 flex-grow">
+        <div class="max-w-[1600px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <!-- 左側控制面板 -->
+            <div class="lg:col-span-3 space-y-6">
+                <div class="panel p-5 rounded-xl shadow-2xl">
+                    <h2 class="text-xs font-bold uppercase tracking-widest text-orange-500 mb-4" data-i18n="step1">第一步：檔案與解析</h2>
+                    <div class="space-y-4">
+                        <div>
+                            <label for="file-input" class="file-custom-label">
+                                <span id="file-label-text" data-i18n="chooseFile">選擇檔案</span>
+                            </label>
+                            <input type="file" id="file-input" accept="image/*,.svg,.dxf">
+                            <p id="file-name-display" class="text-[10px] text-slate-500 mt-2 truncate text-center" data-i18n="noFile">尚未選擇任何檔案</p>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-[10px] text-slate-400 font-bold mb-1" data-i18n="targetWidth">整體寬 (mm)</label>
+                                <input type="number" id="target-width" value="100">
+                            </div>
+                            <div id="threshold-container">
+                                <label class="block text-[10px] text-slate-400 font-bold mb-1" data-i18n="threshold">黑白門檻</label>
+                                <input type="number" id="threshold" value="128" min="0" max="255">
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between items-center mb-2">
+                                <label class="text-[10px] text-slate-400 font-bold" data-i18n="smoothness">解析/平滑度</label>
+                            </div>
+                            <input type="range" id="smooth-range" min="0.01" max="2.0" step="0.01" value="0.1" class="accent-orange-600">
+                        </div>
+                        <button id="process-img-btn" class="w-full py-3 btn-orange rounded-lg font-bold text-sm shadow-lg" data-i18n="reprocess">重新解析檔案</button>
+                    </div>
+                </div>
+
+                <div class="panel p-5 rounded-xl flex flex-col h-[400px] lg:h-[500px] shadow-2xl">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xs font-bold uppercase tracking-widest text-orange-500" data-i18n="step2">第二步：零件清單</h2>
+                        <button id="select-all" class="text-[10px] btn-gray px-3 py-1 rounded" data-i18n="selectAll">全選 / 反選</button>
+                    </div>
+                    <div id="part-list" class="flex-grow overflow-y-auto space-y-2"></div>
+                </div>
+            </div>
+
+            <!-- 中間預覽面板 -->
+            <div class="lg:col-span-6 space-y-6">
+                <div id="three-container" class="shadow-2xl border border-slate-800 relative">
+                    <div class="absolute top-4 left-4 z-10 space-y-2 bg-slate-900/80 p-3 rounded-lg border border-slate-700 backdrop-blur-sm">
+                        <div class="flex items-center gap-2"><span class="w-3 h-3 bg-slate-500 rounded-full"></span><span class="text-[10px] font-bold" data-i18n="legendOriginal">未選零件輪廓</span></div>
+                        <div class="flex items-center gap-2"><span class="w-3 h-3 bg-green-500 rounded-full"></span><span class="text-[10px] font-bold" data-i18n="legendSelected">已選零件輪廓</span></div>
+                        <div class="flex items-center gap-2"><span class="w-3 h-3 bg-yellow-400 rounded-full"></span><span class="text-[10px] font-bold" data-i18n="legendToolpath">加工路徑 (黃色覆蓋)</span></div>
+                    </div>
+                </div>
+                
+                <div class="panel p-6 rounded-xl flex flex-col sm:flex-row justify-between items-center gap-4 shadow-2xl">
+                    <div class="text-center sm:text-left">
+                        <p class="text-[10px] text-slate-400 uppercase font-bold mb-1" data-i18n="estTime">預估總加工時間</p>
+                        <p id="est-time" class="text-3xl font-mono font-bold text-orange-500">00:00:00</p>
+                    </div>
+                    <button id="export-gcode" class="w-full sm:w-auto px-10 py-4 btn-orange rounded-xl font-black text-sm uppercase shadow-xl" data-i18n="downloadBtn">下載檔案</button>
+                </div>
+            </div>
+
+            <!-- 右側設定面板 -->
+            <div class="lg:col-span-3">
+                <div id="job-panel" class="panel p-6 rounded-xl hidden shadow-2xl border-t-4 border-t-orange-600">
+                    <h2 class="text-sm font-bold none text-orange-500 mb-6" data-i18n="jobSettings">第三步：加工參數設定</h2>
+                    <div class="space-y-6">
+                        <div class="p-4 bg-slate-950/50 rounded-lg space-y-4">
+                            <h3 class="text-[10px] font-bold text-slate-400 none" data-i18n="groupSize">選中零件群組尺寸 (mm)</h3>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-[9px] text-slate-500 mb-1" data-i18n="width">寬度</label>
+                                    <input type="number" id="resize-w" step="0.1">
+                                </div>
+                                <div>
+                                    <label class="block text-[9px] text-slate-500 mb-1" data-i18n="height">高度</label>
+                                    <input type="number" id="resize-h" step="0.1">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-[10px] text-slate-400 font-bold mb-1" data-i18n="resolution">解析度 (mm)</label>
+                                <input type="number" id="resolution" value="0.1" min="0.1" step="0.01">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] text-slate-400 font-bold mb-1" data-i18n="feedRate">進給速率</label>
+                                <input type="number" id="job-f" value="1500">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-[10px] text-slate-400 font-bold mb-1" data-i18n="mode">加工模式</label>
+                            <select id="job-type">
+                                <option value="laser" data-i18n="optLaser">雷射切割</option>
+                                <option value="outer" data-i18n="optOuter">CNC 外輪廓</option>
+                                <option value="inner" data-i18n="optInner">CNC 內輪廓</option>
+                                <option value="pocket" selected data-i18n="optPocket">CNC 槽加工</option>
+                            </select>
+                        </div>
+
+                        <div id="milling-opts" class="space-y-4 pt-4 border-t border-slate-700">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-[10px] text-slate-400 font-bold mb-1" data-i18n="toolDia">刀具直徑</label>
+                                    <input type="number" id="mill-d" value="3.175" step="0.001">
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] text-slate-400 font-bold mb-1" data-i18n="totalDepth">加工深度</label>
+                                    <input type="number" id="mill-depth" value="3.0" step="0.1">
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-[10px] text-slate-400 font-bold mb-1" data-i18n="stepDown">每次下刀</label>
+                                    <input type="number" id="mill-step" value="1.0" step="0.1">
+                                </div>
+                                <div id="pocket-opts">
+                                    <label class="block text-[10px] text-slate-400 font-bold mb-1" data-i18n="overlap">路徑重疊</label>
+                                    <input type="number" id="mill-overlap" value="0.5" min="0.1" max="0.9" step="0.1">
+                                </div>
+                            </div>
+                        </div>
+
+                        <button id="apply-job-btn" class="w-full py-4 btn-orange rounded-xl font-bold text-sm uppercase shadow-lg" data-i18n="updateBtn">更新計算路徑</button>
+                    </div>
+                </div>
+                
+                <div id="no-selection-hint" class="panel p-12 rounded-xl text-center text-slate-500 shadow-2xl h-full flex flex-col justify-center">
+                    <svg class="mx-auto mb-4 opacity-20" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+                    <p class="text-sm leading-relaxed" data-i18n="selectionHint">請先在左側清單中勾選零件<br>以進行後續調整</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <canvas id="hidden-canvas" class="hidden"></canvas>
+
+    <script>
+        // --- 1. 基礎影像演算法與輔助函式 ---
+        function tracePath(sx, sy, w, h, isBlack, visited){
+            const path = []; let cx = sx, cy = sy;
+            const dirs = [[0,-1],[1,-1],[1,0],[1,1],[0,1],[-1,1],[-1,0],[-1,-1]];
+            let d = 7;
+            for(let i=0; i<30000; i++){
+                visited[cy*w+cx] = 1; path.push({x:cx, y:cy});
+                let found = false;
+                for(let j=0; j<8; j++){
+                    let nd = (d+j)%8, nx = cx+dirs[nd][0], ny = cy+dirs[nd][1];
+                    if(isBlack(nx, ny)){ cx = nx; cy = ny; d = (nd+5)%8; found = true; break; }
+                }
+                if(!found || (cx === sx && cy === sy && path.length > 5)) break;
+            }
+            return path;
+        }
+
+        function laplacianSmooth(points, iterations = 3) {
+            if (points.length < 3) return points;
+            let current = JSON.parse(JSON.stringify(points));
+            for (let iter = 0; iter < iterations; iter++) {
+                let next = JSON.parse(JSON.stringify(current));
+                for (let i = 1; i < current.length - 1; i++) {
+                    next[i].x = 0.5 * current[i].x + 0.25 * (current[i - 1].x + current[i + 1].x);
+                    next[i].y = 0.5 * current[i].y + 0.25 * (current[i - 1].y + current[i + 1].y);
+                }
+                current = next;
+            }
+            return current;
+        }
+
+        function simplifyPath(points, tolerance) {
+            if (points.length <= 2) return points;
+            let maxSqDist = 0, index = 0;
+            for (let i = 1; i < points.length - 1; i++) {
+                const sqDist = getSqSegDist(points[i], points[0], points[points.length - 1]);
+                if (sqDist > maxSqDist) { index = i; maxSqDist = sqDist; }
+            }
+            if (maxSqDist > tolerance * tolerance) {
+                const res1 = simplifyPath(points.slice(0, index + 1), tolerance);
+                const res2 = simplifyPath(points.slice(index), tolerance);
+                return res1.slice(0, res1.length - 1).concat(res2);
+            }
+            return [points[0], points[points.length - 1]];
+        }
+
+        function getSqSegDist(p, p1, p2) {
+            let x = p1.x, y = p1.y, dx = p2.x - x, dy = p2.y - y;
+            if (dx !== 0 || dy !== 0) {
+                let t = ((p.x - x) * dx + (p.y - y) * dy) / (dx * dx + dy * dy);
+                if (t > 1) { x = p2.x; y = p2.y; }
+                else if (t > 0) { x += dx * t; y += dy * t; }
+            }
+            dx = p.x - x; dy = p.y - y;
+            return dx * dx + dy * dy;
+        }
+
+        function cleanPath(path, resolution) {
+            if (path.length < 2) return path;
+            let filtered = [path[0]], lastPt = path[0];
+            for (let i = 1; i < path.length; i++) {
+                const pt = path[i], dist = Math.sqrt(Math.pow(pt.x - lastPt.x, 2) + Math.pow(pt.y - lastPt.y, 2));
+                if (dist >= resolution || i === path.length - 1) { filtered.push(pt); lastPt = pt; }
+            }
+            return filtered;
+        }
+
+        // --- 多國語言設定 ---
+        const i18n = {
+            zh: {
+                appTitle: "轉檔工具 (切割)",
+                step1: "第一步：檔案與解析",
+                chooseFile: "選擇檔案",
+                noFile: "尚未選擇任何檔案",
+                targetWidth: "整體寬",
+                threshold: "黑白門檻",
+                smoothness: "解析/平滑度",
+                reprocess: "重新解析檔案",
+                step2: "第二步：零件清單",
+                selectAll: "全選 / 反選",
+                legendOriginal: "未選零件輪廓",
+                legendSelected: "已選零件輪廓",
+                legendToolpath: "加工路徑 (黃色覆蓋)",
+                estTime: "預估總加工時間",
+                downloadBtn: "下載檔案",
+                jobSettings: "第三步：加工參數設定(mm)",
+                groupSize: "選中零件群組尺寸",
+                width: "寬度",
+                height: "高度",
+                resolution: "解析度",
+                feedRate: "進給速率",
+                mode: "加工模式",
+                optLaser: "雷射切割",
+                optOuter: "外加工",
+                optInner: "內加工",
+                optPocket: "槽加工",
+                toolDia: "刀具直徑",
+                totalDepth: "加工深度",
+                stepDown: "每次下刀",
+                overlap: "路徑重疊",
+                updateBtn: "更新計算路徑",
+                selectionHint: "請先在左側清單中勾選零件<br>以進行後續調整",
+                partName: "零件",
+                method: "加工方式",
+                notApplied: "NA"
+            },
+            en: {
+                appTitle: "Cut Converter",
+                step1: "Step 1: File & Parsing",
+                chooseFile: "Browse File",
+                noFile: "No file chosen",
+                targetWidth: "Total Width (mm)",
+                threshold: "B/W Threshold",
+                smoothness: "Path Smoothness",
+                reprocess: "Reprocess File",
+                step2: "Step 2: Parts List",
+                selectAll: "Select / Deselect All",
+                legendOriginal: "Deselected Path",
+                legendSelected: "Selected Path",
+                legendToolpath: "Toolpath (Yellow)",
+                estTime: "Estimated Total Time",
+                downloadBtn: "Download file",
+                jobSettings: "Step 3: Job Parameters(mm)",
+                groupSize: "Selection Group Size",
+                width: "Width",
+                height: "Height",
+                resolution: "Resolution",
+                feedRate: "Feed Rate (F)",
+                mode: "Process Mode",
+                optLaser: "Laser Cutting",
+                optOuter: "Mill Outside",
+                optInner: "Mill Inside",
+                optPocket: "Mill Pocket",
+                toolDia: "Tool Diameter",
+                totalDepth: "Total Depth",
+                stepDown: "Step Down",
+                overlap: "Overlap Ratio",
+                updateBtn: "Update Toolpaths",
+                selectionHint: "Please select a part from the list<br>to start adjusting parameters",
+                partName: "Part",
+                method: "Method",
+                notApplied: "NA"
+            }
+        };
+
+        let currentLang = 'zh';
+        function updateLanguage() {
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (i18n[currentLang][key]) el.innerHTML = i18n[currentLang][key];
+            });
+            renderPartList();
+        }
+
+        document.getElementById('lang-toggle').onclick = () => { currentLang = currentLang === 'zh' ? 'en' : 'zh'; updateLanguage(); };
+
+        // --- 全局變數 ---
+        const fileInput = document.getElementById('file-input');
+        const fileNameDisplay = document.getElementById('file-name-display');
+        let rawFileData = null;
+        let fileExtension = "";
+        let originalFileName = "cnc_work";
+        let parts = []; 
+        let selectedIndices = new Set();
+        const SAFE_Z = "2.000";
+
+        // --- 檔案讀取功能 ---
+        fileInput.onchange = (e) => {
+            const file = e.target.files[0];
+            if(!file) return;
+            fileNameDisplay.innerText = file.name;
+            originalFileName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+            fileExtension = file.name.split('.').pop().toLowerCase();
+
+            const r = new FileReader();
+            r.onload = (ev) => {
+                rawFileData = ev.target.result;
+                document.getElementById('process-img-btn').click();
+            };
+
+            const isImg = ["jpg","jpeg","png","bmp","webp"].includes(fileExtension);
+            document.getElementById('threshold-container').style.display = isImg ? 'block' : 'none';
+
+            if (isImg) {
+                r.readAsDataURL(file);
+            } else {
+                r.readAsText(file);
+            }
+        };
+
+        // --- 核心解析流程 ---
+        document.getElementById('process-img-btn').onclick = async () => {
+            if(!rawFileData) return;
+            
+            const targetW = parseFloat(document.getElementById('target-width').value);
+            const smoothTol = parseFloat(document.getElementById('smooth-range').value);
+            
+            let vectorPaths = [];
+
+            if (["jpg","jpeg","png","bmp","webp"].includes(fileExtension)) {
+                vectorPaths = await parseBitmap(rawFileData, targetW, smoothTol);
+            } else if (fileExtension === 'svg') {
+                vectorPaths = parseSVG(rawFileData, targetW, smoothTol);
+            } else if (fileExtension === 'dxf') {
+                vectorPaths = parseDXF(rawFileData, targetW, smoothTol);
+            }
+
+            if (vectorPaths.length > 0) {
+                processVectorIntoParts(vectorPaths);
+            }
+        };
+
+        // --- 點陣圖處理 ---
+        async function parseBitmap(dataUrl, targetW, smoothTol) {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.getElementById('hidden-canvas');
+                    const ctx = canvas.getContext('2d');
+                    const threshold = parseInt(document.getElementById('threshold').value);
+                    canvas.width = img.width; canvas.height = img.height;
+                    ctx.drawImage(img, 0, 0);
+                    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    const w = canvas.width, h = canvas.height;
+                    const visited = new Uint8Array(w * h);
+                    const mmScale = targetW / w;
+
+                    const isBlack = (x, y) => {
+                        if(x < 1 || y < 1 || x >= w-1 || y >= h-1) return false;
+                        const i = (y * w + x) * 4;
+                        const gray = imgData.data[i] * 0.299 + imgData.data[i+1] * 0.587 + imgData.data[i+2] * 0.114;
+                        return gray < threshold;
+                    };
+
+                    let paths = [];
+                    for(let y=1; y<h-1; y++){
+                        for(let x=1; x<w-1; x++){
+                            if(isBlack(x,y) && !visited[y*w+x]){
+                                let edge = false;
+                                for(let dy=-1; dy<=1; dy++) for(let dx=-1; dx<=1; dx++) if(!isBlack(x+dx, y+dy)) edge = true;
+                                if(edge){
+                                    const path = tracePath(x, y, w, h, isBlack, visited);
+                                    if(path.length > 10){
+                                        const mmPoints = path.map(p => ({ x: p.x * mmScale, y: (h - p.y) * mmScale }));
+                                        const smoothed = laplacianSmooth(mmPoints, 3);
+                                        paths.push(simplifyPath(smoothed, smoothTol));
+                                    }
+                                } else visited[y*w+x] = 1;
+                            }
+                        }
+                    }
+                    resolve(paths);
+                };
+                img.src = dataUrl;
+            });
+        }
+
+        // --- SVG 向量解析 ---
+        function parseSVG(svgString, targetW, smoothTol) {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(svgString, 'image/svg+xml');
+            const svgEl = doc.querySelector('svg');
+            if (!svgEl) return [];
+
+            const paths = [];
+            const elements = doc.querySelectorAll('path, rect, circle, ellipse, line, polyline, polygon');
+            
+            elements.forEach(el => {
+                let pts = [];
+                const type = el.tagName.toLowerCase();
+
+                if (type === 'path') {
+                    const tempPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                    tempPath.setAttribute("d", el.getAttribute("d"));
+                    const len = tempPath.getTotalLength();
+                    const segments = Math.max(10, Math.ceil(len / (smoothTol * 5))); 
+                    for(let i=0; i<=segments; i++) {
+                        const p = tempPath.getPointAtLength(i * len / segments);
+                        pts.push({ x: p.x, y: -p.y });
+                    }
+                } else if (type === 'rect') {
+                    const x = parseFloat(el.getAttribute('x')||0), y = parseFloat(el.getAttribute('y')||0);
+                    const w = parseFloat(el.getAttribute('width')), h = parseFloat(el.getAttribute('height'));
+                    pts = [{x,y:-y}, {x:x+w,y:-y}, {x:x+w,y:-(y+h)}, {x,y:-(y+h)}, {x,y:-y}];
+                } else if (type === 'circle' || type === 'ellipse') {
+                    const cx = parseFloat(el.getAttribute('cx')||0), cy = parseFloat(el.getAttribute('cy')||0);
+                    const rx = type === 'circle' ? parseFloat(el.getAttribute('r')) : parseFloat(el.getAttribute('rx'));
+                    const ry = type === 'circle' ? rx : parseFloat(el.getAttribute('ry'));
+                    for(let i=0; i<=64; i++) {
+                        const a = (i/64) * Math.PI * 2;
+                        pts.push({ x: cx + Math.cos(a)*rx, y: -(cy + Math.sin(a)*ry) });
+                    }
+                } else if (type === 'line') {
+                    pts = [{x:parseFloat(el.getAttribute('x1')), y:-parseFloat(el.getAttribute('y1'))}, {x:parseFloat(el.getAttribute('x2')), y:-parseFloat(el.getAttribute('y2'))}];
+                } else if (type === 'polyline' || type === 'polygon') {
+                    const pstr = el.getAttribute('points').trim().split(/[\s,]+/);
+                    for(let i=0; i<pstr.length; i+=2) pts.push({ x: parseFloat(pstr[i]), y: -parseFloat(pstr[i+1]) });
+                    if(type === 'polygon' && pts.length > 0) pts.push(pts[0]);
+                }
+
+                if (pts.length > 1) {
+                    paths.push(simplifyPath(pts, smoothTol));
+                }
+            });
+
+            return scaleVectorPaths(paths, targetW);
+        }
+
+        // --- DXF 向量解析 ---
+        function parseDXF(dxfString, targetW, smoothTol) {
+            const parser = new DxfParser();
+            try {
+                const dxf = parser.parseSync(dxfString);
+                const paths = [];
+
+                dxf.entities.forEach(ent => {
+                    let pts = [];
+                    if (ent.type === 'LINE') {
+                        pts = [{x: ent.vertices[0].x, y: ent.vertices[0].y}, {x: ent.vertices[1].x, y: ent.vertices[1].y}];
+                    } else if (ent.type === 'LWPOLYLINE' || ent.type === 'POLYLINE') {
+                        ent.vertices.forEach(v => pts.push({x: v.x, y: v.y}));
+                        if (ent.shape) pts.push(pts[0]);
+                    } else if (ent.type === 'CIRCLE' || ent.type === 'ARC') {
+                        const start = ent.startAngle || 0, end = ent.endAngle !== undefined ? ent.endAngle : Math.PI*2;
+                        const r = ent.radius, steps = 64;
+                        for(let i=0; i<=steps; i++) {
+                            const a = start + (end-start)*(i/steps);
+                            pts.push({ x: ent.center.x + Math.cos(a)*r, y: ent.center.y + Math.sin(a)*r });
+                        }
+                    }
+                    if (pts.length > 1) paths.push(simplifyPath(pts, smoothTol));
+                });
+                return scaleVectorPaths(paths, targetW);
+            } catch(e) {
+                console.error("DXF Parse Error", e);
+                return [];
+            }
+        }
+
+        // --- 輔助：縮放向量以符合設定寬度並置中 ---
+        function scaleVectorPaths(paths, targetW) {
+            if (paths.length === 0) return [];
+            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+            paths.forEach(p => p.forEach(pt => {
+                minX = Math.min(minX, pt.x); minY = Math.min(minY, pt.y);
+                maxX = Math.max(maxX, pt.x); maxY = Math.max(maxY, pt.y);
+            }));
+
+            const curW = maxX - minX;
+            const scale = targetW / curW;
+            const offsetX = -minX * scale;
+            const offsetY = -minY * scale;
+
+            return paths.map(p => p.map(pt => ({
+                x: pt.x * scale + offsetX,
+                y: pt.y * scale + offsetY
+            })));
+        }
+
+        // --- 將路徑處理成 UI 使用的零件格式 ---
+        function processVectorIntoParts(vectorPaths) {
+            let gMinX = Infinity, gMaxX = -Infinity, gMinY = Infinity, gMaxY = -Infinity;
+            vectorPaths.forEach(p => p.forEach(pt => {
+                gMinX = Math.min(gMinX, pt.x); gMaxX = Math.max(gMaxX, pt.x);
+                gMinY = Math.min(gMinY, pt.y); gMaxY = Math.max(gMaxY, pt.y);
+            }));
+
+            const gCx = (gMinX + gMaxX) / 2;
+            const gCy = (gMinY + gMaxY) / 2;
+
+            parts = vectorPaths.map((p, idx) => {
+                let pMinX = Infinity, pMaxX = -Infinity, pMinY = Infinity, pMaxY = -Infinity;
+                p.forEach(pt => { pMinX = Math.min(pMinX, pt.x); pMaxX = Math.max(pMaxX, pt.x); pMinY = Math.min(pMinY, pt.y); pMaxY = Math.max(pMaxY, pt.y); });
+                
+                const centeredPath = p.map(pt => ({ x: pt.x - gCx, y: pt.y - gCy }));
+                
+                if(centeredPath.length > 2 && (centeredPath[0].x !== centeredPath[centeredPath.length-1].x || centeredPath[0].y !== centeredPath[centeredPath.length-1].y)) {
+                    centeredPath.push({...centeredPath[0]});
+                }
+                
+                return { 
+                    id: idx+1, rawPath: centeredPath, 
+                    originalDim: { w: pMaxX-pMinX, h: pMaxY-pMinY }, 
+                    currentDim: { w: pMaxX-pMinX, h: pMaxY-pMinY }, 
+                    visible: true, 
+                    jobConfig: { type: 'pocket', f: 1500, d: 3.175, depth: 3.0, step: 1.0, overlap: 0.5, resolution: 0.1 }, 
+                    toolpath: null, appliedMethod: null 
+                };
+            });
+
+            selectedIndices.clear(); 
+            renderPartList(); 
+            update3D(); 
+            updateStats();
+        }
+
+        // --- 3D 預覽與控制 ---
+        const container = document.getElementById('three-container');
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 10000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        renderer.setClearColor(0x020617);
+        container.appendChild(renderer.domElement);
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        camera.position.set(0, 0, 200);
+        scene.add(new THREE.GridHelper(500, 50, 0x334155, 0x1e293b).rotateX(Math.PI/2));
+
+        function animate() { requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); }
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        });
+
+        // --- 其他 UI 控制邏輯 ---
+        function renderPartList(){
+            const list = document.getElementById('part-list');
+            list.innerHTML = '';
+            parts.forEach((p, i) => {
+                const isSelected = selectedIndices.has(i);
+                let methodText = i18n[currentLang].notApplied;
+                if (p.appliedMethod) {
+                    const methodMap = {'laser':'optLaser','outer':'optOuter','inner':'optInner','pocket':'optPocket'};
+                    methodText = i18n[currentLang][methodMap[p.appliedMethod]] || p.appliedMethod;
+                }
+                const div = document.createElement('div');
+                div.className = `p-4 border border-slate-700 rounded-xl flex flex-col transition-all cursor-pointer ${isSelected ? 'active-part shadow-lg' : 'hover:bg-slate-800'}`;
+                div.innerHTML = `
+                    <div class="flex justify-between items-center mb-2">
+                        <div class="flex items-center gap-3">
+                            <input type="checkbox" class="w-5 h-5 accent-green-600" ${isSelected ? 'checked' : ''}>
+                            <span class="text-xs font-bold text-slate-100">${i18n[currentLang].partName} ${p.id}</span>
+                        </div>
+                        <button class="toggle-vis p-1">
+                            ${p.visible ? '<svg class="w-5 h-5 stroke-slate-400" fill="none" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>' : '<svg class="w-5 h-5 stroke-slate-600" fill="none" stroke-width="2" viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>'}
+                        </button>
+                    </div>
+                    <div class="flex flex-wrap gap-2 ml-8 items-center">
+                        <span class="dimension-badge">${p.currentDim.w.toFixed(1)} x ${p.currentDim.h.toFixed(1)} mm</span>
+                        <div class="flex items-center gap-1">
+                            <span class="text-[9px] text-slate-500 uppercase font-bold">${i18n[currentLang].method}:</span>
+                            <span class="method-badge">${methodText}</span>
+                        </div>
+                    </div>
+                `;
+                div.onclick = (e) => {
+                    if(e.target.tagName === 'INPUT' || e.target.closest('.toggle-vis')) return;
+                    if(isSelected) selectedIndices.delete(i); else selectedIndices.add(i);
+                    renderPartList(); updateJobUI(); update3D();
+                };
+                div.querySelector('input').onchange = () => { if(isSelected) selectedIndices.delete(i); else selectedIndices.add(i); renderPartList(); updateJobUI(); update3D(); };
+                div.querySelector('.toggle-vis').onclick = (e) => { e.stopPropagation(); p.visible = !p.visible; if(!p.visible && selectedIndices.has(i)) selectedIndices.delete(i); renderPartList(); update3D(); };
+                list.appendChild(div);
+            });
+            updateJobUI();
+        }
+
+        document.getElementById('select-all').onclick = () => {
+            const vis = parts.map((p, i) => p.visible ? i : -1).filter(idx => idx !== -1);
+            if (vis.length === 0) return;
+            if (vis.every(idx => selectedIndices.has(idx))) vis.forEach(idx => selectedIndices.delete(idx));
+            else vis.forEach(idx => selectedIndices.add(idx));
+            renderPartList(); updateJobUI(); update3D();
+        };
+
+        function updateJobUI(){
+            const panel = document.getElementById('job-panel'), hint = document.getElementById('no-selection-hint');
+            if(selectedIndices.size > 0){
+                panel.classList.remove('hidden'); hint.classList.add('hidden');
+                let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+                selectedIndices.forEach(idx => { parts[idx].rawPath.forEach(pt => { minX = Math.min(minX, pt.x); maxX = Math.max(maxX, pt.x); minY = Math.min(minY, pt.y); maxY = Math.max(maxY, pt.y); }); });
+                document.getElementById('resize-w').value = (maxX - minX).toFixed(2);
+                document.getElementById('resize-h').value = (maxY - minY).toFixed(2);
+                const lastP = parts[Array.from(selectedIndices).pop()];
+                ['resolution','job-f','job-type','mill-d','mill-depth','mill-step','mill-overlap'].forEach(id => {
+                    const key = id.replace('job-','').replace('mill-','');
+                    document.getElementById(id).value = lastP.jobConfig[key] || lastP.jobConfig[id.split('-')[1]];
+                });
+            } else { panel.classList.add('hidden'); hint.classList.remove('hidden'); }
+            toggleMillingOptions();
+        }
+
+        document.getElementById('resize-w').oninput = (e) => {
+            if(selectedIndices.size === 0) return;
+            const val = parseFloat(e.target.value); if(!val) return;
+            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+            selectedIndices.forEach(idx => { parts[idx].rawPath.forEach(pt => { minX = Math.min(minX, pt.x); maxX = Math.max(maxX, pt.x); minY = Math.min(minY, pt.y); maxY = Math.max(maxY, pt.y); }); });
+            document.getElementById('resize-h').value = (val * (maxY - minY) / (maxX - minX)).toFixed(2);
+        };
+
+        document.getElementById('job-f').oninput = (e) => {
+            const val = parseFloat(e.target.value);
+            if (!val || val <= 0) return;
+            selectedIndices.forEach(idx => {
+                if (parts[idx]) {
+                    parts[idx].jobConfig.f = val;
+                }
+            });
+            updateStats();
+        };
+
+        function toggleMillingOptions() {
+            const val = document.getElementById('job-type').value;
+            document.getElementById('milling-opts').classList.toggle('hidden', val === 'laser');
+            document.getElementById('pocket-opts').classList.toggle('hidden', val !== 'pocket');
+        }
+        document.getElementById('job-type').onchange = toggleMillingOptions;
+
+        // 計算路徑與 Gcode 生成
+        document.getElementById('apply-job-btn').onclick = () => {
+            const newRes = Math.max(0.1, parseFloat(document.getElementById('resolution').value) || 0.1);
+            const newF = parseFloat(document.getElementById('job-f').value);
+            const newType = document.getElementById('job-type').value;
+            const newD = parseFloat(document.getElementById('mill-d').value);
+            const newDepth = parseFloat(document.getElementById('mill-depth').value);
+            const newStep = parseFloat(document.getElementById('mill-step').value);
+            const newOverlap = Math.max(0.1, Math.min(0.9, parseFloat(document.getElementById('mill-overlap').value) || 0.5));
+
+            let minX = Infinity, maxX = -Infinity;
+            selectedIndices.forEach(idx => { parts[idx].rawPath.forEach(pt => { minX = Math.min(minX, pt.x); maxX = Math.max(maxX, pt.x); }); });
+            const groupScale = parseFloat(document.getElementById('resize-w').value) / (maxX - minX);
+
+            selectedIndices.forEach(idx => {
+                parts[idx].toolpath = null;
+                parts[idx].jobConfig = { type: newType, f: newF, d: newD, depth: newDepth, step: newStep, overlap: newOverlap, resolution: newRes };
+                parts[idx].currentDim = { w: parts[idx].originalDim.w * groupScale, h: parts[idx].originalDim.h * groupScale };
+                parts[idx].appliedMethod = newType; 
+            });
+
+            if (newType === 'pocket') calculateV3PocketPaths(groupScale);
+            else selectedIndices.forEach(idx => parts[idx].toolpath = calculateStandardToolpath(parts[idx], groupScale));
+
+            renderPartList(); update3D(); updateStats();
+        };
+
+        function calculateStandardToolpath(p, groupScale) {
+            const cfg = p.jobConfig, scale = 10000;
+            const scaledPath = p.rawPath.map(pt => ({ x: pt.x * groupScale, y: pt.y * groupScale }));
+            const pX = scaledPath.map(pt => ({ X: Math.round(pt.x * scale), Y: Math.round(pt.y * scale) }));
+            let intermediatePaths = [];
+            if (cfg.type === 'laser') {
+                intermediatePaths.push([...scaledPath, scaledPath[0]]);
+            } else {
+                const co = new ClipperLib.ClipperOffset();
+                co.AddPath(pX, ClipperLib.JoinType.jtRound, ClipperLib.EndType.etClosedPolygon);
+                let delta = cfg.type === 'outer' ? (cfg.d/2)*scale : -(cfg.d/2)*scale;
+                let offsetResult = new ClipperLib.Paths();
+                co.Execute(offsetResult, delta);
+                offsetResult.forEach(pts => {
+                    let loop = pts.map(pt => ({ x: pt.X/scale, y: pt.Y/scale })); 
+                    if(loop.length > 0) loop.push(loop[0]);
+                    intermediatePaths.push(loop);
+                });
+            }
+            return intermediatePaths.map(path => cleanPath(path, cfg.resolution));
+        }
+
+        function calculateV3PocketPaths(groupScale) {
+            const scale = 10000;
+            const selectedArr = Array.from(selectedIndices);
+            const allClipperPaths = selectedArr.map(idx => {
+                return parts[idx].rawPath.map(pt => ({ X: Math.round(pt.x * groupScale * scale), Y: Math.round(pt.y * groupScale * scale) }));
+            });
+            const cl = new ClipperLib.Clipper();
+            cl.AddPaths(allClipperPaths, ClipperLib.PolyType.ptSubject, true);
+            const polyTree = new ClipperLib.PolyTree();
+            cl.Execute(ClipperLib.ClipType.ctUnion, polyTree, ClipperLib.PolyFillType.pftNonZero, ClipperLib.PolyFillType.pftNonZero);
+            const firstIdx = selectedArr[0];
+            const cfg = parts[firstIdx].jobConfig;
+            const finalResults = [];
+            function traverseTree(node) {
+                const children = node.Childs();
+                for (let i = 0; i < children.length; i++) {
+                    const outerNode = children[i];
+                    if (!outerNode.IsHole()) {
+                        const subjectPath = outerNode.Contour();
+                        const islands = outerNode.Childs().map(n => n.Contour());
+                        if (islands.length > 0) {
+                            const islandOffsetter = new ClipperLib.ClipperOffset();
+                            islands.forEach(isl => islandOffsetter.AddPath(isl, ClipperLib.JoinType.jtRound, ClipperLib.EndType.etClosedPolygon));
+                            let islandOuters = new ClipperLib.Paths();
+                            islandOffsetter.Execute(islandOuters, (cfg.d/2)*scale);
+                            islandOuters.forEach(l => {
+                                let p = l.map(pt => ({ x: pt.X/scale, y: pt.Y/scale })); 
+                                if(p.length > 0) p.push(p[0]);
+                                finalResults.push(cleanPath(p, cfg.resolution));
+                            });
+                        }
+                        const subjectOffsetter = new ClipperLib.ClipperOffset();
+                        subjectOffsetter.AddPath(subjectPath, ClipperLib.JoinType.jtRound, ClipperLib.EndType.etClosedPolygon);
+                        let subjectInners = new ClipperLib.Paths();
+                        subjectOffsetter.Execute(subjectInners, -(cfg.d/2)*scale);
+                        subjectInners.forEach(l => {
+                            let p = l.map(pt => ({ x: pt.X/scale, y: pt.Y/scale })); 
+                            if(p.length > 0) p.push(p[0]);
+                            finalResults.push(cleanPath(p, cfg.resolution));
+                        });
+                        const scanPaths = computeScanlinePocket(subjectPath, islands, cfg, scale);
+                        finalResults.push(...scanPaths);
+                        outerNode.Childs().forEach(holeNode => traverseTree(holeNode));
+                    }
+                }
+            }
+            traverseTree(polyTree);
+            
+            selectedArr.forEach(idx => {
+                parts[idx].toolpath = (idx === firstIdx) ? finalResults : []; 
+                parts[idx].appliedMethod = 'pocket';
+            });
+        }
+
+        function computeScanlinePocket(subject, islands, cfg, scale) {
+            const toolRadius = (cfg.d / 2) * scale;
+            const shrinkAmount = (cfg.d * 0.5) * scale;
+            const co = new ClipperLib.ClipperOffset();
+            co.AddPath(subject, ClipperLib.JoinType.jtMiter, ClipperLib.EndType.etClosedPolygon);
+            let outerBound = new ClipperLib.Paths();
+            co.Execute(outerBound, -toolRadius);
+            let workingArea = outerBound;
+            if (islands.length > 0 && outerBound.length > 0) {
+                let islandNoGo = new ClipperLib.Paths();
+                const coIsl = new ClipperLib.ClipperOffset();
+                islands.forEach(isl => coIsl.AddPath(isl, ClipperLib.JoinType.jtMiter, ClipperLib.EndType.etClosedPolygon));
+                coIsl.Execute(islandNoGo, toolRadius);
+                const cl = new ClipperLib.Clipper();
+                cl.AddPaths(outerBound, ClipperLib.PolyType.ptSubject, true);
+                cl.AddPaths(islandNoGo, ClipperLib.PolyType.ptClip, true);
+                let finalArea = new ClipperLib.Paths();
+                cl.Execute(ClipperLib.ClipType.ctDifference, finalArea, ClipperLib.PolyFillType.pftNonZero, ClipperLib.PolyFillType.pftNonZero);
+                workingArea = finalArea;
+            }
+            if (workingArea.length === 0) return [];
+            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+            workingArea.forEach(p => p.forEach(pt => { 
+                minX = Math.min(minX, pt.X); maxX = Math.max(maxX, pt.X); 
+                minY = Math.min(minY, pt.Y); maxY = Math.max(maxY, pt.Y); 
+            }));
+            const scanStep = Math.max(1, (cfg.d * (1 - cfg.overlap)) * scale);
+            let segmentGroups = [];
+            for (let y = minY + scanStep/2; y <= maxY; y += scanStep) {
+                const scanLine = [{X: minX - 100, Y: Math.round(y)}, {X: maxX + 100, Y: Math.round(y)}];
+                const cl = new ClipperLib.Clipper();
+                cl.AddPath(scanLine, ClipperLib.PolyType.ptSubject, false);
+                cl.AddPaths(workingArea, ClipperLib.PolyType.ptClip, true);
+                const segmentsTree = new ClipperLib.PolyTree();
+                cl.Execute(ClipperLib.ClipType.ctIntersection, segmentsTree, ClipperLib.PolyFillType.pftNonZero, ClipperLib.PolyFillType.pftNonZero);
+                const openPaths = ClipperLib.Clipper.PolyTreeToPaths(segmentsTree);
+                if (openPaths.length > 0) {
+                    openPaths.sort((a,b) => a[0].X - b[0].X);
+                    openPaths.forEach((path, groupIdx) => {
+                        if (!segmentGroups[groupIdx]) segmentGroups[groupIdx] = [];
+                        segmentGroups[groupIdx].push(path);
+                    });
+                }
+            }
+            const optimizedPaths = [];
+            segmentGroups.forEach((group, idx) => {
+                let reverse = false;
+                group.forEach(path => {
+                    if (path.length >= 2) {
+                        const p1 = path[0], p2 = path[path.length - 1];
+                        const dx = p2.X - p1.X, dy = p2.Y - p1.Y;
+                        const len = Math.sqrt(dx*dx + dy*dy);
+                        if (len > shrinkAmount * 2.5) { 
+                            const unitX = dx / len, unitY = dy / len;
+                            p1.X = Math.round(p1.X + unitX * shrinkAmount);
+                            p1.Y = Math.round(p1.Y + unitY * shrinkAmount);
+                            p2.X = Math.round(p2.X - unitX * shrinkAmount);
+                            p2.Y = Math.round(p2.Y - unitY * shrinkAmount);
+                        }
+                    }
+                    let p = path.map(pt => ({ x: pt.X / scale, y: pt.Y / scale }));
+                    if (reverse) p.reverse();
+                    optimizedPaths.push(p);
+                    reverse = !reverse;
+                });
+            });
+            return optimizedPaths;
+        }
+
+        function update3D() {
+            while(scene.children.length > 0) scene.remove(scene.children[0]);
+            scene.add(new THREE.GridHelper(500, 50, 0x334155, 0x1e293b).rotateX(Math.PI/2));
+            parts.forEach((p, idx) => {
+                if(!p.visible) return;
+                const isSelected = selectedIndices.has(idx);
+                const color = isSelected ? 0x22c55e : 0xFFFFFF;
+                const opacity = isSelected ? 0.8 : 0.5;
+                const geomOrig = new THREE.BufferGeometry().setFromPoints(p.rawPath.map(pt => new THREE.Vector3(pt.x, pt.y, 0)));
+                scene.add(new THREE.LineLoop(geomOrig, new THREE.LineBasicMaterial({ color: color, opacity: opacity, transparent: true })));
+                if(p.toolpath && p.toolpath.length > 0) {
+                    const cfg = p.jobConfig, passes = cfg.type === 'laser' ? 1 : Math.ceil(cfg.depth / cfg.step);
+                    for(let i=0; i<passes; i++){
+                        const currentZ = cfg.type === 'laser' ? 0.2 : -(Math.min(cfg.depth, (i + 1) * cfg.step)) + 0.2;
+                        const matTool = new THREE.LineBasicMaterial({ color: 0xfacc15, opacity: 1.0 - (i * 0.1), transparent: true });
+                        p.toolpath.forEach(path => {
+                            const geomTool = new THREE.BufferGeometry().setFromPoints(path.map(pt => new THREE.Vector3(pt.x, pt.y, currentZ)));
+                            scene.add(new THREE.Line(geomTool, matTool));
+                        });
+                    }
+                }
+            });
+        }
+
+        function updateStats() {
+            let totalSec = 0;
+            let currentX = 0, currentY = 0;
+            let currentZ = parseFloat(SAFE_Z) || 2.0; 
+            const SAFE_Z_VAL = parseFloat(SAFE_Z) || 2.0;
+
+            const G0_SPEED = 2000;      
+            const PLUNGE_SPEED = 300;   
+
+            let activeParts = parts.filter(p => p.visible && p.toolpath && p.toolpath.length > 0);
+            if (activeParts.length === 0) {
+                document.getElementById('est-time').innerText = "00:00:00";
+                return;
+            }
+
+            const orderPriority = { "laser": 0, "pocket": 1, "inner": 2, "outer": 3 };
+            const grouped = {};
+            activeParts.forEach(p => {
+                const type = p.jobConfig.type;
+                if (!grouped[type]) grouped[type] = [];
+                grouped[type].push(p);
+            });
+
+            const sortedTypes = Object.keys(grouped).sort((a, b) => (orderPriority[a] ?? 99) - (orderPriority[b] ?? 99));
+
+            sortedTypes.forEach(type => {
+                let unvisitedInGroup = [...grouped[type]];
+                while (unvisitedInGroup.length > 0) {
+                    let nearestIdx = -1;
+                    let minDistSq = Infinity;
+                    for (let i = 0; i < unvisitedInGroup.length; i++) {
+                        const firstPath = unvisitedInGroup[i].toolpath[0];
+                        if (!firstPath || firstPath.length === 0) continue;
+                        const dx = firstPath[0].x - currentX;
+                        const dy = firstPath[0].y - currentY;
+                        const distSq = dx * dx + dy * dy;
+                        if (distSq < minDistSq) { minDistSq = distSq; nearestIdx = i; }
+                    }
+                    if (nearestIdx === -1) break;
+
+                    const p = unvisitedInGroup.splice(nearestIdx, 1)[0];
+                    const cfg = p.jobConfig;
+                    const isLaser = cfg.type === 'laser';
+                    const passes = isLaser ? 1 : Math.ceil(cfg.depth / cfg.step);
+                    const cuttingFeedrate = cfg.f || 1500; 
+
+                    let lastPointOfPart = null;
+
+                    for (let i = 1; i <= passes; i++) {
+                        const targetZ = isLaser ? 0 : -(Math.min(cfg.depth, i * cfg.step));
+                        let lastPtInLayer = null;
+
+                        p.toolpath.forEach((path, pathIdx) => {
+                            if (path.length < 2) return;
+                            const start = path[0];
+
+                            let needRetract = true;
+                            if (i > 1 && pathIdx === 0 && lastPointOfPart) {
+                                const dToStart = Math.sqrt(Math.pow(start.x - lastPointOfPart.x, 2) + Math.pow(start.y - lastPointOfPart.y, 2));
+                                if (dToStart < 0.5) needRetract = false; 
+                            } else if (lastPtInLayer) {
+                                const dToLast = Math.sqrt(Math.pow(start.x - lastPtInLayer.x, 2) + Math.pow(start.y - lastPtInLayer.y, 2));
+                                if (dToLast < (cfg.d * 1.5)) needRetract = false;
+                            }
+
+                            if (needRetract) {
+                                if (!isLaser) {
+                                    const travelZToSafe = Math.abs(currentZ - SAFE_Z_VAL);
+                                    totalSec += (travelZToSafe / G0_SPEED) * 60;
+                                    currentZ = SAFE_Z_VAL;
+                                }
+
+                                const travelXY = Math.sqrt(Math.pow(start.x - currentX, 2) + Math.pow(start.y - currentY, 2));
+                                totalSec += (travelXY / G0_SPEED) * 60;
+                                currentX = start.x;
+                                currentY = start.y;
+
+                                if (!isLaser) {
+                                    const plungeZ = Math.abs(currentZ - targetZ);
+                                    totalSec += (plungeZ / PLUNGE_SPEED) * 60;
+                                    currentZ = targetZ;
+                                }
+                            } else {
+                                const travelXY = Math.sqrt(Math.pow(start.x - currentX, 2) + Math.pow(start.y - currentY, 2));
+                                totalSec += (travelXY / cuttingFeedrate) * 60;
+                                currentX = start.x;
+                                currentY = start.y;
+                            }
+
+                            let pathDist = 0;
+                            for (let j = 1; j < path.length; j++) {
+                                pathDist += Math.sqrt(Math.pow(path[j].x - path[j-1].x, 2) + Math.pow(path[j].y - path[j-1].y, 2));
+                            }
+                            totalSec += (pathDist / cuttingFeedrate) * 60;
+
+                            const lastPtInPath = path[path.length - 1];
+                            currentX = lastPtInPath.x;
+                            currentY = lastPtInPath.y;
+
+                            lastPtInLayer = lastPtInPath;
+                            lastPointOfPart = lastPtInPath;
+                        });
+                    }
+
+                    if (!isLaser) {
+                        const travelZToSafe = Math.abs(currentZ - SAFE_Z_VAL);
+                        totalSec += (travelZToSafe / G0_SPEED) * 60;
+                        currentZ = SAFE_Z_VAL;
+                    }
+
+                    if (lastPointOfPart) {
+                        currentX = lastPointOfPart.x;
+                        currentY = lastPointOfPart.y;
+                    }
+                }
+            });
+
+            const returnXY = Math.sqrt(currentX * currentX + currentY * currentY);
+            totalSec += (returnXY / G0_SPEED) * 60;
+            currentX = 0;
+            currentY = 0;
+
+            const h = Math.floor(totalSec / 3600), m = Math.floor((totalSec % 3600) / 60), s = Math.floor(totalSec % 60);
+            document.getElementById('est-time').innerText = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+        }
+
+        // --- 產生 Gcode 輸出 ---
+        document.getElementById('export-gcode').onclick = () => {
+            if(parts.length === 0) return;
+            let gc = ["; CNC V4.0", "G21", "G90", "G0 X0 Y0 F2000"];
+            
+            const orderPriority = { "laser": 0, "pocket": 1, "inner": 2, "outer": 3 };
+            let activeParts = parts.filter(p => p.visible && p.toolpath && p.toolpath.length > 0);
+            if (activeParts.length === 0) return;
+            const grouped = {};
+            activeParts.forEach(p => {
+                const type = p.jobConfig.type;
+                if (!grouped[type]) grouped[type] = [];
+                grouped[type].push(p);
+            });
+            let currentX = 0, currentY = 0;
+            const sortedTypes = Object.keys(grouped).sort((a, b) => (orderPriority[a] ?? 99) - (orderPriority[b] ?? 99));
+            sortedTypes.forEach(type => {
+                let unvisitedInGroup = [...grouped[type]];
+                while (unvisitedInGroup.length > 0) {
+                    let nearestIdx = -1;
+                    let minDistSq = Infinity;
+                    for (let i = 0; i < unvisitedInGroup.length; i++) {
+                        const firstPath = unvisitedInGroup[i].toolpath[0];
+                        if (!firstPath || firstPath.length === 0) continue;
+                        const dx = firstPath[0].x - currentX;
+                        const dy = firstPath[0].y - currentY;
+                        const distSq = dx * dx + dy * dy;
+                        if (distSq < minDistSq) { minDistSq = distSq; nearestIdx = i; }
+                    }
+                    if (nearestIdx === -1) break;
+                    const p = unvisitedInGroup.splice(nearestIdx, 1)[0];
+                    const cfg = p.jobConfig, isLaser = cfg.type === 'laser', passes = isLaser ? 1 : Math.ceil(cfg.depth / cfg.step);
+                    let lastPointOfPart = null;
+                    for (let i = 1; i <= passes; i++) {
+                        const targetZ = isLaser ? 0 : -(Math.min(cfg.depth, i * cfg.step)).toFixed(3);
+                        let lastPtInLayer = null;
+                        let isFirstMoveOfPass = true;
+                        p.toolpath.forEach((path, pathIdx) => {
+                            if (path.length < 2) return;
+                            const start = path[0];
+                            let needRetract = true;
+                            if (i > 1 && pathIdx === 0 && lastPointOfPart) {
+                                const dToStart = Math.sqrt(Math.pow(start.x - lastPointOfPart.x, 2) + Math.pow(start.y - lastPointOfPart.y, 2));
+                                if (dToStart < 0.5) needRetract = false; 
+                            } else if (lastPtInLayer) {
+                                const dToLast = Math.sqrt(Math.pow(start.x - lastPtInLayer.x, 2) + Math.pow(start.y - lastPtInLayer.y, 2));
+                                if (dToLast < (cfg.d * 1.5)) needRetract = false;
+                            }
+                            
+                            let forceFeedrate = false;
+                            if (needRetract) {
+                                if (!isLaser) gc.push(`G0 Z${SAFE_Z}`);
+                                gc.push(`G0 X${start.x.toFixed(3)} Y${start.y.toFixed(3)}`);
+                                if (!isLaser) {
+                                    gc.push(`G1 Z${targetZ} F300`);
+                                    forceFeedrate = true; 
+                                } else {
+                                    gc.push("M3 S255");
+                                }
+                            } else {
+                                if (!isLaser) gc.push(`G1 X${start.x.toFixed(3)} Y${start.y.toFixed(3)} Z${targetZ} ${isFirstMoveOfPass ? 'F' + cfg.f : ''}`);
+                                else gc.push(`G1 X${start.x.toFixed(3)} Y${start.y.toFixed(3)} ${isFirstMoveOfPass ? 'F' + cfg.f : ''}`);
+                            }
+                            
+                            for (let j = 1; j < path.length; j++) {
+                                const fStr = (isFirstMoveOfPass || forceFeedrate) ? ` F${cfg.f}` : "";
+                                gc.push(`G1 X${path[j].x.toFixed(3)} Y${path[j].y.toFixed(3)}${fStr}`);
+                                isFirstMoveOfPass = false;
+                                forceFeedrate = false; 
+                            }
+                            lastPtInLayer = path[path.length - 1];
+                            lastPointOfPart = lastPtInLayer;
+                        });
+                        if (isLaser) gc.push("M5");
+                    }
+                    if (!isLaser) gc.push(`G0 Z${SAFE_Z}`);
+                    if (lastPointOfPart) { currentX = lastPointOfPart.x; currentY = lastPointOfPart.y; }
+                }
+            });
+            gc.push("G0 X0Y0");
+            const blob = new Blob([gc.join('\n')], { type: 'text/plain' });
+            const a = document.createElement('a'); 
+            a.href = URL.createObjectURL(blob); 
+            a.download = `${originalFileName}.gcode`; 
+            a.click();
+        };
+
+        updateLanguage();
+    </script>
+
+    <!-- PWA Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./service-worker.js')
+                    .then((reg) => console.log('Service Worker registered successfully with scope: ', reg.scope))
+                    .catch((err) => console.error('Service Worker registration failed: ', err));
+            });
+        }
+    </script>
+
+</body>
+</html>

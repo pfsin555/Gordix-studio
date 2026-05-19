@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gcode Editor & Viewer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --primary-green: #10b981;
+            --dark-bg: #111827; 
+            --panel-dark: #1f2937;
+            --accent-green: #059669;
+            --input-bg: #374151;
+        }
+        body { background-color: var(--dark-bg); font-family: 'Inter', system-ui, -apple-system, sans-serif; overflow-x: hidden; }
+        
+        #preview-container { 
+            width: 100%; 
+            height: 450px; 
+            background: #000; 
+            border-radius: 12px; 
+            overflow: hidden; 
+            position: relative; 
+            border: 2px solid #374151; 
+        }
+        @media (min-width: 1024px) {
+            #preview-container { height: calc(100vh - 120px); min-height: 500px; }
+        }
+
+        .controls-card { 
+            background: var(--panel-dark); 
+            padding: 1rem; 
+            border-radius: 10px; 
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5); 
+            border-top: 3px solid var(--primary-green); 
+            border-left: 1px solid #374151;
+            border-right: 1px solid #374151;
+            border-bottom: 1px solid #374151;
+        }
+        .btn-green { background-color: var(--primary-green); color: #064e3b; transition: all 0.2s; }
+        .btn-green:hover { background-color: var(--accent-green); transform: translateY(-1px); }
+        .btn-green:disabled { background-color: #4b5563; color: #9ca3af; cursor: not-allowed; transform: none; }
+        
+        .label-text { color: #d1d5db; font-weight: 600; font-size: 0.8rem; }
+        canvas { display: block; }
+        
+        input[type="number"] {
+            background-color: var(--input-bg);
+            border: 1px solid #4b5563;
+            color: white;
+            padding: 0.4rem 0.6rem;
+            font-size: 0.85rem;
+            border-radius: 0.375rem;
+            transition: all 0.2s;
+        }
+        input[type="number"]:focus {
+            outline: none;
+            border-color: var(--primary-green);
+            ring: 1px solid var(--primary-green);
+        }
+
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: #111827; }
+        ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 10px; }
+    </style>
+
+    <!-- PWA Meta Tags -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="icon-192.png">
+
+</head>
+<body class="pb-4 text-gray-100">
+
+<div class="bg-emerald-500 shadow-lg mb-4">
+    <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+        <h1 id="txt-header-title" class="text-gray-900 font-black text-lg md:text-xl tracking-tight">
+            Gcode 即時調整
+        </h1>
+        <button id="langBtn" class="bg-gray-900 text-emerald-400 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-black transition border border-gray-700 shadow-sm">
+            中 / EN
+        </button>
+    </div>
+</div>
+
+<div class="container mx-auto px-4 max-w-7xl">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        
+        <div class="lg:col-span-3 space-y-4 order-2 lg:order-1">
+            <div class="controls-card">
+                <h2 class="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-2 flex items-center">
+                    <span id="txt-sec-upload">1. 檔案上傳</span>
+                </h2>
+                <div class="flex flex-col gap-2">
+                    <button onclick="document.getElementById('fileInput').click()" class="w-full bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded border border-gray-600 transition text-sm flex items-center justify-center shadow-inner">
+                        <svg class="w-4 h-4 mr-2 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                        <span id="txt-btn-upload">選擇 Gcode 檔案</span>
+                    </button>
+                    <input type="file" id="fileInput" accept=".gcode,.nc,.txt" class="hidden" />
+                    <div id="fileInfo" class="p-2 bg-emerald-900/30 rounded border border-emerald-800/50 text-[10px] text-emerald-400 font-bold hidden truncate">
+                        <span id="txt-file-name">檔名</span>: <span id="fileNameDisplay" class="text-gray-200">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="controls-card">
+                <h2 class="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-3 flex items-center">
+                    <span id="txt-sec-params">2. 參數調整 (不影響 Z/F)</span>
+                </h2>
+                <div class="space-y-3">
+                    <div class="grid grid-cols-2 gap-2">
+                        <div class="col-span-2">
+                            <label class="label-text block mb-1" id="txt-label-scale">縮放比例 (僅限 XY)</label>
+                            <input type="number" id="scaleInput" value="1" step="0.1" class="w-full">
+                        </div>
+                        <div>
+                            <label class="label-text block mb-1" id="txt-label-ox">X 偏移</label>
+                            <input type="number" id="offsetX" value="0" step="1" class="w-full">
+                        </div>
+                        <div>
+                            <label class="label-text block mb-1" id="txt-label-oy">Y 偏移</label>
+                            <input type="number" id="offsetY" value="0" step="1" class="w-full">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="label-text block mb-1" id="txt-label-rot">旋轉角度 (Z軸中心)</label>
+                        <input type="number" id="rotationInput" value="0" step="1" class="w-full">
+                    </div>
+                    <div>
+                        <label class="label-text block mb-1" id="txt-label-res">解析度 (最小 XY 位移 mm)</label>
+                        <input type="number" id="resInput" value="0.1" min="0.1" step="0.1" class="w-full">
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 pt-1">
+                        <button id="centerBtn" class="bg-gray-700 text-gray-200 font-bold py-2 rounded hover:bg-gray-600 border border-gray-600 transition text-xs">自動置中</button>
+                        <button id="applyBtn" class="btn-green font-bold py-2 rounded shadow-sm text-xs">更新預覽</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-gray-800 border border-gray-700 text-white rounded-lg p-4 shadow-xl space-y-3 border-t-4 border-emerald-500">
+                <div class="flex justify-between items-end">
+                    <div>
+                        <p class="text-[9px] text-emerald-500 font-bold uppercase tracking-wider" id="txt-info-time">預估時間</p>
+                        <p class="text-sm font-mono font-bold text-emerald-400" id="timeEst">0 min 0 sec</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-[9px] text-emerald-500 font-bold uppercase tracking-wider" id="txt-info-dist">路徑長度</p>
+                        <p class="text-sm font-mono font-bold text-white"><span id="distEst">0</span> <span class="text-[10px] text-gray-500">mm</span></p>
+                    </div>
+                </div>
+                <button id="downloadBtn" class="w-full bg-emerald-500 text-gray-900 py-3 rounded-lg font-black text-xs uppercase hover:bg-emerald-400 transition shadow-lg disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed" disabled>
+                    下載修改後的 Gcode
+                </button>
+            </div>
+        </div>
+
+        <div class="lg:col-span-9 order-1 lg:order-2">
+            <div id="preview-container" class="shadow-2xl ring-1 ring-gray-700">
+                <div class="absolute top-3 right-3 z-10">
+                    <div class="bg-black/80 backdrop-blur-md text-emerald-400 px-3 py-1 rounded-full text-[9px] font-black border border-emerald-500/30" id="txt-preview-hint">
+                        3D REALTIME VIEW
+                    </div>
+                </div>
+                <div class="absolute bottom-3 left-3 z-10 text-gray-400 text-[9px] space-y-0.5 bg-black/60 p-2 rounded-lg backdrop-blur-sm border border-white/5">
+                    <p id="txt-mouse-l" class="flex items-center"><span class="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-1.5"></span>左鍵: 旋轉</p>
+                    <p id="txt-mouse-r" class="flex items-center"><span class="w-1.5 h-1.5 bg-blue-500 rounded-full mr-1.5"></span>右鍵: 平移</p>
+                    <p id="txt-mouse-w" class="flex items-center"><span class="w-1.5 h-1.5 bg-white rounded-full mr-1.5"></span>滾輪: 縮放</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const i18n = {
+        zh: {
+            headerTitle: "Gcode 即時調整",
+            langBtn: "中文 / EN",
+            secUpload: "1. 檔案上傳",
+            btnUpload: "選擇 Gcode 檔案",
+            fileName: "檔名",
+            secParams: "2. 參數調整 (不影響 Z/F)",
+            labelScale: "縮放比例 (僅 XY)",
+            labelOX: "X 偏移 (mm)",
+            labelOY: "Y 偏移 (mm)",
+            labelRot: "旋轉",
+            labelRes: "解析度 (最小 XY 位移 mm)",
+            btnCenter: "自動置中",
+            btnUpdate: "更新預覽",
+            infoTime: "預估時間",
+            infoDist: "路徑長度",
+            btnDownload: "下載修改後的 Gcode",
+            mouseL: "左鍵: 旋轉",
+            mouseR: "右鍵: 平移",
+            mouseW: "滾輪: 縮放",
+            unitMin: "分",
+            unitSec: "秒"
+        },
+        en: {
+            headerTitle: "Gcode Adjuster",
+            langBtn: "中文 / EN",
+            secUpload: "1. File Upload",
+            btnUpload: "Choose Gcode File",
+            fileName: "File",
+            secParams: "2. Parameters (Fixed Z/F)",
+            labelScale: "Scale (XY Only)",
+            labelOX: "X Offset (mm)",
+            labelOY: "Y Offset (mm)",
+            labelRot: "Rotate",
+            labelRes: "Resolution (Min XY mm)",
+            btnCenter: "Auto Center",
+            btnUpdate: "Update",
+            infoTime: "Est. Time",
+            infoDist: "Total Path",
+            btnDownload: "Download Processed Gcode",
+            mouseL: "L-Click: Rotate",
+            mouseR: "R-Click: Pan",
+            mouseW: "Wheel: Zoom",
+            unitMin: "min",
+            unitSec: "sec"
+        }
+    };
+
+    let currentLang = 'zh';
+    let lastTimeSec = 0, lastDistance = 0;
+    let scene, camera, renderer, gcodeGroup, grid;
+    let originalGcode = "";
+    let originalFileName = "output";
+
+    function updateLanguage() {
+        const lang = i18n[currentLang];
+        document.getElementById('txt-header-title').innerText = lang.headerTitle;
+        document.getElementById('langBtn').innerText = lang.langBtn;
+        document.getElementById('txt-sec-upload').innerText = lang.secUpload;
+        document.getElementById('txt-btn-upload').innerText = lang.btnUpload;
+        document.getElementById('txt-file-name').innerText = lang.fileName;
+        document.getElementById('txt-sec-params').innerText = lang.secParams;
+        document.getElementById('txt-label-scale').innerText = lang.labelScale;
+        document.getElementById('txt-label-ox').innerText = lang.labelOX;
+        document.getElementById('txt-label-oy').innerText = lang.labelOY;
+        document.getElementById('txt-label-rot').innerText = lang.labelRot;
+        document.getElementById('txt-label-res').innerText = lang.labelRes;
+        document.getElementById('centerBtn').innerText = lang.btnCenter;
+        document.getElementById('applyBtn').innerText = lang.btnUpdate;
+        document.getElementById('txt-info-time').innerText = lang.infoTime;
+        document.getElementById('txt-info-dist').innerText = lang.infoDist;
+        document.getElementById('downloadBtn').innerText = lang.btnDownload;
+        document.getElementById('txt-mouse-l').innerHTML = `<span class="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-1.5"></span>${lang.mouseL}`;
+        document.getElementById('txt-mouse-r').innerHTML = `<span class="w-1.5 h-1.5 bg-blue-500 rounded-full mr-1.5"></span>${lang.mouseR}`;
+        document.getElementById('txt-mouse-w').innerHTML = `<span class="w-1.5 h-1.5 bg-white rounded-full mr-1.5"></span>${lang.mouseW}`;
+        displayStats(lastTimeSec, lastDistance);
+    }
+
+    function displayStats(timeSec, dist) {
+        lastTimeSec = timeSec; lastDistance = dist;
+        const lang = i18n[currentLang];
+        const mins = Math.floor(timeSec / 60);
+        const secs = Math.round(timeSec % 60);
+        document.getElementById('timeEst').innerText = `${mins} ${lang.unitMin} ${secs} ${lang.unitSec}`;
+        document.getElementById('distEst').innerText = dist.toFixed(2);
+    }
+
+    function initThree() {
+        const container = document.getElementById('preview-container');
+        scene = new THREE.Scene();
+        camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 10000);
+        renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        container.appendChild(renderer.domElement);
+        scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+        grid = new THREE.GridHelper(2000, 40, 0x10b981, 0x222222);
+        grid.rotation.x = Math.PI / 2;
+        scene.add(grid);
+        camera.position.set(200, -200, 200); camera.up.set(0, 0, 1); camera.lookAt(0, 0, 0);
+        
+        let isDragging = false, prevMouse = { x: 0, y: 0 };
+        container.addEventListener('mousedown', e => { isDragging = true; prevMouse = { x: e.clientX, y: e.clientY }; });
+        window.addEventListener('mouseup', () => isDragging = false);
+        container.addEventListener('mousemove', e => {
+            if (!isDragging) return;
+            const dx = e.clientX - prevMouse.x, dy = e.clientY - prevMouse.y;
+            if (e.buttons === 1) {
+                const off = new THREE.Vector3().subVectors(camera.position, new THREE.Vector3(0,0,0));
+                const r = off.length();
+                let phi = Math.atan2(off.y, off.x) - dx * 0.005, theta = Math.acos(off.z / r) - dy * 0.005;
+                theta = Math.max(0.01, Math.min(Math.PI - 0.01, theta));
+                camera.position.x = r * Math.sin(theta) * Math.cos(phi);
+                camera.position.y = r * Math.sin(theta) * Math.sin(phi);
+                camera.position.z = r * Math.cos(theta);
+            } else if (e.buttons === 2) {
+                camera.position.x -= dx * 0.1; camera.position.y += dy * 0.1;
+            }
+            camera.lookAt(0,0,0); prevMouse = { x: e.clientX, y: e.clientY };
+        });
+        container.addEventListener('wheel', e => {
+            if (e.deltaY > 0) camera.position.multiplyScalar(1.1); else camera.position.divideScalar(1.1);
+            camera.lookAt(0,0,0);
+        });
+        container.oncontextmenu = e => e.preventDefault();
+        animate();
+    }
+    function animate() { requestAnimationFrame(animate); renderer.render(scene, camera); }
+
+    function parseGcode(text) {
+        const lines = text.split('\n');
+        let currentPos = { x: 0, y: 0, z: 0, f: 1000 };
+        const pathData = [];
+        lines.forEach((line, index) => {
+            const cmd = line.trim().toUpperCase();
+            if (!cmd || cmd.startsWith('(') || cmd.startsWith(';')) return;
+            if (cmd.startsWith('G0') || cmd.startsWith('G1')) {
+                let nX = currentPos.x, nY = currentPos.y, nZ = currentPos.z, hM = false;
+                const parts = cmd.split(/[\s;]/);
+                parts.forEach(p => {
+                    if (p.startsWith('X')) { nX = parseFloat(p.substring(1)); hM = true; }
+                    if (p.startsWith('Y')) { nY = parseFloat(p.substring(1)); hM = true; }
+                    if (p.startsWith('Z')) { nZ = parseFloat(p.substring(1)); hM = true; }
+                    if (p.startsWith('F')) { currentPos.f = parseFloat(p.substring(1)); }
+                });
+                if (hM) {
+                    pathData.push({ from: {...currentPos}, to: {x: nX, y: nY, z: nZ}, f: currentPos.f, type: cmd.substring(0, 2), lineIdx: index });
+                    currentPos.x = nX; currentPos.y = nY; currentPos.z = nZ;
+                }
+            }
+        });
+        return pathData;
+    }
+
+    function processAndPreview() {
+        if (!originalGcode) return;
+        const scale = parseFloat(document.getElementById('scaleInput').value) || 1;
+        const offX = parseFloat(document.getElementById('offsetX').value) || 0;
+        const offY = parseFloat(document.getElementById('offsetY').value) || 0;
+        const rotRad = (parseFloat(document.getElementById('rotationInput').value) || 0) * Math.PI / 180;
+        const res = parseFloat(document.getElementById('resInput').value) || 0.1;
+
+        const pathData = parseGcode(originalGcode);
+        if (gcodeGroup) scene.remove(gcodeGroup);
+        gcodeGroup = new THREE.Group();
+        const mat = new THREE.LineBasicMaterial({ color: 0x10b981 });
+
+        let totalDist = 0, totalTime = 0, lastP = { x: 0, y: 0, z: 0 }, isF = true;
+
+        pathData.forEach((seg, idx) => {
+            const trans = (p) => ({
+                x: (p.x * Math.cos(rotRad) - p.y * Math.sin(rotRad)) * scale + offX,
+                y: (p.x * Math.sin(rotRad) + p.y * Math.cos(rotRad)) * scale + offY,
+                z: p.z
+            });
+
+            const p2 = trans(seg.to);
+            const dXY = Math.sqrt((p2.x - lastP.x)**2 + (p2.y - lastP.y)**2);
+            const zM = Math.abs(seg.to.z - lastP.z) > 0.0001;
+            const isLast = (idx === pathData.length - 1);
+
+            // 簡化判斷：若是 G1, XY位移過短, Z沒動, 且不是最後一個點
+            if (!isF && seg.type === 'G1' && dXY < res && !zM && !isLast) return;
+
+            const p1 = isF ? trans(seg.from) : { ...lastP };
+            const segD = Math.sqrt((p2.x - p1.x)**2 + (p2.y - p1.y)**2 + (p2.z - p1.z)**2);
+            totalDist += segD;
+            if (seg.f > 0) totalTime += segD / (seg.f / 60);
+
+            const geo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(p1.x, p1.y, p1.z), new THREE.Vector3(p2.x, p2.y, p2.z)]);
+            gcodeGroup.add(new THREE.Line(geo, mat));
+            lastP = { ...p2 }; isF = false;
+        });
+
+        displayStats(totalTime, totalDist);
+        scene.add(gcodeGroup);
+        document.getElementById('downloadBtn').disabled = false;
+    }
+
+    function generateGcode() {
+        const scale = parseFloat(document.getElementById('scaleInput').value) || 1;
+        const offX = parseFloat(document.getElementById('offsetX').value) || 0;
+        const offY = parseFloat(document.getElementById('offsetY').value) || 0;
+        const rotRad = (parseFloat(document.getElementById('rotationInput').value) || 0) * Math.PI / 180;
+        const res = parseFloat(document.getElementById('resInput').value) || 0.1;
+
+        let lastX = 0, lastY = 0, lastZ = 0, isF = true;
+        const lines = originalGcode.split('\n');
+        
+        // 預先找出移動指令的最後索引，確保最後一個移動點不被簡化
+        let lastMoveIdx = -1;
+        lines.forEach((l, i) => {
+            const up = l.trim().toUpperCase();
+            if (up.startsWith('G0') || up.startsWith('G1')) {
+                const xM = l.match(/X/i), yM = l.match(/Y/i), zM = l.match(/Z/i);
+                if (xM || yM || zM) lastMoveIdx = i;
+            }
+        });
+
+        const output = [];
+        lines.forEach((line, i) => {
+            let cmd = line.trim();
+            if (!cmd || cmd.startsWith('(') || cmd.startsWith(';')) { output.push(line); return; }
+
+            const up = cmd.toUpperCase();
+            if (up.startsWith('G0') || up.startsWith('G1')) {
+                const isG1 = up.startsWith('G1');
+                const xM = cmd.match(/X([-+]?[0-9]*\.?[0-9]+)/i);
+                const yM = cmd.match(/Y([-+]?[0-9]*\.?[0-9]+)/i);
+                const zM = cmd.match(/Z([-+]?[0-9]*\.?[0-9]+)/i);
+                const fM = cmd.match(/F([-+]?[0-9]*\.?[0-9]+)/i);
+
+                if (!xM && !yM && !zM && !fM) { output.push(line); return; }
+
+                let rX = xM ? parseFloat(xM[1]) : lastX;
+                let rY = yM ? parseFloat(yM[1]) : lastY;
+                let rZ = zM ? parseFloat(zM[1]) : lastZ;
+
+                let fX = (rX * Math.cos(rotRad) - rY * Math.sin(rotRad)) * scale + offX;
+                let fY = (rX * Math.sin(rotRad) + rY * Math.cos(rotRad)) * scale + offY;
+                let fZ = rZ;
+
+                const dXY = Math.sqrt((fX - lastX)**2 + (fY - lastY)**2);
+                const zChanged = zM !== null && Math.abs(rZ - lastZ) > 0.0001;
+                const fChanged = fM !== null;
+                const isLastMove = (i === lastMoveIdx);
+
+                // 簡化核心：若為 G1 且距離不足且非最後一點，且無 Z/F 變動，則忽略
+                if (!isF && isG1 && dXY < res && !zChanged && !fChanged && !isLastMove) return;
+
+                let nL = cmd;
+                if (xM) nL = nL.replace(/X([-+]?[0-9]*\.?[0-9]+)/i, `X${fX.toFixed(4)}`);
+                if (yM) nL = nL.replace(/Y([-+]?[0-9]*\.?[0-9]+)/i, `Y${fY.toFixed(4)}`);
+                if (zM) nL = nL.replace(/Z([-+]?[0-9]*\.?[0-9]+)/i, `Z${fZ.toFixed(4)}`);
+                if (fM) nL = nL.replace(/F([-+]?[0-9]*\.?[0-9]+)/i, `F${fM[1]}`);
+                
+                lastX = fX; lastY = fY; lastZ = fZ; isF = false;
+                output.push(nL);
+            } else {
+                output.push(line);
+            }
+        });
+        return output.join('\n');
+    }
+
+    document.getElementById('langBtn').addEventListener('click', () => { currentLang = currentLang === 'zh' ? 'en' : 'zh'; updateLanguage(); });
+    document.getElementById('fileInput').addEventListener('change', e => {
+        const file = e.target.files[0]; if (!file) return;
+        originalFileName = file.name.split('.').slice(0, -1).join('.');
+        document.getElementById('fileNameDisplay').innerText = file.name;
+        document.getElementById('fileInfo').classList.remove('hidden');
+        const r = new FileReader(); r.onload = ev => { originalGcode = ev.target.result; processAndPreview(); }; r.readAsText(file);
+    });
+    document.getElementById('applyBtn').addEventListener('click', processAndPreview);
+    document.getElementById('centerBtn').addEventListener('click', () => {
+        if (!originalGcode) return;
+        const p = parseGcode(originalGcode), s = parseFloat(document.getElementById('scaleInput').value) || 1;
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        p.forEach(seg => {
+            minX = Math.min(minX, seg.to.x, seg.from.x); maxX = Math.max(maxX, seg.to.x, seg.from.x);
+            minY = Math.min(minY, seg.to.y, seg.from.y); maxY = Math.max(maxY, seg.to.y, seg.from.y);
+        });
+        document.getElementById('offsetX').value = (-( (minX+maxX)/2 * s)).toFixed(2);
+        document.getElementById('offsetY').value = (-( (minY+maxY)/2 * s)).toFixed(2);
+        processAndPreview();
+    });
+    document.getElementById('downloadBtn').addEventListener('click', () => {
+        const b = new Blob([generateGcode()], { type: 'text/plain' });
+        const a = document.createElement('a'); a.href = URL.createObjectURL(b);
+        a.download = `${originalFileName}_optimized.gcode`; a.click();
+    });
+    window.addEventListener('resize', () => {
+        const c = document.getElementById('preview-container');
+        camera.aspect = c.clientWidth / c.clientHeight; camera.updateProjectionMatrix();
+        renderer.setSize(c.clientWidth, c.clientHeight);
+    });
+    window.onload = () => { initThree(); updateLanguage(); };
+</script>
+
+    <!-- PWA Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./service-worker.js')
+                    .then((reg) => console.log('Service Worker registered successfully with scope: ', reg.scope))
+                    .catch((err) => console.error('Service Worker registration failed: ', err));
+            });
+        }
+    </script>
+
+</body>
+</html>

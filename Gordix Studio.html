@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GORDIX STUDIO</title>
+    <style>
+        :root {
+            --primary-bg: #1a1a1a;
+            --header-bg: #121212;
+            --card-default: #2d2d2d;
+            --text-main: #eeeeee;
+            --text-sub: #888888;
+            
+            --color-table: #888888;
+            --color-cnc: #ff9800;
+            --color-laser: #2196f3;
+            --color-gcode: #4caf50;
+
+            --transition-speed: 0.2s;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--primary-bg);
+            color: var(--text-main);
+            line-height: 1.6;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            overflow-y: scroll; 
+        }
+
+        header {
+            background: var(--header-bg);
+            min-height: 180px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-bottom: 1px solid #333;
+            position: relative;
+        }
+
+        .lang-toggle {
+            position: absolute;
+            top: 1.5rem;
+            right: 1.5rem;
+        }
+
+        .btn-lang {
+            background: transparent;
+            border: 1px solid #444;
+            color: var(--text-sub);
+            padding: 0.5rem 1.2rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all var(--transition-speed);
+        }
+
+        .btn-lang:hover {
+            border-color: #888;
+            color: #fff;
+        }
+
+        .logo-text {
+            font-size: clamp(2rem, 8vw, 3.5rem);
+            font-weight: 900;
+            letter-spacing: 0.6rem;
+            color: #ffffff;
+            text-transform: uppercase;
+            user-select: none;
+        }
+
+        .main-container {
+            flex: 1;
+            max-width: 900px; /* 縮小容器寬度讓 2x2 看起來更精緻 */
+            margin: 0 auto;
+            padding: 3rem 1.5rem;
+            width: 100%;
+            display: flex;
+            align-items: center;
+        }
+
+        .tools-grid {
+            display: grid;
+            /* 強制設定為 2x2 佈局 */
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: auto auto;
+            gap: 1.5rem;
+            width: 100%;
+        }
+
+        .tool-card {
+            background: var(--card-default);
+            text-decoration: none;
+            color: inherit;
+            padding: 2.5rem 1.5rem;
+            border-radius: 12px;
+            text-align: center;
+            border: 1px solid #3d3d3d;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: background-color var(--transition-speed), border-color var(--transition-speed);
+            position: relative;
+        }
+
+        .card-table { --theme-color: var(--color-table); }
+        .card-cnc { --theme-color: var(--color-cnc); }
+        .card-laser { --theme-color: var(--color-laser); }
+        .card-gcode { --theme-color: var(--color-gcode); }
+
+        .tool-card:hover {
+            background: #333;
+            border-color: var(--theme-color);
+            outline: 1px solid var(--theme-color);
+        }
+
+        .icon-box {
+            width: 56px;
+            height: 56px;
+            background: #222;
+            border-radius: 10px;
+            margin-bottom: 1.25rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-sub);
+            transition: all var(--transition-speed);
+        }
+
+        .tool-card:hover .icon-box {
+            background: var(--theme-color);
+            color: #fff;
+        }
+
+        .tool-card h3 {
+            font-size: 1.15rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: #fff;
+        }
+
+        .tool-card p {
+            font-size: 0.85rem;
+            color: var(--text-sub);
+        }
+
+        footer {
+            padding: 2rem;
+            text-align: center;
+            font-size: 0.8rem;
+            color: #444;
+            background: var(--header-bg);
+            border-top: 1px solid #222;
+        }
+
+        .icon {
+            width: 26px;
+            height: 26px;
+            fill: currentColor;
+        }
+
+        /* 手機端自動改回單欄模式 */
+        @media (max-width: 768px) {
+            .tools-grid {
+                grid-template-columns: 1fr;
+            }
+            .main-container {
+                padding: 2rem 1.5rem;
+            }
+        }
+    </style>
+
+    <!-- PWA Meta Tags -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="icon-192.png">
+
+</head>
+<body>
+
+    <header>
+        <div class="lang-toggle">
+            <button class="btn-lang" onclick="toggleLanguage()">
+                <span id="lang-text">中文 / EN</span>
+            </button>
+        </div>
+        <div class="logo-text">GORDIX STUDIO</div>
+    </header>
+
+    <main class="main-container">
+        <div class="tools-grid">
+            <!-- Tool 1: 桌長配置 (灰色) -->
+            <a href="table_conf.html" class="tool-card card-table">
+                <div class="icon-box">
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>
+                </div>
+                <h3 data-zh="桌長參數配置產生器" data-en="Table Configurator">桌長配置產生器</h3>
+                <p data-zh="系統配置參數快速生成" data-en="Generate system config parameters">系統配置參數快速生成</p>
+            </a>
+
+            <!-- Tool 2: CNC (橘色) -->
+            <a href="CNC.html" class="tool-card card-cnc">
+                <div class="icon-box">
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 1.6 4.7C.4 7.1.9 10.1 2.9 12.1c1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1c.4.4 1 .4 1.4 0l2.3-2.3c.5-.4.5-1.1.1-1.4z"/></svg>
+                </div>
+                <h3 data-zh="轉檔工具 (切割)" data-en="Cut Converter">轉檔工具 (切割)</h3>
+                <p data-zh="CNC與雷射切割專用" data-en="Optimized for CNC and laser cutting">CNC與雷射切割專用</p>
+            </a>
+
+            <!-- Tool 3: 雷射/筆 (藍色) -->
+            <a href="Laser.html" class="tool-card card-laser">
+                <div class="icon-box">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <!-- 簡潔的雷射聚焦/目標圖標 -->
+                        <path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm0 6c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zM11 2v4h2V2h-2zm0 16v4h2v-4h-2zm11-7h-4v2h4v-2zM6 11H2v2h4v-2z"/>
+                    </svg>
+                </div>
+                <h3 data-zh="轉檔工具 (繪圖)" data-en="Draw Converter">轉檔工具 (繪圖)</h3>
+                <p data-zh="繪圖與雷射雕刻專用" data-en="Optimized for plotter and laser engraving">雷射雕刻與繪圖專用</p>
+            </a>
+
+            <!-- Tool 4: Gcode (綠色) -->
+            <a href="Gcodetrans.html" class="tool-card card-gcode">
+                <div class="icon-box">
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                </div>
+                <h3 data-zh="Gcode 即時調整" data-en="Gcode Real-time Adjuster">Gcode 即時調整</h3>
+                <p data-zh="即時編輯與校正 Gcode 內容" data-en="Live Gcode editing and correction">即時編輯與校正 Gcode 內容</p>
+            </a>
+        </div>
+    </main>
+
+    <footer>
+        <p>&copy; 2026 GORDIX || cubiio</p>
+    </footer>
+
+    <script>
+        let currentLang = 'zh';
+
+        function toggleLanguage() {
+            currentLang = currentLang === 'zh' ? 'en' : 'zh';
+            
+            const elements = document.querySelectorAll('[data-zh]');
+            elements.forEach(el => {
+                el.textContent = el.getAttribute(`data-${currentLang}`);
+            });
+
+            const btn = document.getElementById('lang-text');
+            btn.textContent = currentLang === 'zh' ? 'EN / 中' : '中 / EN';
+
+            localStorage.setItem('gordix-lang', currentLang);
+        }
+
+        window.onload = () => {
+            const savedLang = localStorage.getItem('gordix-lang');
+            if (savedLang && savedLang !== currentLang) {
+                toggleLanguage();
+            }
+        };
+    </script>
+
+    <!-- PWA Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./service-worker.js')
+                    .then((reg) => console.log('Service Worker registered successfully with scope: ', reg.scope))
+                    .catch((err) => console.error('Service Worker registration failed: ', err));
+            });
+        }
+    </script>
+
+</body>
+</html>

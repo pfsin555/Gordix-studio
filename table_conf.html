@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Table Configurator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background-color: #0f172a; /* 深藍底色 */
+            color: #f1f5f9;
+            overflow-x: hidden;
+        }
+        canvas {
+            border-radius: 8px;
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.5);
+            background-color: #1e293b; /* 畫布深藍灰背景 */
+            border: 1px solid #334155;
+            max-width: 100%;
+            height: auto;
+        }
+        .uniform-input {
+            width: 100%;
+            height: 32px;
+            outline: none;
+            text-align: center;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-weight: 700;
+            background: #0f172a;
+            color: #f8fafc;
+            font-size: 13px;
+            border: none;
+        }
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        .active-row {
+            background-color: #334155;
+            border-left: 4px solid #f8fafc;
+        }
+        .tag-label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            background-color: #94a3b8;
+            color: #0f172a;
+            font-size: 11px;
+            font-weight: 900;
+        }
+        .input-card {
+            border: 1px solid #475569;
+            border-radius: 6px;
+            overflow: hidden;
+            display: flex;
+            background: #1e293b;
+        }
+        /* 捲軸美化 */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #f8fafc;
+        }
+    </style>
+
+    <!-- PWA Meta Tags -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="icon-192.png">
+
+</head>
+<body class="p-2 md:p-8">
+    <div class="max-w-6xl mx-auto">
+        <header class="mb-4 md:mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="text-center md:text-left">
+                <h1 id="ui-title" class="text-2xl md:text-3xl font-bold text-white tracking-tight">桌長配置產生器</h1>
+            </div>
+            <button onclick="toggleLang()" class="w-full md:w-auto bg-slate-800 border border-slate-700 px-6 py-2 rounded-lg shadow hover:bg-slate-700 transition-colors font-bold text-slate-300">
+                中文 / EN
+            </button>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
+            <!-- 左側繪圖與數值輸入區 -->
+            <div class="lg:col-span-2 flex flex-col gap-4">
+                <div id="canvas-container" class="relative bg-slate-800 p-3 md:p-4 rounded-xl shadow-xl border border-slate-700 flex flex-col items-center justify-center overflow-hidden min-h-[300px]">
+                    <canvas id="tableCanvas"></canvas>
+                </div>
+                
+                <!-- 固定位置的輸入面板 -->
+                <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 shadow-lg">
+                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                        <div class="flex flex-col gap-1">
+                            <span id="label-n" class="text-[10px] text-slate-400 font-bold ml-1 uppercase">Side N (北)</span>
+                            <div class="input-card"><span class="tag-label">N</span><input type="number" id="valN" class="uniform-input" oninput="updateCurrentTableData()"></div>
+                        </div>
+                        <div class="flex flex-col gap-1">
+                            <span id="label-s" class="text-[10px] text-slate-400 font-bold ml-1 uppercase">Side S (南)</span>
+                            <div class="input-card"><span class="tag-label">S</span><input type="number" id="valS" class="uniform-input" oninput="updateCurrentTableData()"></div>
+                        </div>
+                        <div class="flex flex-col gap-1">
+                            <span id="label-w" class="text-[10px] text-slate-400 font-bold ml-1 uppercase">Side W (西)</span>
+                            <div class="input-card"><span class="tag-label">W</span><input type="number" id="valW" class="uniform-input" oninput="updateCurrentTableData()"></div>
+                        </div>
+                        <div class="flex flex-col gap-1">
+                            <span id="label-e" class="text-[10px] text-slate-400 font-bold ml-1 uppercase">Side E (東)</span>
+                            <div class="input-card"><span class="tag-label">E</span><input type="number" id="valE" class="uniform-input" oninput="updateCurrentTableData()"></div>
+                        </div>
+                        <div class="flex flex-col gap-1">
+                            <span id="label-d" class="text-[10px] text-slate-400 font-bold ml-1 uppercase">Diagonal D (對角)</span>
+                            <div class="input-card"><span class="tag-label bg-slate-500 text-white">D</span><input type="number" id="valD" class="uniform-input" oninput="updateCurrentTableData()"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4 mt-6 pt-4 border-t border-slate-700">
+                        <div>
+                            <label id="ui-scaleX" class="block text-[10px] md:text-xs font-bold text-slate-400 uppercase mb-1">Scale X</label>
+                            <input type="number" id="valX" step="0.0001" class="w-full bg-slate-900 border border-slate-700 p-2 rounded font-mono text-white outline-none focus:ring-2 focus:ring-slate-500" oninput="updateCurrentTableData()">
+                        </div>
+                        <div>
+                            <label id="ui-scaleY" class="block text-[10px] md:text-xs font-bold text-slate-400 uppercase mb-1">Scale Y</label>
+                            <input type="number" id="valY" step="0.0001" class="w-full bg-slate-900 border border-slate-700 p-2 rounded font-mono text-white outline-none focus:ring-2 focus:ring-slate-500" oninput="updateCurrentTableData()">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右側控制 -->
+            <div class="bg-slate-800 p-4 md:p-6 rounded-xl shadow-xl border border-slate-700 flex flex-col">
+                <h3 id="ui-list-title" class="text-lg font-bold mb-4 text-slate-200 flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-400" viewBox="0 0 20 20" fill="currentColor"><path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z"/></svg>
+                    TABLE 數據列表
+                </h3>
+                
+                <div class="flex-1 overflow-y-auto space-y-2 mb-6 max-h-[300px] lg:max-h-none" id="tableList"></div>
+
+                <div class="space-y-4">
+                    <div class="p-3 md:p-4 bg-slate-900/50 rounded-lg border border-slate-500/30">
+                        <p id="ui-range-label" class="font-bold text-xs text-slate-400 mb-2">加工範圍 (±X, ±Y) mm：</p>
+                        <div id="wa-info" class="text-center font-bold text-lg md:text-xl text-white bg-slate-900 p-3 rounded-lg shadow-inner border border-slate-700"></div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-2">
+                        <button onclick="document.getElementById('fileInput').click()" class="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 px-4 rounded-xl border border-slate-600 transition-all shadow-md flex items-center justify-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                            <span id="ui-upload-btn">上傳 table.cfg</span>
+                        </button>
+                        <input type="file" id="fileInput" class="hidden" accept=".cfg" onchange="handleFileUpload(event)">
+                        
+                        <button onclick="downloadAll()" class="w-full bg-slate-100 hover:bg-white text-slate-900 font-bold py-3 px-4 rounded-xl transition-all shadow-md flex items-center justify-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                            <span id="ui-download-btn">下載 table.cfg</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('tableCanvas');
+        const ctx = canvas.getContext('2d');
+        const container = document.getElementById('canvas-container');
+        
+        let currentLang = 'zh';
+        const i18n = {
+            zh: {
+                title: "桌長配置產生器",
+                scaleX: "比例 X",
+                scaleY: "比例 Y",
+                listTitle: "TABLE 數據列表",
+                rangeLabel: "加工範圍 (±X, ±Y) mm：",
+                download: "下載 table.cfg",
+                upload: "上傳 table.cfg",
+                table: "表格",
+                sideN: "側邊N",
+                sideS: "側邊S",
+                sideW: "側邊W",
+                sideE: "側邊E",
+                sideD: "對角D"
+            },
+            en: {
+                title: "Table Configurator",
+                scaleX: "Scale X",
+                scaleY: "Scale Y",
+                listTitle: "TABLE Data List",
+                rangeLabel: "Working range (±X, ±Y) mm:",
+                download: "Download table.cfg",
+                upload: "Upload table.cfg",
+                table: "Table",
+                sideN: "Side N",
+                sideS: "Side S",
+                sideW: "Side W",
+                sideE: "Side E",
+                sideD: "Diagonal D"
+            }
+        };
+
+        let allTables = {
+            1: { E: 1460, S: 2560, W: 1460, N: 2560, D: 2947, X: 1.000, Y: 1.000 },
+            2: { E: 1460, S: 1340, W: 1460, N: 1340, D: 1982, X: 1.000, Y: 1.000 },
+            3: { E: 1440, S: 1320, W: 1440, N: 1320, D: 1953, X: 1.000, Y: 1.000 },
+            4: { E: 840, S: 1320, W: 840, N: 1320, D: 1565, X: 1.000, Y: 1.000 },
+            5: { E: 840, S: 720, W: 840, N: 720, D: 1106, X: 1.000, Y: 1.000 }
+        };
+
+        let currentTableId = 1;
+
+        function toggleLang() {
+            currentLang = currentLang === 'zh' ? 'en' : 'zh';
+            updateUI();
+        }
+
+        function updateUI() {
+            const t = i18n[currentLang];
+            document.getElementById('ui-title').innerText = t.title;
+            document.getElementById('ui-scaleX').innerText = t.scaleX;
+            document.getElementById('ui-scaleY').innerText = t.scaleY;
+            document.getElementById('ui-range-label').innerText = t.rangeLabel;
+            document.getElementById('ui-list-title').innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-400" viewBox="0 0 20 20" fill="currentColor"><path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z"/></svg> ${t.listTitle}`;
+            document.getElementById('ui-download-btn').innerText = t.download;
+            document.getElementById('ui-upload-btn').innerText = t.upload;
+            
+            // 更新輸入面板標籤
+            document.getElementById('label-n').innerText = t.sideN;
+            document.getElementById('label-s').innerText = t.sideS;
+            document.getElementById('label-w').innerText = t.sideW;
+            document.getElementById('label-e').innerText = t.sideE;
+            document.getElementById('label-d').innerText = t.sideD;
+
+            renderTableList();
+        }
+
+        function renderTableList() {
+            const list = document.getElementById('tableList');
+            const t = i18n[currentLang];
+            list.innerHTML = '';
+            for (let i = 1; i <= 5; i++) {
+                const item = document.createElement('div');
+                item.className = `p-3 rounded-lg border border-slate-700 cursor-pointer transition-all ${currentTableId == i ? 'active-row shadow-lg' : 'bg-slate-900/40 hover:bg-slate-700/50'}`;
+                item.onclick = () => switchTable(i);
+                item.innerHTML = `
+                    <div class="flex justify-between items-center">
+                        <span class="font-bold ${currentTableId == i ? 'text-white' : 'text-slate-400'}">${t.table} ${i}</span>
+                        <div class="text-right">
+                             <div class="text-[10px] font-mono text-slate-500">S: ${allTables[i].S} W: ${allTables[i].W}</div>
+                             <div class="text-[10px] font-mono text-slate-500">D: ${allTables[i].D}</div>
+                        </div>
+                    </div>
+                `;
+                list.appendChild(item);
+            }
+        }
+
+        function switchTable(id) {
+            currentTableId = id;
+            const data = allTables[id];
+            document.getElementById('valN').value = data.N;
+            document.getElementById('valS').value = data.S;
+            document.getElementById('valW').value = data.W;
+            document.getElementById('valE').value = data.E;
+            document.getElementById('valD').value = data.D;
+            document.getElementById('valX').value = data.X;
+            document.getElementById('valY').value = data.Y;
+            renderTableList();
+            draw();
+        }
+
+        function updateCurrentTableData() {
+            allTables[currentTableId] = {
+                N: parseFloat(document.getElementById('valN').value) || 0,
+                S: parseFloat(document.getElementById('valS').value) || 0,
+                W: parseFloat(document.getElementById('valW').value) || 0,
+                E: parseFloat(document.getElementById('valE').value) || 0,
+                D: parseFloat(document.getElementById('valD').value) || 0,
+                X: parseFloat(document.getElementById('valX').value) || 0,
+                Y: parseFloat(document.getElementById('valY').value) || 0
+            };
+            renderTableList();
+            draw();
+        }
+
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const lines = e.target.result.split(/\r?\n/);
+                const regex = /TABLE(\d)([ESWNDXY])\s+([\d.]+)/;
+                lines.forEach(line => {
+                    const match = line.trim().match(regex);
+                    if (match) {
+                        const id = parseInt(match[1]);
+                        const key = match[2];
+                        const val = parseFloat(match[3]);
+                        if (allTables[id]) allTables[id][key] = val;
+                    }
+                });
+                switchTable(currentTableId);
+                event.target.value = ''; 
+            };
+            reader.readAsText(file);
+        }
+
+        function draw() {
+            const containerWidth = container.clientWidth;
+            const baseWidth = 750;
+            const baseHeight = 500;
+            const ratio = baseHeight / baseWidth;
+            
+            canvas.width = containerWidth;
+            canvas.height = containerWidth * ratio;
+
+            const w = canvas.width;
+            const h = canvas.height;
+            const d = allTables[currentTableId];
+
+            const maxVal = Math.max(d.S, d.N, d.W, d.E, d.D);
+            const scale = (w * 0.8) / (maxVal || 1); 
+
+            let cosTheta = (Math.pow(d.W, 2) + Math.pow(d.S, 2) - Math.pow(d.D, 2)) / (2 * d.W * d.S || 1);
+            cosTheta = Math.max(-1, Math.min(1, cosTheta)); 
+            const theta = Math.acos(cosTheta);
+
+            const pBL = { x: 0, y: 0 };
+            const pBR = { x: d.S * scale, y: 0 };
+            const pTL = { 
+                x: d.W * scale * Math.cos(theta), 
+                y: -d.W * scale * Math.sin(theta) 
+            };
+
+            const dx = pBR.x - pTL.x;
+            const dy = pBR.y - pTL.y;
+            const angleD = Math.atan2(dy, dx);
+
+            let cosPhi = (Math.pow(d.N, 2) + Math.pow(d.D, 2) - Math.pow(d.E, 2)) / (2 * d.N * d.D || 1);
+            cosPhi = Math.max(-1, Math.min(1, cosPhi));
+            const phi = Math.acos(cosPhi);
+
+            const pTR = {
+                x: pTL.x + d.N * scale * Math.cos(angleD - phi),
+                y: pTL.y + d.N * scale * Math.sin(angleD - phi)
+            };
+
+            const minX = Math.min(pBL.x, pBR.x, pTL.x, pTR.x);
+            const maxX = Math.max(pBL.x, pBR.x, pTL.x, pTR.x);
+            const minY = Math.min(pBL.y, pBR.y, pTL.y, pTR.y);
+            const maxY = Math.max(pBL.y, pBR.y, pTL.y, pTR.y);
+
+            const offsetX = (w - (maxX - minX)) / 2 - minX;
+            const offsetY = (h - (maxY - minY)) / 2 - minY;
+
+            const pts = {
+                BL: { x: pBL.x + offsetX, y: pBL.y + offsetY },
+                BR: { x: pBR.x + offsetX, y: pBR.y + offsetY },
+                TL: { x: pTL.x + offsetX, y: pTL.y + offsetY },
+                TR: { x: pTR.x + offsetX, y: pTR.y + offsetY }
+            };
+
+            const centerX = (pts.TL.x + pts.BR.x) / 2;
+            const centerY = (pts.TL.y + pts.BR.y) / 2;
+
+            ctx.clearRect(0, 0, w, h);
+
+            // 繪製桌面背景
+            ctx.fillStyle = '#1e293b';
+            ctx.beginPath();
+            ctx.moveTo(pts.TL.x, pts.TL.y); 
+            ctx.lineTo(pts.TR.x, pts.TR.y);
+            ctx.lineTo(pts.BR.x, pts.BR.y); 
+            ctx.lineTo(pts.BL.x, pts.BL.y);
+            ctx.closePath(); 
+            ctx.fill();
+            ctx.strokeStyle = '#334155'; ctx.lineWidth = 2; ctx.stroke();
+
+            // 加工範圍計算
+            const tan15 = Math.tan(15 * Math.PI / 180);
+            let xVal = 100 + (d.S / 2) - ((d.W - 240) / 2 * tan15);
+            let yVal = 100 + (d.W / 2) - ((d.S - 240) / 2 * tan15);
+            const xMax = d.S / 2 - 200;
+            const yMax = d.W / 2 - 200;
+            const xDisp = Math.round(xVal > xMax ? xMax : xVal);
+            const yDisp = Math.round(yVal > yMax ? yMax : yVal);
+
+            const pxLeft  = -xDisp * scale;
+            const pxRight = xDisp * scale;
+            const pxUp    = yDisp * scale;
+            const pxDown  = -yDisp * scale;
+
+            ctx.save();
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.rect(centerX + pxLeft, centerY - pxUp, pxRight - pxLeft, pxUp - pxDown);
+            ctx.fill();
+            ctx.stroke();
+            ctx.restore();
+
+            document.getElementById('wa-info').innerText = `(±${xDisp}, ±${yDisp})`;
+
+            // 繪製線條
+            ctx.save();
+            ctx.setLineDash([8, 6]);
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+            ctx.lineWidth = Math.max(1.5, 2 * (w / baseWidth));
+            line(pts.TL.x, pts.TL.y, pts.TR.x, pts.TR.y); // N
+            line(pts.BL.x, pts.BL.y, pts.BR.x, pts.BR.y); // S
+            line(pts.TL.x, pts.TL.y, pts.BL.x, pts.BL.y); // W
+            line(pts.TR.x, pts.TR.y, pts.BR.x, pts.BR.y); // E
+            ctx.strokeStyle = 'rgba(148, 163, 184, 0.5)';
+            line(pts.TL.x, pts.TL.y, pts.BR.x, pts.BR.y); // D
+            ctx.restore();
+
+            // 繪製標註文字 (標示 N/S/W/E/D)
+            ctx.fillStyle = "#FFFFFF";
+            ctx.font = "bold 12px sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText("N", (pts.TL.x + pts.TR.x) / 2, (pts.TL.y + pts.TR.y) / 2 - 10);
+            ctx.fillText("S", (pts.BL.x + pts.BR.x) / 2, (pts.BL.y + pts.BR.y) / 2 + 20);
+            ctx.fillText("W", (pts.TL.x + pts.BL.x) / 2 - 15, (pts.TL.y + pts.BL.y) / 2);
+            ctx.fillText("E", (pts.TR.x + pts.BR.x) / 2 + 15, (pts.TR.y + pts.BR.y) / 2);
+     
+            
+            // 對角線 D 的標籤
+            ctx.save();
+            ctx.fillStyle = "#FFFFFF"; 
+            ctx.fillText("D", (pts.TL.x + pts.BR.x) / 2 - 30, (pts.TL.y + pts.BR.y) / 2 - 30);
+            ctx.restore();
+
+            drawCorner(pts.TL.x, pts.TL.y, 0, w/baseWidth);
+            drawCorner(pts.TR.x, pts.TR.y, Math.PI / 2, w/baseWidth);
+            drawCorner(pts.BR.x, pts.BR.y, Math.PI, w/baseWidth);
+            drawCorner(pts.BL.x, pts.BL.y, -Math.PI / 2, w/baseWidth);
+
+            ctx.fillStyle = '#f8fafc';
+            Object.values(pts).forEach(p => {
+                ctx.beginPath(); ctx.arc(p.x, p.y, 4 * (w/baseWidth), 0, Math.PI * 2); ctx.fill();
+            });
+
+            drawMachine(centerX, centerY, w/baseWidth);
+        }
+
+        function drawMachine(cx, cy, s) {
+            ctx.save();
+            ctx.translate(cx, cy); ctx.scale(s, s);
+            ctx.fillStyle = '#000000';
+            ctx.rotate(Math.PI / 4);
+            ctx.fillRect(-33, -10, 66, 20); ctx.fillRect(-10, -33, 20, 66);
+            ctx.rotate(-Math.PI / 4);
+            ctx.fillRect(-7,-10,14,-15);
+            ctx.strokeStyle = '#ea580c'; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.arc(0, 0, 7, 0, Math.PI * 2); ctx.stroke();
+            ctx.fillStyle = '#cbd5e1';
+            ctx.beginPath(); ctx.arc(0, 15, 5, 0, Math.PI * 2); ctx.fill();
+            ctx.restore();
+        }
+
+        function line(x1, y1, x2, y2) {
+            ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+        }
+
+        function drawCorner(x, y, rot, s) {
+            ctx.save();
+            ctx.translate(x, y); ctx.rotate(rot); ctx.scale(s, s);
+            ctx.fillStyle = '#475569';
+            ctx.beginPath(); 
+            ctx.moveTo(0,0); ctx.lineTo(15,0); ctx.lineTo(15,5); ctx.lineTo(5,15); ctx.lineTo(0,15); 
+            ctx.closePath(); ctx.fill(); 
+            ctx.restore();
+        }
+
+        function downloadAll() {
+            let out = "";
+            for (let i = 1; i <= 5; i++) {
+                const d = allTables[i];
+                out += `TABLE${i}E ${d.E}\nTABLE${i}S ${d.S}\nTABLE${i}W ${d.W}\nTABLE${i}N ${d.N}\nTABLE${i}D ${d.D}\nTABLE${i}X ${d.X.toFixed(4)}\nTABLE${i}Y ${d.Y.toFixed(4)}\n\n`;
+            }
+            const blob = new Blob([out], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = 'table.cfg'; a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        window.addEventListener('resize', draw);
+        window.onload = () => { updateUI(); switchTable(1); };
+    </script>
+
+    <!-- PWA Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./service-worker.js')
+                    .then((reg) => console.log('Service Worker registered successfully with scope: ', reg.scope))
+                    .catch((err) => console.error('Service Worker registration failed: ', err));
+            });
+        }
+    </script>
+
+</body>
+</html>
