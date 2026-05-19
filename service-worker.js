@@ -2,7 +2,7 @@ const CACHE_NAME = 'gordix-studio-v1';
 const ASSETS = [
   './index.html',
   './CNC.html',
-  './LASER.html',
+  './draw.html',
   './Gcodetrans.html',
   './table_conf.html',
   './manifest.json',
