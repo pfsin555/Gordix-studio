@@ -71,14 +71,6 @@
             background: #3b82f6;
         }
     </style>
-
-    <!-- PWA Meta Tags -->
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#0f172a">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="apple-touch-icon" href="icon-192.png">
-
 </head>
 <body class="bg-slate-950 min-h-screen p-4 md:p-8 text-slate-200 font-sans">
     <div class="max-w-7xl mx-auto bg-slate-900 rounded-2xl shadow-2xl overflow-hidden border border-slate-800">
@@ -235,7 +227,6 @@
     </div>
 
     <script>
-        // --- I18N Data ---
         const i18n = {
             zh: {
                 title: "轉檔工具 (繪圖)",
@@ -304,6 +295,21 @@
         };
 
         let currentLang = 'zh';
+
+        // --- Viewport Control State ---
+        const zoomWrapper = document.getElementById('zoom-wrapper');
+        const container = document.getElementById('container');
+        
+        let state = {
+            scale: 1.0,
+            translateX: 0,
+            translateY: 0,
+            isDragging: false,
+            lastMouseX: 0,
+            lastMouseY: 0,
+            evCache: [], 
+            prevDiff: -1 
+        };
 
         function updateUI() {
             const data = i18n[currentLang];
@@ -410,6 +416,110 @@
 
         btnFormatGcode.onclick = () => { outputMode = "gcode"; updateOutputFormatUI(); };
         btnFormatSvg.onclick = () => { outputMode = "svg"; updateOutputFormatUI(); };
+
+        function updateTransform() {
+            zoomWrapper.style.transform = `translate(${state.translateX}px, ${state.translateY}px) scale(${state.scale})`;
+        }
+
+        function resetView() {
+            if (!originalImage) return;
+            const rect = container.getBoundingClientRect();
+            const contentW = previewCanvas.width;
+            const contentH = previewCanvas.height;
+            
+            const padding = 100;
+            const scaleW = (rect.width - padding) / contentW;
+            const scaleH = (rect.height - padding) / contentH;
+            state.scale = Math.min(scaleW, scaleH, 1.0);
+            
+            state.translateX = (rect.width - contentW * state.scale) / 2;
+            state.translateY = (rect.height - contentH * state.scale) / 2;
+            
+            updateTransform();
+        }
+
+        container.addEventListener('wheel', (e) => {
+            if (!originalImage) return;
+            e.preventDefault();
+            const delta = -e.deltaY;
+            const factor = Math.pow(1.1, delta / 100);
+            const newScale = Math.max(0.05, Math.min(state.scale * factor, 20));
+            
+            const rect = container.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            state.translateX = mouseX - (mouseX - state.translateX) * (newScale / state.scale);
+            state.translateY = mouseY - (mouseY - state.translateY) * (newScale / state.scale);
+            state.scale = newScale;
+            updateTransform();
+        }, { passive: false });
+
+        container.addEventListener('pointerdown', (e) => {
+            if (!originalImage) return;
+            state.evCache.push(e);
+            if (state.evCache.length === 1) {
+                state.isDragging = true;
+                state.lastMouseX = e.clientX;
+                state.lastMouseY = e.clientY;
+            }
+            container.setPointerCapture(e.pointerId);
+        });
+
+        window.addEventListener('pointermove', (e) => {
+            if (!originalImage) return;
+            const index = state.evCache.findIndex((ev) => ev.pointerId === e.pointerId);
+            if (index > -1) state.evCache[index] = e;
+
+            if (state.evCache.length === 2) {
+                state.isDragging = false;
+                const centerX = (state.evCache[0].clientX + state.evCache[1].clientX) / 2;
+                const centerY = (state.evCache[0].clientY + state.evCache[1].clientY) / 2;
+                const rect = container.getBoundingClientRect();
+                const viewCenterX = centerX - rect.left;
+                const viewCenterY = centerY - rect.top;
+
+                const curDiff = Math.hypot(
+                    state.evCache[0].clientX - state.evCache[1].clientX,
+                    state.evCache[0].clientY - state.evCache[1].clientY
+                );
+
+                if (state.prevDiff > 0) {
+                    const factor = curDiff / state.prevDiff;
+                    const newScale = Math.max(0.05, Math.min(state.scale * factor, 20));
+                    state.translateX = viewCenterX - (viewCenterX - state.translateX) * (newScale / state.scale);
+                    state.translateY = viewCenterY - (viewCenterY - state.translateY) * (newScale / state.scale);
+                    state.scale = newScale;
+                    updateTransform();
+                }
+                state.prevDiff = curDiff;
+            } 
+            else if (state.isDragging && state.evCache.length === 1) {
+                const dx = e.clientX - state.lastMouseX;
+                const dy = e.clientY - state.lastMouseY;
+                state.translateX += dx;
+                state.translateY += dy;
+                state.lastMouseX = e.clientX;
+                state.lastMouseY = e.clientY;
+                updateTransform();
+            }
+        });
+
+        const handlePointerUp = (e) => {
+            const index = state.evCache.findIndex((ev) => ev.pointerId === e.pointerId);
+            if (index > -1) state.evCache.splice(index, 1);
+            if (state.evCache.length < 2) state.prevDiff = -1;
+            if (state.evCache.length === 0) {
+                state.isDragging = false;
+            } else if (state.evCache.length === 1) {
+                state.isDragging = true;
+                state.lastMouseX = state.evCache[0].clientX;
+                state.lastMouseY = state.evCache[0].clientY;
+            }
+        };
+
+        window.addEventListener('pointerup', handlePointerUp);
+        window.addEventListener('pointercancel', handlePointerUp);
 
         function updateOutputFormatUI() {
             const isGcode = outputMode === "gcode";
@@ -796,7 +906,7 @@
             const midX = (minX + maxX)/2, midY = (minY + maxY)/2;
             const tx = x => (x - midX).toFixed(3), ty = y => (midY - y).toFixed(3);
 
-            let g = [`MODE: ${fillEnable.checked ? "FILL" : "OUTLINE"}`, `G21`, `G90`, `F${feed}`, `M05` ];
+            let g = [`G21`, `G90`, `G1 F${feed}`];
             let tps = [];
             finalFillLines.forEach(l => tps.push({ pts: l, isClosed: false }));
             finalContours.forEach(p => tps.push({ pts: p, isClosed: true }));
@@ -855,117 +965,13 @@
             a.click();
         };
 
-        // Init
-        updateUI();
-
-        const zoomWrapper = document.getElementById('zoom-wrapper');
-        const container = document.getElementById('container');
-        
-        let state = {
-            scale: 1.0,
-            translateX: 0,
-            translateY: 0,
-            isDragging: false,
-            lastMouseX: 0,
-            lastMouseY: 0
-        };
-
-        // 更新變換樣式
-        function updateTransform() {
-            zoomWrapper.style.transform = `translate(${state.translateX}px, ${state.translateY}px) scale(${state.scale})`;
-        }
-
-        // 初始化位置（居中）
-        function resetView() {
-            if (!originalImage) return;
-            const rect = container.getBoundingClientRect();
-            const contentW = previewCanvas.width;
-            const contentH = previewCanvas.height;
-            
-            // 計算初始比例以適應容器
-            const padding = 100;
-            const scaleW = (rect.width - padding) / contentW;
-            const scaleH = (rect.height - padding) / contentH;
-            state.scale = Math.min(scaleW, scaleH, 1.0);
-            
-            // 居中計算
-            state.translateX = contentW * state.scale/2;
-            state.translateY = contentH * state.scale/2;
-            
-            updateTransform();
-        }
-
-        // 監聽滾輪縮放
-        container.addEventListener('wheel', (e) => {
-            if (!originalImage) return;
-            e.preventDefault();
-
-            const zoomSpeed = 0.0015;
-            const delta = -e.deltaY;
-            const factor = Math.pow(1.1, delta / 100); // 平滑縮放倍率
-            
-            const newScale = Math.max(0.05, Math.min(state.scale * factor, 20));
-            
-            // 以滑鼠位置為中心縮放
-            const rect = container.getBoundingClientRect();
-            const mouseX = e.clientX - rect.left;
-            const mouseY = e.clientY - rect.top;
-
-            // 計算縮放偏移補償
-            state.translateX = mouseX - (mouseX - state.translateX) * (newScale / state.scale);
-            state.translateY = mouseY - (mouseY - state.translateY) * (newScale / state.scale);
-            state.scale = newScale;
-
-            updateTransform();
-        }, { passive: false });
-
-        // 監聽拖拽平移
-        container.addEventListener('pointerdown', (e) => {
-            if (!originalImage) return;
-            state.isDragging = true;
-            state.lastMouseX = e.clientX;
-            state.lastMouseY = e.clientY;
-            container.setPointerCapture(e.pointerId);
-        });
-
-        window.addEventListener('pointermove', (e) => {
-            if (!state.isDragging) return;
-            
-            const dx = e.clientX - state.lastMouseX;
-            const dy = e.clientY - state.lastMouseY;
-            
-            state.translateX += dx;
-            state.translateY += dy;
-            
-            state.lastMouseX = e.clientX;
-            state.lastMouseY = e.clientY;
-            
-            updateTransform();
-        });
-
-        window.addEventListener('pointerup', (e) => {
-            state.isDragging = false;
-        });
-
-        // 修改原有的圖片載入邏輯，在載入後重置視角
-        const originalFileHandler = fileInput.onchange; // 暫存舊邏輯（非標準用法，此處示範邏輯流程）
-        
-        // 修改原本的讀取完成回呼以執行 resetView
-        // 在 fileInput 的 'change' 事件監聽器內，Image.onload 或 SVG 讀取完成後加入 resetView()
-        // 為了確保完整性，我會在 processImage 執行後也確保視角正確
-        const originalProcess = processBtn.onclick;
-        processBtn.onclick = async () => {
-            await processImage();
-            // 如果是第一次處理或需要重置
-            // resetView(); 
-        };
-
-        // 監聽畫布大小變化（例如初次載入圖片時）
         const resizeObserver = new ResizeObserver(() => {
-            if (originalImage && state.scale === 1.0) resetView();
+            if (originalImage) resetView();
         });
         resizeObserver.observe(previewCanvas);
 
+        // 初始化語系 UI
+        updateUI();
     </script>
 
     <!-- PWA Service Worker Registration -->
