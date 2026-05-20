@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Draw Converter V0.4</title>
+    <title>Draw Converter V0.5</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .canvas-container {
@@ -78,6 +78,8 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" href="icon-192.png">
+
+
     
 </head>
 <body class="bg-slate-950 min-h-screen p-4 md:p-8 text-slate-200 font-sans">
@@ -92,13 +94,25 @@
                     <span>中文/EN</span>
                 </button>
                 <div id="loading-spinner" class="hidden animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
-                <span class="text-[10px] bg-white/10 px-3 py-1 rounded-full border border-white/20 font-mono">V0.4</span>
+                <span class="text-[10px] bg-white/10 px-3 py-1 rounded-full border border-white/20 font-mono">V0.5</span>
             </div>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-4">
             <!-- Sidebar -->
             <div class="p-6 border-r border-slate-800 bg-slate-900/40 space-y-6 overflow-y-auto max-h-[85vh]">
+                <section class="p-4 bg-blue-900/20 rounded-xl border border-blue-500/20">
+                    <div class="flex justify-between items-center mb-2">
+                        <label id="i18n-label-pen-diam" class="block text-[10px] font-black text-blue-400 none tracking-widest">工具直徑 (D_PEN)</label>
+                        <span id="tool-type-badge" class="text-[9px] px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 font-bold uppercase">Laser</span>
+                    </div>
+                    <div class="relative flex items-center">
+                        <input type="number" id="pen-diameter" value="0" min="0" max="13" step="0.1" class="w-full bg-slate-800 border border-slate-700 p-2 rounded text-white focus:ring-2 focus:ring-blue-500 outline-none text-sm font-mono">
+                        <span class="absolute right-3 text-[10px] text-slate-500">mm</span>
+                    </div>
+                    <div id="offset-preview" class="mt-2 text-[9px] font-mono text-slate-500 italic">Y-Offset: -12.60mm</div>
+                </section>
+
                 <section>
                     <label id="i18n-label-source" class="block text-[10px] font-black text-slate-500 none tracking-widest mb-2">1. 圖片來源</label>
                     <div class="flex items-center gap-3">
@@ -238,6 +252,9 @@
         const i18n = {
             zh: {
                 title: "轉檔工具 (繪圖)",
+                labelPenDiam: "筆直徑",
+                toolLaser: "雷射雕刻",
+                toolPen: "筆",
                 labelSource: "1. 圖片來源",
                 btnBrowse: "選擇檔案",
                 labelWidth: "輸出寬度 (mm)",
@@ -270,6 +287,9 @@
             },
             en: {
                 title: "Draw Converter",
+                labelPenDiam: "Pen Diameter",
+                toolLaser: "Laser engraving",
+                toolPen: "Pen",
                 labelSource: "1. Image Source",
                 btnBrowse: "Browse File",
                 labelWidth: "Output Width (mm)",
@@ -304,24 +324,14 @@
 
         let currentLang = 'zh';
 
-        // --- Viewport Control State ---
-        const zoomWrapper = document.getElementById('zoom-wrapper');
-        const container = document.getElementById('container');
-        
-        let state = {
-            scale: 1.0,
-            translateX: 0,
-            translateY: 0,
-            isDragging: false,
-            lastMouseX: 0,
-            lastMouseY: 0,
-            evCache: [], 
-            prevDiff: -1 
-        };
+        const penDiamInput = document.getElementById('pen-diameter');
+        const toolBadge = document.getElementById('tool-type-badge');
+        const offsetPreview = document.getElementById('offset-preview');
 
         function updateUI() {
             const data = i18n[currentLang];
             document.getElementById('i18n-title').innerText = data.title;
+            document.getElementById('i18n-label-pen-diam').innerText = data.labelPenDiam;
             document.getElementById('i18n-label-source').innerText = data.labelSource;
             document.getElementById('i18n-btn-browse').innerText = data.btnBrowse;
             document.getElementById('i18n-label-width').innerText = data.labelWidth;
@@ -355,7 +365,29 @@
                 updateStats(previewCanvas.width, previewCanvas.height);
             }
             smoothText.innerText = data.smoothLabels[smoothSlider.value];
+            updateToolTypeUI();
         }
+
+        function updateToolTypeUI() {
+            const d = parseFloat(penDiamInput.value) || 0;
+            const offset = (d === 0) ? 0 : (d / 2) - 12.6;
+            const data = i18n[currentLang];
+            
+            if (d === 0) {
+                toolBadge.innerText = data.toolLaser;
+                toolBadge.className = "text-[9px] px-2 py-0.5 rounded bg-red-500/20 text-red-400 font-bold uppercase";
+            } else {
+                toolBadge.innerText = data.toolPen;
+                toolBadge.className = "text-[9px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold uppercase";
+            }
+            offsetPreview.innerText = `Y-Offset: ${offset.toFixed(2)}mm`;
+        }
+
+        penDiamInput.oninput = () => {
+            if(penDiamInput.value > 13) penDiamInput.value = 13;
+            if(penDiamInput.value < 0) penDiamInput.value = 0;
+            updateToolTypeUI();
+        };
 
         // 單一按鈕語系切換邏輯
         document.getElementById('lang-toggle').onclick = () => {
@@ -364,6 +396,19 @@
         };
 
         // --- Core Logic ---
+        const state = {
+            scale: 1,
+            translateX: 0,
+            translateY: 0,
+            isDragging: false,
+            lastMouseX: 0,
+            lastMouseY: 0,
+            evCache: [],
+            prevDiff: -1
+        };
+
+        const container = document.getElementById('container');
+        const zoomWrapper = document.getElementById('zoom-wrapper');
         const fileInput = document.getElementById('file-input');
         const fileNameDisplay = document.getElementById('file-name-display');
         const processBtn = document.getElementById('process-btn');
@@ -908,34 +953,87 @@
         function generateGcode() {
             const mmW = parseFloat(widthInput.value), scale = mmW / previewCanvas.width;
             const feed = feedInput.value;
+            
+            const dPen = parseFloat(penDiamInput.value) || 0;
+            const yOffset = (dPen === 0) ? 0 : (dPen / 2) - 12.6;
+
+            // 計算邊界以便置中 (與預覽一致)
             let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-            const up = p => { minX = Math.min(minX, p.x*scale); maxX = Math.max(maxX, p.x*scale); minY = Math.min(minY, p.y*scale); maxY = Math.max(maxY, p.y*scale); };
-            finalContours.forEach(p => p.forEach(up)); finalFillLines.forEach(l => l.forEach(up));
-            const midX = (minX + maxX)/2, midY = (minY + maxY)/2;
-            const tx = x => (x - midX).toFixed(3), ty = y => (midY - y).toFixed(3);
+            const updateBounds = p => { 
+                minX = Math.min(minX, p.x * scale); maxX = Math.max(maxX, p.x * scale); 
+                minY = Math.min(minY, p.y * scale); maxY = Math.max(maxY, p.y * scale); 
+            };
+            finalContours.forEach(path => path.forEach(updateBounds));
+            finalFillLines.forEach(line => line.forEach(updateBounds));
+            
+            const midX = (minX + maxX) / 2, midY = (minY + maxY) / 2;
 
-            let g = [`G21`, `G90`, `G1 F${feed}`];
-            let tps = [];
-            finalFillLines.forEach(l => tps.push({ pts: l, isClosed: false }));
-            finalContours.forEach(p => tps.push({ pts: p, isClosed: true }));
+            // 坐標轉換：將中心移至 (0,0)，並套用 Y 軸偏移
+            const tx = x => (x - midX).toFixed(3);
+            const ty = y => (midY - (y * scale) + yOffset).toFixed(3); 
 
-            let cx = 0, cy = 0;
-            while(tps.length) {
-                let bi = -1, md = Infinity, rev = false;
-                for(let i=0; i<tps.length; i++){
-                    let p = tps[i].pts, d1 = Math.pow(tx(p[0].x*scale)-cx, 2) + Math.pow(ty(p[0].y*scale)-cy, 2);
-                    if(d1 < md) { md = d1; bi = i; rev = false; }
-                    if(!tps[i].isClosed) {
-                        let d2 = Math.pow(tx(p[p.length-1].x*scale)-cx, 2) + Math.pow(ty(p[p.length-1].y*scale)-cy, 2);
-                        if(d2 < md) { md = d2; bi = i; rev = true; }
+            let g = [
+                `G21`, 
+                `G90`, 
+                `G1 F${feed}`, 
+                `(Generated by Draw Converter V0.5)`, 
+                `(Tool: ${dPen === 0 ? 'Laser' : 'Pen ' + dPen + 'mm'})`, 
+                `(Y Offset Applied: ${yOffset.toFixed(3)}mm)`
+            ];
+
+            // 整合所有路徑 (輪廓為封閉，填滿線條為開放)
+            let allPaths = [];
+            finalContours.forEach(path => allPaths.push({ pts: path, isClosed: true }));
+            finalFillLines.forEach(line => allPaths.push({ pts: line, isClosed: false }));
+
+            let cx = 0, cy = 0; // 當前噴頭/筆尖位置
+
+            while (allPaths.length > 0) {
+                let bestIdx = -1;
+                let minDist = Infinity;
+                let reversePath = false;
+
+                for (let i = 0; i < allPaths.length; i++) {
+                    const p = allPaths[i].pts;
+                    // 檢查起點距離
+                    const dStart = Math.pow(parseFloat(tx(p[0].x * scale)) - cx, 2) + Math.pow(parseFloat(ty(p[0].y)) - cy, 2);
+                    if (dStart < minDist) {
+                        minDist = dStart; bestIdx = i; reversePath = false;
+                    }
+                    // 如果不是封閉曲線，檢查終點距離（可反向繪製以優化路徑）
+                    if (!allPaths[i].isClosed) {
+                        const dEnd = Math.pow(parseFloat(tx(p[p.length - 1].x * scale)) - cx, 2) + Math.pow(parseFloat(ty(p[p.length - 1].y)) - cy, 2);
+                        if (dEnd < minDist) {
+                            minDist = dEnd; bestIdx = i; reversePath = true;
+                        }
                     }
                 }
-                let target = tps.splice(bi, 1)[0], pts = rev ? [...target.pts].reverse() : target.pts;
-                g.push(`G0 X${tx(pts[0].x*scale)} Y${ty(pts[0].y*scale)}`, "M03 S255");
-                for(let i=1; i<pts.length; i++) g.push(`G1 X${tx(pts[i].x*scale)} Y${ty(pts[i].y*scale)}`);
-                if(target.isClosed) g.push(`G1 X${tx(pts[0].x*scale)} Y${ty(pts[0].y*scale)}`);
-                g.push("M05"); cx = tx(pts[pts.length-1].x*scale); cy = ty(pts[pts.length-1].y*scale);
+
+                let target = allPaths.splice(bestIdx, 1)[0];
+                let pts = reversePath ? [...target.pts].reverse() : target.pts;
+
+                // 移動到起點 (G0) -> 下刀 (M03)
+                g.push(`G0 X${tx(pts[0].x * scale)} Y${ty(pts[0].y)}`);
+                g.push("M03 S255");
+
+                // 繪製路徑 (G1)
+                for (let i = 1; i < pts.length; i++) {
+                    g.push(`G1 X${tx(pts[i].x * scale)} Y${ty(pts[i].y)}`);
+                }
+
+                // 若是輪廓則回到原點封閉路徑
+                if (target.isClosed) {
+                    g.push(`G1 X${tx(pts[0].x * scale)} Y${ty(pts[0].y)}`);
+                }
+
+                // 抬刀 (M05)
+                g.push("M05");
+
+                // 更新當前座標
+                cx = parseFloat(tx(pts[pts.length - 1].x * scale));
+                cy = parseFloat(ty(pts[pts.length - 1].y));
             }
+
             g.push("G0 X0 Y0", "M30");
             return g.join("\n");
         }
@@ -982,7 +1080,6 @@
         updateUI();
     </script>
 
-    <!-- PWA Service Worker Registration -->
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
@@ -992,6 +1089,7 @@
             });
         }
     </script>
+
 
 </body>
 </html>
