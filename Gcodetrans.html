@@ -78,10 +78,15 @@
 
 <div class="bg-emerald-500 shadow-lg mb-4">
     <div class="container mx-auto px-4 py-3 flex justify-between items-center">
-        <h1 id="txt-header-title" class="text-gray-900 font-black text-lg md:text-xl tracking-tight">
-            Gcode 即時調整
-        </h1>
-        <button id="langBtn" class="bg-gray-900 text-emerald-400 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-black transition border border-gray-700 shadow-sm">
+        <div class="flex items-center gap-3">
+            <a href="index.html" class="text-gray-900 hover:text-emerald-900 transition-colors" aria-label="Back to Home">
+                <svg class="w-6 h-6 fill-current" viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+            </a>
+            <h1 id="txt-header-title" class="text-gray-900 font-black text-lg md:text-xl tracking-tight">
+                Gcode 即時調整
+            </h1>
+        </div>
+        <button id="langBtn" class="bg-gray-900 text-emerald-400 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-black transition border border-gray-700 shadow-sm" aria-label="Toggle language">
             中 / EN
         </button>
     </div>

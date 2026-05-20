@@ -54,10 +54,13 @@
     
     <header class="w-full bg-orange-600 shadow-md py-3 px-6 flex items-center justify-between sticky top-0 z-50">
         <div class="flex items-center gap-3">
+            <a href="index.html" class="text-white hover:text-orange-200 transition-colors" aria-label="Back to Home">
+                <svg class="w-6 h-6 fill-current" viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+            </a>
             <h1 class="text-white font-black text-lg tracking-wider" data-i18n="appTitle">轉檔工具 (切割)</h1>
         </div>
         <div class="flex items-center gap-4">
-            <button id="lang-toggle" class="bg-orange-800 hover:bg-orange-900 text-white text-[10px] font-bold py-1 px-3 rounded-full border border-orange-400 transition-colors">
+            <button id="lang-toggle" class="bg-orange-800 hover:bg-orange-900 text-white text-[10px] font-bold py-1 px-3 rounded-full border border-orange-400 transition-colors" aria-label="Toggle language">
                 中文 / EN
             </button>
             <span class="text-orange-100 text-xs font-mono hidden md:block">V1.3</span>
@@ -640,7 +643,7 @@
                             <input type="checkbox" class="w-5 h-5 accent-green-600" ${isSelected ? 'checked' : ''}>
                             <span class="text-xs font-bold text-slate-100">${i18n[currentLang].partName} ${p.id}</span>
                         </div>
-                        <button class="toggle-vis p-1">
+                        <button class="toggle-vis p-1" aria-label="${p.visible ? (currentLang === 'zh' ? '隱藏零件' : 'Hide part') : (currentLang === 'zh' ? '顯示零件' : 'Show part')}">
                             ${p.visible ? '<svg class="w-5 h-5 stroke-slate-400" fill="none" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>' : '<svg class="w-5 h-5 stroke-slate-600" fill="none" stroke-width="2" viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>'}
                         </button>
                     </div>
