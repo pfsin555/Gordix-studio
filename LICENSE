@@ -1,0 +1,40 @@
+Gordix Studio
+Copyright (c) 2026 GORDIX || cubiio
+
+-----------------------------------------------------------------------------
+This project is licensed under the MIT License.
+-----------------------------------------------------------------------------
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND... (下略標準MIT宣告)
+
+=============================================================================
+THIRD-PARTY COMPONENT LICENSES
+=============================================================================
+
+This application bundle includes and relies on the following third-party 
+software components. Their respective licenses are listed below:
+
+1. Tailwind CSS
+   - URL: https://tailwindcss.com
+   - License: MIT License
+   - Copyright (c) Tailwind Labs, Inc.
+
+2. Three.js
+   - URL: https://threejs.org
+   - License: MIT License
+   - Copyright (c) 2010-2026 three.js authors
+
+3. Clipper-lib (js-clipper)
+   - Description: Polygon clipping and offsetting library
+   - License: Boost Software License (BSL-1.0)
+   - Copyright (c) Angus Johnson (C++ Clipper), Timo (JS port)
+
+4. Dxf-parser
+   - Description: A JavaScript DXF file parser
+   - License: MIT License
+   - Copyright (c) 2014 Gauthier Boaglio
+
+5. Font Awesome (Icons used via CDN)
+   - URL: https://fontawesome.com
+   - License: Font Awesome Free License (CC BY 4.0 for Icons, MIT for Code)
+   - Copyright (c) Fonticons, Inc.
