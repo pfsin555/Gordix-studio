@@ -234,6 +234,12 @@
             }
         }
     </style>
+        <!-- PWA Meta Tags -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="icon-192.png">
 </head>
 <body>
 
@@ -277,7 +283,7 @@
             </a>
 
             <!-- Tool 3: 雷射/筆 (藍色) -->
-            <a href="Laser.html" class="tool-card card-laser">
+            <a href="draw.html" class="tool-card card-laser">
                 <div class="icon-box">
                     <svg class="icon" viewBox="0 0 24 24">
                         <path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm0 6c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zM11 2v4h2V2h-2zm0 16v4h2v-4h-2zm11-7h-4v2h4v-2zM6 11H2v2h4v-2z"/>
@@ -368,6 +374,17 @@
                 applyTheme();
             }
         };
+    </script>
+    
+        <!-- PWA Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./service-worker.js')
+                    .then((reg) => console.log('Service Worker registered successfully with scope: ', reg.scope))
+                    .catch((err) => console.error('Service Worker registration failed: ', err));
+            });
+        }
     </script>
 </body>
 </html>
