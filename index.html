@@ -1,317 +1,132 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-TW" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GORDIX STUDIO</title>
+    <!-- 引入與 1.html 相同之 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class'
+        }
+    </script>
     <style>
-        :root {
-            /* 預設暗色主題 (Dark Mode) */
-            --primary-bg: #1a1a1a;
-            --header-bg: #121212;
-            --card-default: #2d2d2d;
-            --text-main: #eeeeee;
-            --text-sub: #888888;
-            --border-color: #3d3d3d;
-            --card-hover-bg: #333333;
-            
-            /* 各工具代表色 */
-            --color-table: #888888;
-            --color-cnc: #ff9800;
-            --color-laser: #2196f3;
-            --color-gcode: #4caf50;
-            --color-vcarve: #ff5252;  /* 紅色 */
-            --color-tools: #e040fb;   /* 紫色 */
-
-            --transition-speed: 0.25s;
+        /* 防止切換語言或主題時版面抖動，強制保留右側滾動條空間 */
+        html {
+            overflow-y: scroll;
         }
-
-        /* 明亮主題 (Light Mode) 樣式覆蓋 */
-        body.light-theme {
-            --primary-bg: #f5f5f7;
-            --header-bg: #ffffff;
-            --card-default: #ffffff;
-            --text-main: #1d1d1f;
-            --text-sub: #6e6e73;
-            --border-color: #e5e5e7;
-            --card-hover-bg: #fafafa;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background-color: var(--primary-bg);
-            color: var(--text-main);
-            line-height: 1.6;
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
-            overflow-y: scroll; /* 強制滾動條，防抖動 */
-            transition: background-color var(--transition-speed);
-        }
-
-        header {
-            background: var(--header-bg);
-            min-height: 180px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            border-bottom: 1px solid var(--border-color);
-            position: relative;
-            transition: background-color var(--transition-speed), border-color var(--transition-speed);
-        }
-
-        .header-controls {
-            position: absolute;
-            top: 1.5rem;
-            right: 1.5rem;
-            display: flex;
-            gap: 0.75rem;
-            align-items: center;
-        }
-
-        .btn-control {
-            background: transparent;
-            border: 1px solid var(--border-color);
-            color: var(--text-sub);
-            padding: 0.5rem 1rem;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 0.85rem;
-            transition: all var(--transition-speed);
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .btn-control:hover {
-            border-color: var(--text-main);
-            color: var(--text-main);
-        }
-
-        .icon-control {
-            width: 18px;
-            height: 18px;
-            fill: currentColor;
-        }
-
-        .logo-text {
-            font-size: clamp(2rem, 8vw, 3.5rem);
-            font-weight: 900;
-            letter-spacing: 0.6rem;
-            color: var(--text-main);
-            text-transform: uppercase;
-            user-select: none;
-            transition: color var(--transition-speed);
-        }
-
-        .main-container {
-            flex: 1;
-            max-width: 1140px; 
-            margin: 0 auto;
-            padding: 3rem 1.5rem;
-            width: 100%;
-            display: flex;
-            align-items: center;
-        }
-
-        .tools-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 1.5rem;
-            width: 100%;
-        }
-
-        .tool-card {
-            background: var(--card-default);
-            text-decoration: none;
-            color: inherit;
-            padding: 2.5rem 1.5rem;
-            border-radius: 12px;
-            text-align: center;
-            border: 1px solid var(--border-color);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            transition: background-color var(--transition-speed), border-color var(--transition-speed);
-            position: relative;
-            min-height: 230px; 
-        }
-
-        .card-table { --theme-color: var(--color-table); }
-        .card-cnc { --theme-color: var(--color-cnc); }
-        .card-laser { --theme-color: var(--color-laser); }
-        .card-gcode { --theme-color: var(--color-gcode); }
-        .card-vcarve { --theme-color: var(--color-vcarve); }
-        .card-tools { --theme-color: var(--color-tools); }
-
-        .tool-card:hover {
-            background: var(--card-hover-bg);
-            border-color: var(--theme-color);
-            outline: 1px solid var(--theme-color);
-        }
-
-        .icon-box {
-            width: 56px;
-            height: 56px;
-            background: rgba(0, 0, 0, 0.1);
-            border-radius: 10px;
-            margin-bottom: 1.25rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--text-sub);
-            transition: all var(--transition-speed);
-        }
-
-        body.light-theme .icon-box {
-            background: rgba(0, 0, 0, 0.04);
-        }
-
-        .tool-card:hover .icon-box {
-            background: var(--theme-color);
-            color: #fff;
-        }
-
-        .tool-card h3 {
-            font-size: 1.15rem;
-            font-weight: 700;
-            margin-bottom: 0.5rem;
-            color: var(--text-main);
-            transition: color var(--transition-speed);
-        }
-
-        .tool-card p {
-            font-size: 0.85rem;
-            color: var(--text-sub);
-            transition: color var(--transition-speed);
-        }
-
-        footer {
-            padding: 2rem;
-            text-align: center;
-            font-size: 0.8rem;
-            color: var(--text-sub);
-            background: var(--header-bg);
-            border-top: 1px solid var(--border-color);
-            transition: background-color var(--transition-speed), border-color var(--transition-speed), color var(--transition-speed);
-        }
-
-        .icon {
-            width: 26px;
-            height: 26px;
-            fill: currentColor;
-        }
-
-        /* 平板尺寸自適應 2x3 */
-        @media (max-width: 900px) {
-            .tools-grid {
-                grid-template-columns: 1fr 1fr;
-            }
-        }
-
-        /* 手機尺寸自適應 1x6 */
-        @media (max-width: 600px) {
-            .tools-grid {
-                grid-template-columns: 1fr;
-            }
-            .main-container {
-                padding: 2rem 1.5rem;
-            }
-            .header-controls {
-                position: static;
-                margin-top: 1rem;
-            }
-            header {
-                padding: 2rem 1rem 1.5rem 1rem;
-            }
+        /* 極佳的平滑轉變動畫，但避免引發位置抖動的 transform 過渡 */
+        .theme-transition {
+            transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
         }
     </style>
+
+    <!-- PWA Meta Tags -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="icon-192.png">
+
 </head>
-<body>
-
-    <header>
-        <div class="header-controls">
-            <!-- 太陽/月亮主題切換按鈕 -->
-            <button class="btn-control" onclick="toggleTheme()" aria-label="Toggle Theme">
-                <svg id="theme-icon" class="icon-control" viewBox="0 0 24 24">
-                    <path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1zM5.99 4.58c-.39-.39-1.03-.39-1.41 0s-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41L5.99 4.58zm12.37 12.37c-.39-.39-1.03-.39-1.41 0s-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41l-1.06-1.06zm1.06-12.37c-.39-.39-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06c.39-.38.39-1.02 0-1.41zm-12.37 12.37c-.39-.39-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06c.39-.38.39-1.02 0-1.41z"/>
-                </svg>
-            </button>
+<body class="bg-slate-50 dark:bg-slate-950 min-h-screen p-4 md:p-8 text-slate-800 dark:text-slate-200 font-sans theme-transition">
+    <!-- 主卡片容器 (承襲 1.html 的外觀與風格) -->
+    <div class="max-w-7xl mx-auto bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800 theme-transition">
+        
+        <!-- Header: 黑色主題色 -->
+        <div class="bg-gradient-to-r from-black via-zinc-900 to-neutral-950 p-6 text-white flex justify-between items-center border-b border-zinc-800">
+            <div>
+                <!-- GORDIX Logo，GORDIX 為白色，STUDIO 為亮橘色 -->
+                <h1 class="text-2xl md:text-3xl font-black tracking-widest select-none">
+                    GORDIX <span class="text-orange-500 text-xs md:text-sm tracking-widest ml-1 font-bold">STUDIO</span>
+                </h1>
+            </div>
             
-            <!-- 中英文語言切換按鈕 -->
-            <button class="btn-control" onclick="toggleLanguage()">
-                <span id="lang-text">中文 / EN</span>
-            </button>
+            <!-- 右側控制區 (主題切換與語言切換) -->
+            <div class="flex gap-3 items-center">
+                <!-- 明暗主題切換按鈕 -->
+                <button id="theme-toggle" onclick="toggleTheme()" class="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-white border border-white/10 transition-all flex items-center justify-center" aria-label="Toggle Theme">
+                    <svg id="theme-icon" class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <!-- 圖示由 JS 動態注入 -->
+                    </svg>
+                </button>
+                <!-- 語系切換 -->
+                <button onclick="toggleLanguage()" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-white/5 hover:bg-white/10 text-white border border-white/10 transition-all flex items-center gap-2">
+                    <span id="lang-text">中文 / EN</span>
+                </button>
+                <span class="text-[10px] bg-white/10 px-3 py-1 rounded-full border border-white/20 font-mono hidden md:inline">HUB V1.0</span>
+            </div>
         </div>
-        <div class="logo-text">GORDIX STUDIO</div>
-    </header>
 
-    <main class="main-container">
-        <div class="tools-grid">
-            <!-- Tool 1: 桌長配置 (灰色) -->
-            <a href="table_conf.html" class="tool-card card-table">
-                <div class="icon-box">
-                    <svg class="icon" viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>
-                </div>
-                <h3 data-zh="桌長參數配置產生器" data-en="Table Configurator">桌長配置產生器</h3>
-                <p data-zh="系統配置參數快速生成" data-en="Generate system config parameters">系統配置參數快速生成</p>
-            </a>
+        <!-- 主內容區域: 5 個功能卡片佈局 -->
+        <main class="p-6 md:p-12">
+            <!-- 採用 flex-wrap 在寬螢幕下自動置中最後兩個項目，達成完美的 3x2 置中對齊 -->
+            <div class="flex flex-wrap justify-center gap-6 w-full">
+                
+                <!-- Tool 1: 桌長配置 (灰色) -->
+                <a href="table_conf.html" class="group w-full sm:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)] max-w-sm bg-slate-50 dark:bg-slate-800/40 p-8 rounded-xl border border-slate-200 dark:border-slate-800/80 flex flex-col items-center justify-center text-center transition-all duration-200 hover:-translate-y-1 hover:border-slate-400 dark:hover:border-slate-500 hover:shadow-lg">
+                    <div class="w-14 h-14 bg-slate-200 dark:bg-slate-800 rounded-xl mb-5 flex items-center justify-center text-slate-500 dark:text-slate-400 group-hover:bg-slate-500 group-hover:text-white group-hover:shadow-[0_0_15px_rgba(148,163,184,0.4)] transition-all duration-200">
+                        <svg class="w-7 h-7" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/>
+                        </svg>
+                    </div>
+                    <h3 data-zh="桌長參數配置產生器" data-en="Table Configurator" class="text-lg font-bold text-slate-900 dark:text-white mb-2 transition-colors">桌長配置產生器</h3>
+                    <p data-zh="系統配置參數快速生成" data-en="Generate system config parameters" class="text-sm text-slate-500 dark:text-slate-400">系統配置參數快速生成</p>
+                </a>
 
-            <!-- Tool 2: CNC (橘色) - 鑽頭造型圖標 -->
-            <a href="CNC.html" class="tool-card card-cnc">
-                <div class="icon-box">
-                    <svg class="icon" viewBox="0 0 24 24">
-                        <path d="M11 2h2v3h-2zm-2 4h6v1.5H9zm0 3.5l6-1.5v1.5l-6 1.5zm0 3.5l6-1.5v1.5l-6 1.5zm1 3l2 3 2-3z"/>
-                    </svg>
-                </div>
-                <h3 data-zh="轉檔工具 (切割)" data-en="Cut Converter">轉檔工具 (切割)</h3>
-                <p data-zh="CNC與雷射切割專用" data-en="Optimized for CNC and laser cutting">CNC與雷射切割專用</p>
-            </a>
+                <!-- Tool 2: 轉檔工具(切割) (橘色) -->
+                <a href="CNC.html" class="group w-full sm:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)] max-w-sm bg-slate-50 dark:bg-slate-800/40 p-8 rounded-xl border border-slate-200 dark:border-slate-800/80 flex flex-col items-center justify-center text-center transition-all duration-200 hover:-translate-y-1 hover:border-orange-500 dark:hover:border-orange-500 hover:shadow-lg">
+                    <div class="w-14 h-14 bg-slate-200 dark:bg-slate-800 rounded-xl mb-5 flex items-center justify-center text-slate-500 dark:text-slate-400 group-hover:bg-orange-500 group-hover:text-white group-hover:shadow-[0_0_15px_rgba(249,115,22,0.4)] transition-all duration-200">
+                        <svg class="w-7 h-7" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M11 2h2v3h-2zm-2 4h6v1.5H9zm0 3.5l6-1.5v1.5l-6 1.5zm0 3.5l6-1.5v1.5l-6 1.5zm1 3l2 3 2-3z"/>
+                        </svg>
+                    </div>
+                    <h3 data-zh="轉檔工具 (切割)" data-en="Cut Converter" class="text-lg font-bold text-slate-900 dark:text-white mb-2 transition-colors">轉檔工具 (切割)</h3>
+                    <p data-zh="CNC與雷射切割專用" data-en="Optimized for CNC and laser cutting" class="text-sm text-slate-500 dark:text-slate-400">CNC與雷射切割專用</p>
+                </a>
 
-            <!-- Tool 3: 雷射/筆 (藍色) -->
-            <a href="Laser.html" class="tool-card card-laser">
-                <div class="icon-box">
-                    <svg class="icon" viewBox="0 0 24 24">
-                        <path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm0 6c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zM11 2v4h2V2h-2zm0 16v4h2v-4h-2zm11-7h-4v2h4v-2zM6 11H2v2h4v-2z"/>
-                    </svg>
-                </div>
-                <h3 data-zh="轉檔工具 (繪圖)" data-en="Draw Converter">轉檔工具 (繪圖)</h3>
-                <p data-zh="繪圖與雷射雕刻專用" data-en="Optimized for plotter and laser engraving">雷射雕刻與繪圖專用</p>
-            </a>
+                <!-- Tool 3: 轉檔工具(繪圖) (藍色) -->
+                <a href="Laser.html" class="group w-full sm:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)] max-w-sm bg-slate-50 dark:bg-slate-800/40 p-8 rounded-xl border border-slate-200 dark:border-slate-800/80 flex flex-col items-center justify-center text-center transition-all duration-200 hover:-translate-y-1 hover:border-blue-500 dark:hover:border-blue-500 hover:shadow-lg">
+                    <div class="w-14 h-14 bg-slate-200 dark:bg-slate-800 rounded-xl mb-5 flex items-center justify-center text-slate-500 dark:text-slate-400 group-hover:bg-blue-500 group-hover:text-white group-hover:shadow-[0_0_15px_rgba(59,130,246,0.4)] transition-all duration-200">
+                        <svg class="w-7 h-7" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm0 6c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zM11 2v4h2V2h-2zm0 16v4h2v-4h-2zm11-7h-4v2h4v-2zM6 11H2v2h4v-2z"/>
+                        </svg>
+                    </div>
+                    <h3 data-zh="轉檔工具 (繪圖)" data-en="Draw Converter" class="text-lg font-bold text-slate-900 dark:text-white mb-2 transition-colors">轉檔工具 (繪圖)</h3>
+                    <p data-zh="雷射雕刻與繪圖專用" data-en="Optimized for plotter and laser engraving" class="text-sm text-slate-500 dark:text-slate-400">雷射雕刻與繪圖專用</p>
+                </a>
 
-            <!-- Tool 4: V雕刻 (紅色) - 向下的 V 造型圖標 -->
-            <a href="vc.html" class="tool-card card-vcarve">
-                <div class="icon-box">
-                    <svg class="icon" viewBox="0 0 24 24">
-                        <path d="M3 5h4l5 10 5-10h4L12 19z"/>
-                    </svg>
-                </div>
-                <h3 data-zh="V 雕刻" data-en="V-Carving">V 雕刻</h3>
-                <p data-zh="提供圖片或向量轉V-carving用gcode" data-en="Convert images or vectors to V-carving G-code">提供圖片或向量轉V-carving用gcode</p>
-            </a>
+                <!-- Tool 4: V雕刻 (紅色) -->
+                <a href="vc.html" class="group w-full sm:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)] max-w-sm bg-slate-50 dark:bg-slate-800/40 p-8 rounded-xl border border-slate-200 dark:border-slate-800/80 flex flex-col items-center justify-center text-center transition-all duration-200 hover:-translate-y-1 hover:border-red-500 dark:hover:border-red-500 hover:shadow-lg">
+                    <div class="w-14 h-14 bg-slate-200 dark:bg-slate-800 rounded-xl mb-5 flex items-center justify-center text-slate-500 dark:text-slate-400 group-hover:bg-red-500 group-hover:text-white group-hover:shadow-[0_0_15px_rgba(239,68,68,0.4)] transition-all duration-200">
+                        <svg class="w-7 h-7" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M3 5h4l5 10 5-10h4L12 19z"/>
+                        </svg>
+                    </div>
+                    <h3 data-zh="V 雕刻" data-en="V-Carving" class="text-lg font-bold text-slate-900 dark:text-white mb-2 transition-colors">V 雕刻</h3>
+                    <p data-zh="提供圖片或向量轉V-carving用gcode" data-en="Convert images or vectors to V-carving G-code" class="text-sm text-slate-500 dark:text-slate-400">提供圖片或向量轉V-carving用gcode</p>
+                </a>
 
-            <!-- Tool 5: Gcode (綠色) -->
-            <a href="Gcodetrans.html" class="tool-card card-gcode">
-                <div class="icon-box">
-                    <svg class="icon" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
-                </div>
-                <h3 data-zh="Gcode 即時調整" data-en="Gcode Real-time Adjuster">Gcode 即時調整</h3>
-                <p data-zh="即時編輯與校正 Gcode 內容" data-en="Live Gcode editing and correction">即時編輯與校正 Gcode 內容</p>
-            </a>
-        </div>
-    </main>
+                <!-- Tool 5: Gcode (綠色) -->
+                <a href="Gcodetrans.html" class="group w-full sm:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)] max-w-sm bg-slate-50 dark:bg-slate-800/40 p-8 rounded-xl border border-slate-200 dark:border-slate-800/80 flex flex-col items-center justify-center text-center transition-all duration-200 hover:-translate-y-1 hover:border-green-500 dark:hover:border-green-500 hover:shadow-lg">
+                    <div class="w-14 h-14 bg-slate-200 dark:bg-slate-800 rounded-xl mb-5 flex items-center justify-center text-slate-500 dark:text-slate-400 group-hover:bg-green-500 group-hover:text-white group-hover:shadow-[0_0_15px_rgba(34,197,94,0.4)] transition-all duration-200">
+                        <svg class="w-7 h-7" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                        </svg>
+                    </div>
+                    <h3 data-zh="Gcode 即時調整" data-en="Gcode Real-time Adjuster" class="text-lg font-bold text-slate-900 dark:text-white mb-2 transition-colors">Gcode 即時調整</h3>
+                    <p data-zh="即時編輯與校正 Gcode 內容" data-en="Live Gcode editing and correction" class="text-sm text-slate-500 dark:text-slate-400">即時編輯與校正 Gcode 內容</p>
+                </a>
 
-    <footer>
-        <p>&copy; 2026 GORDIX || cubiio</p>
-    </footer>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="bg-slate-50 dark:bg-slate-900/50 p-6 text-center text-xs text-slate-500 dark:text-slate-500 border-t border-slate-100 dark:border-slate-800/60 theme-transition">
+            <p>&copy; 2026 GORDIX STUDIO || cubiio. All tools run locally in browser.</p>
+        </footer>
+    </div>
 
     <script>
         let currentLang = 'zh';
@@ -339,35 +154,54 @@
         }
 
         function applyTheme() {
-            const body = document.body;
+            const html = document.documentElement;
             const themeIcon = document.getElementById('theme-icon');
+            
             if (currentTheme === 'light') {
-                body.classList.add('light-theme');
-                // 亮色模式：按鈕改顯示為「月亮圖標」(點擊改暗色)
-                themeIcon.innerHTML = `<path d="M12.3 22c5.3 0 9.7-4.3 9.7-9.7 0-4.1-2.5-7.6-6.1-9.1-.5-.2-1.1.1-1.2.6-.1.5.2 1.1.7 1.3 2.9 1.2 4.9 4 4.9 7.2 0 4.3-3.5 7.8-7.8 7.8-3.2 0-6-2-7.2-4.9-.2-.5-.8-.8-1.3-.7-.5.1-.8.7-.6 1.2 1.5 3.6 5 6.1 9.2 6.1z"/>`;
+                html.classList.remove('dark');
+                // 亮色模式顯示月亮 (代表点击可以切换成暗色)
+                themeIcon.innerHTML = `
+                    <path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clip-rule="evenodd" />
+                `;
             } else {
-                body.classList.remove('light-theme');
-                // 暗色模式：按鈕改顯示為「太陽圖標」(點擊改亮色)
-                themeIcon.innerHTML = `<path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1zM5.99 4.58c-.39-.39-1.03-.39-1.41 0s-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41L5.99 4.58zm12.37 12.37c-.39-.39-1.03-.39-1.41 0s-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41l-1.06-1.06zm1.06-12.37c-.39-.39-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06c.39-.38.39-1.02 0-1.41zm-12.37 12.37c-.39-.39-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06c.39-.38.39-1.02 0-1.41z"/>`;
+                html.classList.add('dark');
+                // 暗色模式顯示太陽 (代表点击可以切换成亮色)
+                themeIcon.innerHTML = `
+                    <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
+                `;
             }
             localStorage.setItem('gordix-theme', currentTheme);
         }
 
-        // 初始化載入
+        // 初始化載入偏好設定
         window.onload = () => {
-            // 載入偏好語言
+            // 語系載入
             const savedLang = localStorage.getItem('gordix-lang');
             if (savedLang && savedLang !== currentLang) {
                 toggleLanguage();
             }
             
-            // 載入偏好主題
+            // 主題載入
             const savedTheme = localStorage.getItem('gordix-theme');
             if (savedTheme) {
                 currentTheme = savedTheme;
-                applyTheme();
+            } else {
+                // 如果無本機設定，預設為暗色主題
+                currentTheme = 'dark';
             }
+            applyTheme();
         };
+    </script>
+
+    <!-- PWA Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./service-worker.js')
+                    .then((reg) => console.log('Service Worker registered successfully with scope: ', reg.scope))
+                    .catch((err) => console.error('Service Worker registration failed: ', err));
+            });
+        }
     </script>
 </body>
 </html>
