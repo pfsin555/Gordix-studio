@@ -3,8 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Draw Converter V0.5</title>
+    <title>Draw Converter V0.6</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class'
+        }
+    </script>
     <style>
         .canvas-container {
             position: relative;
@@ -71,108 +76,113 @@
             background: #3b82f6;
         }
     </style>
-    
+
     <!-- PWA Meta Tags -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0f172a">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" href="icon-192.png">
-
-
     
 </head>
-<body class="bg-slate-950 min-h-screen p-4 md:p-8 text-slate-200 font-sans">
-    <div class="max-w-7xl mx-auto bg-slate-900 rounded-2xl shadow-2xl overflow-hidden border border-slate-800">
+<body class="bg-slate-50 dark:bg-slate-950 min-h-screen p-4 md:p-8 text-slate-800 dark:text-slate-200 font-sans transition-colors duration-300">
+    <div class="max-w-7xl mx-auto bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800 transition-colors duration-300">
         <!-- Header -->
         <div class="bg-gradient-to-r from-blue-700 to-indigo-900 p-6 text-white flex justify-between items-center border-b border-indigo-500/30">
             <div>
                 <h1 id="i18n-title" class="text-2xl font-black tracking-tight none">轉檔工具 (繪圖)</h1>
             </div>
-            <div class="flex gap-4 items-center">
-                <button id="lang-toggle" class="px-4 py-1.5 rounded-lg text-[11px] font-bold bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-all flex items-center gap-2">
+            <div class="flex gap-3 items-center">
+                <!-- 主題切換 (明暗主題切換按鈕，已放置於語言切換左側) -->
+                <button id="theme-toggle" class="p-1.5 rounded-lg text-[11px] font-bold bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-all flex items-center justify-center" aria-label="Toggle Theme">
+                    <svg id="theme-icon" class="w-4 h-4 animate-pulse-slow" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <!-- 圖示由 JS 動態注入 -->
+                    </svg>
+                </button>
+                <!-- 語系切換 -->
+                <button id="lang-toggle" class="px-3 py-1.5 rounded-lg text-[11px] font-bold bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-all flex items-center gap-2">
                     <span>中文/EN</span>
                 </button>
                 <div id="loading-spinner" class="hidden animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
-                <span class="text-[10px] bg-white/10 px-3 py-1 rounded-full border border-white/20 font-mono">V0.5</span>
+                <span class="text-[10px] bg-white/10 px-3 py-1 rounded-full border border-white/20 font-mono">V0.6</span>
             </div>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-4">
             <!-- Sidebar -->
-            <div class="p-6 border-r border-slate-800 bg-slate-900/40 space-y-6 overflow-y-auto max-h-[85vh]">
-                <section class="p-4 bg-blue-900/20 rounded-xl border border-blue-500/20">
+            <div class="p-6 border-r border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 space-y-6 overflow-y-auto max-h-[85vh] transition-colors duration-300">
+                <section class="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-500/20 transition-colors duration-300">
                     <div class="flex justify-between items-center mb-2">
-                        <label id="i18n-label-pen-diam" class="block text-[10px] font-black text-blue-400 none tracking-widest">工具直徑 (D_PEN)</label>
+                        <label id="i18n-label-pen-diam" class="block text-[10px] font-black text-blue-600 dark:text-blue-400 none tracking-widest">工具直徑 (D_PEN)</label>
                         <span id="tool-type-badge" class="text-[9px] px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 font-bold uppercase">Laser</span>
                     </div>
                     <div class="relative flex items-center">
-                        <input type="number" id="pen-diameter" value="0" min="0" max="13" step="0.1" class="w-full bg-slate-800 border border-slate-700 p-2 rounded text-white focus:ring-2 focus:ring-blue-500 outline-none text-sm font-mono">
-                        <span class="absolute right-3 text-[10px] text-slate-500">mm</span>
+                        <input type="number" id="pen-diameter" value="0" min="0" max="13" step="0.1" class="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 p-2 rounded text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none text-sm font-mono transition-colors duration-300">
+                        <span class="absolute right-3 text-[10px] text-slate-400 dark:text-slate-500">mm</span>
                     </div>
-                    <div id="offset-preview" class="mt-2 text-[9px] font-mono text-slate-500 italic">Y-Offset: -12.60mm</div>
+                    <div id="offset-preview" class="mt-2 text-[9px] font-mono text-slate-500 dark:text-slate-400 italic">Y-Offset: 0.00mm</div>
                 </section>
 
                 <section>
-                    <label id="i18n-label-source" class="block text-[10px] font-black text-slate-500 none tracking-widest mb-2">1. 圖片來源</label>
+                    <label id="i18n-label-source" class="block text-[10px] font-black text-slate-500 dark:text-slate-400 none tracking-widest mb-2">1. 圖片來源</label>
                     <div class="flex items-center gap-3">
                         <label for="file-input" class="custom-file-upload" id="i18n-btn-browse">選擇檔案</label>
                         <input type="file" id="file-input" accept="image/*" class="hidden">
-                        <span id="file-name-display" class="text-[10px] text-slate-500 truncate max-w-[150px]">No file chosen</span>
+                        <span id="file-name-display" class="text-[10px] text-slate-500 dark:text-slate-400 truncate max-w-[150px]">No file chosen</span>
                     </div>
                 </section>
 
                 <section class="grid grid-cols-2 gap-3">
                     <div>
-                        <label id="i18n-label-width" class="block text-[10px] font-bold text-slate-400 mb-1 none">輸出寬度 (mm)</label>
-                        <input type="number" id="target-width" value="100" class="w-full bg-slate-800 border border-slate-700 p-2 rounded text-white focus:ring-2 focus:ring-blue-500 outline-none text-sm font-mono">
+                        <label id="i18n-label-width" class="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-1 none">輸出寬度 (mm)</label>
+                        <input type="number" id="target-width" value="100" class="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 p-2 rounded text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none text-sm font-mono transition-colors duration-300">
                     </div>
                     <div>
-                        <label id="i18n-label-feed" class="block text-[10px] font-bold text-slate-400 mb-1 none">工作走速 (F)</label>
-                        <input type="number" id="feed-rate" value="1500" class="w-full bg-slate-800 border border-slate-700 p-2 rounded text-white focus:ring-2 focus:ring-blue-500 outline-none text-sm font-mono">
+                        <label id="i18n-label-feed" class="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-1 none">工作走速 (F)</label>
+                        <input type="number" id="feed-rate" value="1500" class="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 p-2 rounded text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none text-sm font-mono transition-colors duration-300">
                     </div>
                 </section>
 
                 <section class="grid grid-cols-2 gap-3">
                     <div>
-                        <label id="i18n-label-threshold" class="block text-[10px] font-bold text-slate-400 mb-1 none">黑白門檻</label>
-                        <input type="number" id="threshold-num" value="128" min="0" max="255" class="w-full bg-slate-800 border border-slate-700 p-2 rounded text-white focus:ring-2 focus:ring-blue-500 outline-none text-sm font-mono">
+                        <label id="i18n-label-threshold" class="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-1 none">黑白門檻</label>
+                        <input type="number" id="threshold-num" value="128" min="0" max="255" class="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 p-2 rounded text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none text-sm font-mono transition-colors duration-300">
                     </div>
                     <div>
-                        <label id="i18n-label-noise" class="block text-[10px] font-bold text-slate-400 mb-1 none">雜點過濾</label>
-                        <input type="number" id="noise-filter" value="10" min="0" max="100" class="w-full bg-slate-800 border border-slate-700 p-2 rounded text-white focus:ring-2 focus:ring-blue-500 outline-none text-sm font-mono">
+                        <label id="i18n-label-noise" class="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-1 none">雜點過濾</label>
+                        <input type="number" id="noise-filter" value="10" min="0" max="100" class="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 p-2 rounded text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none text-sm font-mono transition-colors duration-300">
                     </div>
                 </section>
 
                 <!-- 曲線優化 -->
-                <section class="p-4 bg-slate-800/60 rounded-xl border border-blue-500/30 space-y-4">
+                <section class="p-4 bg-slate-100 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-blue-500/30 space-y-4 transition-colors duration-300">
                     <div>
-                        <div class="flex justify-between text-[10px] text-slate-400 none font-black mb-2 tracking-widest">
+                        <div class="flex justify-between text-[10px] text-slate-500 dark:text-slate-400 none font-black mb-2 tracking-widest">
                             <span id="i18n-label-smooth">曲線平滑度</span>
-                            <span id="smooth-val-text" class="text-blue-400">適中</span>
+                            <span id="smooth-val-text" class="text-blue-600 dark:text-blue-400">適中</span>
                         </div>
-                        <input type="range" id="smooth-iterations" min="0" max="6" step="1" value="3" class="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer">
+                        <input type="range" id="smooth-iterations" min="0" max="6" step="1" value="3" class="w-full h-1.5 bg-slate-300 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer">
                     </div>
                     <div>
-                        <div class="flex justify-between text-[10px] text-slate-400 none font-black mb-2 tracking-widest">
+                        <div class="flex justify-between text-[10px] text-slate-500 dark:text-slate-400 none font-black mb-2 tracking-widest">
                             <span id="i18n-label-resolution">解析度 (線段長)</span>
-                            <span id="segment-val-text" class="text-indigo-400">1.0mm</span>
+                            <span id="segment-val-text" class="text-indigo-600 dark:text-indigo-400">1.0mm</span>
                         </div>
-                        <input type="range" id="segment-length" min="0.1" max="5.0" step="0.1" value="1.0" class="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer">
+                        <input type="range" id="segment-length" min="0.1" max="5.0" step="0.1" value="1.0" class="w-full h-1.5 bg-slate-300 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer">
                     </div>
                 </section>
 
                 <!-- 填滿設定 -->
-                <section class="p-4 bg-slate-800/50 rounded-xl border border-slate-700 space-y-4">
+                <section class="p-4 bg-slate-100 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 space-y-4 transition-colors duration-300">
                     <div class="flex items-center justify-between">
-                        <label id="i18n-label-fill-title" class="text-[10px] font-black text-slate-400 none tracking-widest">填滿設定 (Hatch)</label>
+                        <label id="i18n-label-fill-title" class="text-[10px] font-black text-slate-500 dark:text-slate-400 none tracking-widest">填滿設定 (Hatch)</label>
                         <input type="checkbox" id="enable-fill" checked class="w-4 h-4 accent-blue-500 rounded">
                     </div>
                     <div id="fill-settings-group" class="space-y-3 transition-opacity">
                         <div class="grid grid-cols-2 gap-3">
                             <div>
-                                <label id="i18n-label-angle" class="block text-[10px] text-slate-500 mb-1 none font-bold">填滿角度</label>
-                                <select id="fill-angle" class="w-full bg-slate-900 border border-slate-700 p-2 rounded text-xs outline-none text-white">
+                                <label id="i18n-label-angle" class="block text-[10px] text-slate-500 dark:text-slate-400 mb-1 none font-bold">填滿角度</label>
+                                <select id="fill-angle" class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 p-2 rounded text-xs outline-none text-slate-800 dark:text-white transition-colors duration-300">
                                     <option value="0" id="i18n-opt-0">0° (水平)</option>
                                     <option value="45" id="i18n-opt-45">45° (斜角)</option>
                                     <option value="90" id="i18n-opt-90">90° (垂直)</option>
@@ -180,8 +190,8 @@
                                 </select>
                             </div>
                             <div>
-                                <label id="i18n-label-spacing" class="block text-[10px] text-slate-500 mb-1 none font-bold">間隔 (mm)</label>
-                                <input type="number" id="fill-spacing" value="1.0" step="0.1" min="0.1" class="w-full bg-slate-900 border border-slate-700 p-2 rounded text-xs outline-none text-white font-mono">
+                                <label id="i18n-label-spacing" class="block text-[10px] text-slate-500 dark:text-slate-400 mb-1 none font-bold">間隔 (mm)</label>
+                                <input type="number" id="fill-spacing" value="1.0" step="0.1" min="0.1" class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 p-2 rounded text-xs outline-none text-slate-800 dark:text-white font-mono transition-colors duration-300">
                             </div>
                         </div>
                     </div>
@@ -193,14 +203,14 @@
 
                 <!-- 輸出設定 -->
                 <div id="status-panel" class="hidden space-y-4">
-                    <div class="p-4 bg-slate-950/50 rounded-xl border border-slate-800">
-                        <span id="i18n-label-format" class="text-[10px] font-black text-slate-500 none tracking-widest block mb-2">輸出格式</span>
+                    <div class="p-4 bg-slate-100 dark:bg-slate-950/50 rounded-xl border border-slate-200 dark:border-slate-800 transition-colors duration-300">
+                        <span id="i18n-label-format" class="text-[10px] font-black text-slate-500 dark:text-slate-400 none tracking-widest block mb-2">輸出格式</span>
                         <div class="flex gap-2 mb-3">
                             <button id="format-gcode" class="flex-1 py-2 rounded text-[10px] font-bold transition-all bg-blue-600 text-white ring-2 ring-blue-400">Gcode</button>
-                            <button id="format-svg" class="flex-1 py-2 rounded text-[10px] font-bold transition-all bg-slate-800 text-slate-400">SVG</button>
+                            <button id="format-svg" class="flex-1 py-2 rounded text-[10px] font-bold transition-all bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400">SVG</button>
                         </div>
                         <!-- 統計內容 -->
-                        <div id="coord-range" class="font-mono text-[11px] font-bold text-blue-400 whitespace-pre-line leading-relaxed"></div>
+                        <div id="coord-range" class="font-mono text-[11px] font-bold text-blue-600 dark:text-blue-400 whitespace-pre-line leading-relaxed"></div>
                     </div>
                     
                     <button id="download-btn" class="w-full py-4 bg-emerald-600 text-white font-black rounded-xl hover:bg-emerald-500 transition flex flex-col items-center justify-center leading-tight">
@@ -211,20 +221,20 @@
             </div>
 
             <!-- Preview Area -->
-            <div class="lg:col-span-3 p-8 flex flex-col bg-slate-950/20">
+            <div class="lg:col-span-3 p-8 flex flex-col bg-slate-50/50 dark:bg-slate-950/20 transition-colors duration-300">
                 <div class="flex flex-wrap justify-between items-center mb-4 gap-4">
                     <div class="flex gap-4">
                         <div class="flex items-center gap-2">
                             <span class="w-3 h-3 bg-emerald-500 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span>
-                            <span id="i18n-legend-contour" class="text-[10px] font-bold text-slate-400 none">向量輪廓</span>
+                            <span id="i18n-legend-contour" class="text-[10px] font-bold text-slate-500 dark:text-slate-400 none">向量輪廓</span>
                         </div>
                         <div class="flex items-center gap-2" id="legend-fill-box">
                             <span class="w-3 h-3 bg-blue-500 rounded-full shadow-[0_0_8px_rgba(59,130,246,0.5)]"></span>
-                            <span id="i18n-legend-fill" class="text-[10px] font-bold text-slate-400 none">填滿區塊</span>
+                            <span id="i18n-legend-fill" class="text-[10px] font-bold text-slate-500 dark:text-slate-400 none">填滿區塊</span>
                         </div>
                     </div>
                     
-                    <div class="flex items-center bg-slate-800/80 rounded-lg p-1 border border-slate-700 gap-1">
+                    <div class="flex items-center bg-slate-200 dark:bg-slate-800/80 rounded-lg p-1 border border-slate-300 dark:border-slate-700 gap-1 transition-colors duration-300">
                         <button id="toggle-image" class="px-3 py-1 rounded text-[10px] font-bold transition-all bg-blue-600 text-white">底圖</button>
                         <button id="toggle-contour" class="px-3 py-1 rounded text-[10px] font-bold transition-all bg-emerald-600 text-white">輪廓</button>
                         <button id="toggle-hatch" class="px-3 py-1 rounded text-[10px] font-bold transition-all bg-indigo-600 text-white">填滿</button>
@@ -232,8 +242,8 @@
                 </div>
                 
                 <div class="canvas-container shadow-inner" id="container">
-                    <!-- 將 origin 改為左上角以利縮放計算 -->
-                    <div class="relative transition-none transform-gpu origin-top-left" id="zoom-wrapper" style="transform: translate(0px, 0px) scale(1);">
+                    <!-- 將 origin 改為左上角以利縮放計算，並改成 absolute 避免手動平移與 flex 佈局衝突 -->
+                    <div class="absolute top-0 left-0 transition-none transform-gpu origin-top-left" id="zoom-wrapper" style="transform: translate(0px, 0px) scale(1);">
                         <canvas id="preview-canvas"></canvas>
                         <svg id="vector-overlay">
                             <g id="hatch-group"></g>
@@ -241,7 +251,7 @@
                         </svg>
                     </div>
                     <div id="empty-state" class="absolute inset-0 flex items-center justify-center text-slate-700">
-                        <p id="i18n-empty-msg" class="text-xs font-black tracking-widest none opacity-20">請上傳圖片以開始</p>
+                        <p id="i18n-empty-msg" class="text-xs font-black tracking-widest none opacity-40 dark:opacity-20 text-slate-500 dark:text-slate-300">請上傳圖片以開始</p>
                     </div>
                 </div>
             </div>
@@ -328,6 +338,36 @@
         const toolBadge = document.getElementById('tool-type-badge');
         const offsetPreview = document.getElementById('offset-preview');
 
+        // 主題切換變數與邏輯
+        const themeToggleBtn = document.getElementById('theme-toggle');
+        const themeIcon = document.getElementById('theme-icon');
+
+        function initTheme() {
+            const savedTheme = localStorage.getItem('theme') || 'dark'; // 預設暗色主題
+            setTheme(savedTheme);
+        }
+
+        function setTheme(theme) {
+            if (theme === 'dark') {
+                document.documentElement.classList.add('dark');
+                // Sun 圖示 (點擊變亮)
+                themeIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m0-12.728l.707.707m12.728 12.728l.707.707M12 8a4 4 0 100 8 4 4 0 000-8z" />`;
+                localStorage.setItem('theme', 'dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+                // Moon 圖示 (點擊變暗)
+                themeIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />`;
+                localStorage.setItem('theme', 'light');
+            }
+            // 每次主題變更後，更新輸出格式 UI（確保非選取按鈕的底色在明/暗模式下完美對比）
+            updateOutputFormatUI();
+        }
+
+        themeToggleBtn.onclick = () => {
+            const isDark = document.documentElement.classList.contains('dark');
+            setTheme(isDark ? 'light' : 'dark');
+        };
+
         function updateUI() {
             const data = i18n[currentLang];
             document.getElementById('i18n-title').innerText = data.title;
@@ -375,10 +415,10 @@
             
             if (d === 0) {
                 toolBadge.innerText = data.toolLaser;
-                toolBadge.className = "text-[9px] px-2 py-0.5 rounded bg-red-500/20 text-red-400 font-bold uppercase";
+                toolBadge.className = "text-[9px] px-2 py-0.5 rounded bg-red-500/20 text-red-600 dark:text-red-400 font-bold uppercase";
             } else {
                 toolBadge.innerText = data.toolPen;
-                toolBadge.className = "text-[9px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold uppercase";
+                toolBadge.className = "text-[9px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold uppercase";
             }
             offsetPreview.innerText = `Y-Offset: ${offset.toFixed(2)}mm`;
         }
@@ -576,8 +616,11 @@
 
         function updateOutputFormatUI() {
             const isGcode = outputMode === "gcode";
-            btnFormatGcode.className = isGcode ? "flex-1 py-2 rounded text-[10px] font-bold transition-all bg-blue-600 text-white ring-2 ring-blue-400" : "flex-1 py-2 rounded text-[10px] font-bold transition-all bg-slate-800 text-slate-400";
-            btnFormatSvg.className = !isGcode ? "flex-1 py-2 rounded text-[10px] font-bold transition-all bg-blue-600 text-white ring-2 ring-blue-400" : "flex-1 py-2 rounded text-[10px] font-bold transition-all bg-slate-800 text-slate-400";
+            const selectedClass = "flex-1 py-2 rounded text-[10px] font-bold transition-all bg-blue-600 text-white ring-2 ring-blue-400";
+            const unselectedClass = "flex-1 py-2 rounded text-[10px] font-bold transition-all bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-300 dark:hover:bg-slate-700";
+            
+            btnFormatGcode.className = isGcode ? selectedClass : unselectedClass;
+            btnFormatSvg.className = !isGcode ? selectedClass : unselectedClass;
             updateDownloadFileName();
         }
 
@@ -644,7 +687,9 @@
                     
                     document.getElementById('empty-state').classList.add('hidden');
                     processBtn.disabled = false;
-                    // 不再自動執行 processImage()，等待使用者點擊按鈕
+                    
+                    // 載入 SVG 後即時計算、精準置中預覽
+                    setTimeout(resetView, 50);
                 };
                 reader.readAsText(file);
             } else {
@@ -657,6 +702,9 @@
                         document.getElementById('empty-state').classList.add('hidden');
                         processBtn.disabled = false;
                         renderBinary();
+                        
+                        // 載入一般圖片後即時計算、精準置中預覽
+                        setTimeout(resetView, 50);
                     };
                     img.src = event.target.result;
                 };
@@ -774,6 +822,7 @@
             return Math.pow(p.x - x, 2) + Math.pow(p.y - y, 2);
         }
 
+        // --- Chaikin Algorithm ---
         function smoothPathChaikin(pts, iters) {
             if (iters === 0 || pts.length < 3) return pts;
             let cur = pts;
@@ -976,7 +1025,7 @@
                 `G21`, 
                 `G90`, 
                 `G1 F${feed}`, 
-                `(Generated by Draw Converter V0.5)`, 
+                `(Generated by Draw Converter V0.6)`, 
                 `(Tool: ${dPen === 0 ? 'Laser' : 'Pen ' + dPen + 'mm'})`, 
                 `(Y Offset Applied: ${yOffset.toFixed(3)}mm)`
             ];
@@ -1074,12 +1123,15 @@
         const resizeObserver = new ResizeObserver(() => {
             if (originalImage) resetView();
         });
-        resizeObserver.observe(previewCanvas);
+        // 改為觀察外框容器大小變化，確保響應式設計、側邊欄或主題切換時能精確居中
+        resizeObserver.observe(container);
 
-        // 初始化語系 UI
+        // 初始化語系、主題與 UI
+        initTheme();
         updateUI();
     </script>
 
+    <!-- PWA Service Worker Registration -->
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
@@ -1089,7 +1141,5 @@
             });
         }
     </script>
-
-
 </body>
 </html>
