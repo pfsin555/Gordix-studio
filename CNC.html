@@ -191,7 +191,7 @@
                             </div>
                             <div>
                                 <label class="block text-[10px] text-slate-500 dark:text-slate-400 font-bold mb-1" data-i18n="feedRate">進給速率</label>
-                                <input type="number" id="job-f" value="1500">
+                                <input type="number" id="job-f" value="1000">
                             </div>
                         </div>
 
@@ -770,7 +770,7 @@
                     originalDim: { w: pMaxX-pMinX, h: pMaxY-pMinY }, 
                     currentDim: { w: pMaxX-pMinX, h: pMaxY-pMinY }, 
                     visible: true, 
-                    jobConfig: { type: 'pocket', f: 1500, d: 3.175, depth: 3.0, step: 1.0, overlap: 0.5, resolution: 0.1, useTab: false }, 
+                    jobConfig: { type: 'pocket', f: 1000, d: 3.175, depth: 3.0, step: 1.0, overlap: 0.5, resolution: 0.1, useTab: false }, 
                     toolpath: null, appliedMethod: null 
                 };
             });
@@ -1161,7 +1161,7 @@
                     const cfg = p.jobConfig;
                     const isLaser = cfg.type === 'laser';
                     const passes = isLaser ? 1 : Math.ceil(cfg.depth / cfg.step);
-                    const cuttingFeedrate = cfg.f || 1500; 
+                    const cuttingFeedrate = cfg.f || 1000; 
 
                     let lastPointOfPart = null;
 
