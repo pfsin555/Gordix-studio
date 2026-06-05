@@ -139,29 +139,6 @@
             ring: 1px solid var(--primary-green);
         }
 
-        /* 主題切換按鈕樣式 */
-        .btn-control {
-            background-color: var(--btn-secondary-bg);
-            color: #10b981;
-            padding: 0.45rem;
-            border-radius: 0.5rem;
-            border: 1px solid var(--btn-secondary-border);
-            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .btn-control:hover {
-            background-color: var(--btn-secondary-hover);
-            color: #34d399;
-        }
-        .icon-control {
-            width: 1.25rem;
-            height: 1.25rem;
-            stroke: currentColor;
-        }
-
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-track { background: var(--bg-color); }
         ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 10px; }
@@ -173,28 +150,28 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" href="icon-192.png">
-
 </head>
 <body class="pb-4">
 
-<!-- 頂部導航 -->
-<div class="bg-emerald-500 shadow-lg mb-4">
-    <div class="container mx-auto px-4 py-3 flex justify-between items-center">
-        <h1 id="txt-header-title" class="text-gray-900 font-black text-lg md:text-xl tracking-tight">
+<!-- 頂部導航：導入 1.html 精緻綠色漸層風格 -->
+<div class="bg-gradient-to-r from-emerald-600 to-teal-950 p-5 text-white flex justify-between items-center border-b border-emerald-500/30 shadow-lg mb-4">
+    <div>
+        <h1 id="txt-header-title" class="text-2xl font-black tracking-tight">
             Gcode 即時調整
         </h1>
-        <div class="flex items-center space-x-2">
-            <!-- 明暗主題切換按鈕 -->
-            <button class="btn-control" onclick="toggleTheme()" aria-label="Toggle Theme">
-                <svg id="theme-icon" class="icon-control" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <!-- JavaScript 將在此注入對應的主題 SVG 路徑 -->
-                </svg>
-            </button>
-            <!-- 綁定 onclick 的語言切換按鈕 -->
-            <button id="langBtn" onclick="toggleLanguage()" class="bg-gray-900 text-emerald-400 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-black transition border border-gray-700 shadow-sm">
-                EN
-            </button>
-        </div>
+    </div>
+    <div class="flex gap-3 items-center">
+        <!-- 明暗主題切換 -->
+        <button onclick="toggleTheme()" class="p-1.5 rounded-lg text-[11px] font-bold bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-all flex items-center justify-center" aria-label="Toggle Theme">
+            <svg id="theme-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <!-- 圖示由 JS 動態注入 -->
+            </svg>
+        </button>
+        <!-- 語系切換 -->
+        <button id="langBtn" onclick="toggleLanguage()" class="px-3 py-1.5 rounded-lg text-[11px] font-bold bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-all flex items-center gap-2">
+            EN
+        </button>
+        <span class="text-[10px] bg-white/10 px-3 py-1 rounded-full border border-white/20 font-mono">V0.8</span>
     </div>
 </div>
 
@@ -673,14 +650,12 @@
         reader.onload = function(e) {
             const img = new Image();
             img.onload = function() {
-                // 計算原圖的 寬高比（高度/寬度）
                 refAspect = img.height / img.width;
                 
                 const loader = new THREE.TextureLoader();
                 loader.load(e.target.result, function(texture) {
                     if (refMesh) scene.remove(refMesh);
 
-                    // 修正關鍵：建立 Plane 時使用 1x1 正方形，完美交給 Scale 屬性依比例縮放，避免重複套用比例導致變形
                     const geo = new THREE.PlaneGeometry(1, 1);
                     const mat = new THREE.MeshBasicMaterial({
                         map: texture,
@@ -707,7 +682,6 @@
     function updateImageDimensions() {
         if (!refMesh) return;
         const width = parseFloat(document.getElementById('imgWidthInput').value) || 100;
-        // 寬度設定為 width，高度則自動等比例縮放為 width * refAspect，完美還原原圖 XY 比例
         refMesh.scale.set(width, width * refAspect, 1);
     }
 
@@ -784,6 +758,5 @@
             });
         }
     </script>
-
 </body>
 </html>
