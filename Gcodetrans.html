@@ -3,73 +3,168 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CNC</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        // 設定 Tailwind CSS 以支援 class 模式的黑夜模式
-        tailwind.config = {
-            darkMode: 'class'
-        }
-    </script>
-    <script>
-        // 立即在網頁頂部設定主題，防範載入時的背景閃爍問題
-        const savedTheme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-        if (savedTheme === 'dark') {
-            document.documentElement.classList.add('dark');
-        } else {
-            document.documentElement.classList.remove('dark');
-        }
-    </script>
+    <title>G-code Editor & Viewer</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/clipper-lib@6.4.2/clipper.js"></script>
-    <!-- DXF 解析庫 -->
-    <script src="https://cdn.jsdelivr.net/npm/dxf-parser@1.1.2/dist/dxf-parser.min.js"></script>
-
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { background: #f8fafc; color: #0f172a; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; transition: background-color 0.2s, color 0.2s; }
-        .dark body { background: #0f172a; color: #f8fafc; }
-
-        .panel { background: #ffffff; border: 1px solid #cbd5e1; transition: background-color 0.2s, border-color 0.2s; }
-        .dark .panel { background: #1e293b; border: 1px solid #334155; }
-        
-        #three-container { width: 100%; height: 400px; border-radius: 8px; overflow: hidden; background: #e2e8f0; position: relative; border: 1px solid #cbd5e1; transition: background-color 0.2s, border-color 0.2s; }
-        .dark #three-container { background: #020617; border: 1px solid #1e293b; }
-        @media (min-width: 1024px) { #three-container { height: 600px; } }
-        
-        input, select { background: #ffffff; border: 1px solid #cbd5e1; color: #0f172a; border-radius: 6px; padding: 8px 12px; font-size: 14px; width: 100%; transition: background-color 0.2s, border-color 0.2s, color 0.2s; }
-        .dark input, .dark select { background: #0f172a; border: 1px solid #475569; color: white; }
-        input:focus { border-color: #ea580c; outline: none; ring: 1px solid #ea580c; }
-        
-        .btn-orange { background: #ea580c; color: white; transition: background 0.2s; }
-        .btn-orange:hover { background: #f97316; }
-        .btn-gray { background: #e2e8f0; color: #334155; transition: background-color 0.2s, color 0.2s; }
-        .dark .btn-gray { background: #475569; color: white; }
-        .btn-gray:hover { background: #cbd5e1; }
-        .dark .btn-gray:hover { background: #64748b; }
-        
-        .active-part { border-left: 4px solid #22c55e; background: rgba(34, 197, 94, 0.05); }
-        .dark class="active-part" { background: rgba(34, 197, 94, 0.1); }
-        
-        .dimension-badge { font-size: 11px; background: #e2e8f0; padding: 2px 8px; border-radius: 4px; color: #475569; transition: background-color 0.2s, color 0.2s; }
-        .dark .dimension-badge { background: #020617; color: #94a3b8; }
-
-        .method-badge { font-size: 11px; background: #f1f5f9; padding: 2px 8px; border-radius: 4px; color: #ea580c; font-weight: bold; transition: background-color 0.2s, color 0.2s; }
-        .dark .method-badge { background: #334155; color: #fb923c; }
-        
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: #f1f5f9; }
-        .dark ::-webkit-scrollbar-track { background: #1e293b; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        .dark ::-webkit-scrollbar-thumb { background: #475569; }
-
-        #file-input { display: none; }
-        .file-custom-label { 
-            display: flex; align-items: center; justify-content: center; gap: 8px;
-            background: #ea580c; color: white; padding: 10px; border-radius: 8px;
-            font-weight: bold; cursor: pointer; font-size: 13px; transition: 0.2s;
+        :root {
+            --primary-green: #10b981;
+            --accent-green: #059669;
+            
+            /* 暗色主題 (預設) */
+            --bg-color: #111827; 
+            --panel-dark: #1f2937;
+            --preview-bg: #000000;
+            --input-bg: #374151;
+            --input-text: #ffffff;
+            --input-border: #4b5563;
+            --label-color: #d1d5db;
+            --card-shadow: rgba(0, 0, 0, 0.5);
+            --panel-border: #374151;
+            --body-text: #f3f4f6;
+            --btn-secondary-bg: #374151;
+            --btn-secondary-text: #e5e7eb;
+            --btn-secondary-hover: #4b5563;
+            --btn-secondary-border: #4b5563;
+            
+            --alert-bg: rgba(16, 185, 129, 0.15);
+            --alert-border: rgba(16, 185, 129, 0.3);
+            --alert-text: #34d399;
         }
-        .file-custom-label:hover { background: #f97316; }
+
+        body.light-theme {
+            /* 亮色主題 */
+            --bg-color: #f3f4f6; 
+            --panel-dark: #ffffff;
+            --preview-bg: #f9fafb;
+            --input-bg: #ffffff;
+            --input-text: #111827;
+            --input-border: #cbd5e1;
+            --label-color: #374151;
+            --card-shadow: rgba(0, 0, 0, 0.05);
+            --panel-border: #e2e8f0;
+            --body-text: #1e293b;
+            --btn-secondary-bg: #f1f5f9;
+            --btn-secondary-text: #334155;
+            --btn-secondary-hover: #e2e8f0;
+            --btn-secondary-border: #cbd5e1;
+            
+            --alert-bg: #ecfdf5;
+            --alert-border: #a7f3d0;
+            --alert-text: #047857;
+        }
+
+        body { 
+            background-color: var(--bg-color); 
+            color: var(--body-text);
+            font-family: 'Inter', system-ui, -apple-system, sans-serif; 
+            overflow-x: hidden; 
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        #preview-container { 
+            width: 100%; 
+            height: 450px; 
+            background-color: var(--preview-bg); 
+            border-radius: 12px; 
+            overflow: hidden; 
+            position: relative; 
+            border: 2px solid var(--panel-border); 
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+        @media (min-width: 1024px) {
+            #preview-container { height: calc(100vh - 120px); min-height: 500px; }
+        }
+
+        /* 雙主題控制面板卡片 */
+        .controls-card { 
+            background: var(--panel-dark); 
+            padding: 1rem; 
+            border-radius: 10px; 
+            box-shadow: 0 4px 6px -1px var(--card-shadow); 
+            border-top: 3px solid var(--primary-green); 
+            border-left: 1px solid var(--panel-border);
+            border-right: 1px solid var(--panel-border);
+            border-bottom: 1px solid var(--panel-border);
+            transition: background-color 0.3s, border-color 0.3s, box-shadow 0.3s;
+        }
+
+        /* 統一的主題化次級按鈕 */
+        .btn-secondary {
+            background-color: var(--btn-secondary-bg);
+            color: var(--btn-secondary-text);
+            border: 1px solid var(--btn-secondary-border);
+            transition: all 0.2s;
+        }
+        .btn-secondary:hover {
+            background-color: var(--btn-secondary-hover);
+        }
+
+        /* 主題化資訊整合卡片 */
+        .info-card {
+            background-color: var(--panel-dark);
+            border: 1px solid var(--panel-border);
+            color: var(--body-text);
+            transition: background-color 0.3s, border-color 0.3s, color 0.3s;
+        }
+
+        /* 主題化警告提示框 */
+        .alert-success {
+            background-color: var(--alert-bg);
+            border: 1px solid var(--alert-border);
+            color: var(--alert-text);
+            transition: background-color 0.3s, border-color 0.3s, color 0.3s;
+        }
+
+        .btn-green { background-color: var(--primary-green); color: #064e3b; transition: all 0.2s; }
+        .btn-green:hover { background-color: var(--accent-green); transform: translateY(-1px); }
+        .btn-green:disabled { background-color: #4b5563; color: #9ca3af; cursor: not-allowed; transform: none; }
+        
+        .label-text { color: var(--label-color); font-weight: 600; font-size: 0.8rem; transition: color 0.3s; }
+        canvas { display: block; }
+        
+        /* 雙主題輸入框 */
+        input[type="number"], input[type="range"] {
+            background-color: var(--input-bg);
+            border: 1px solid var(--input-border);
+            color: var(--input-text);
+            padding: 0.4rem 0.6rem;
+            font-size: 0.85rem;
+            border-radius: 0.375rem;
+            transition: all 0.3s;
+        }
+        input[type="number"]:focus {
+            outline: none;
+            border-color: var(--primary-green);
+            ring: 1px solid var(--primary-green);
+        }
+
+        /* 主題切換按鈕樣式 */
+        .btn-control {
+            background-color: var(--btn-secondary-bg);
+            color: #10b981;
+            padding: 0.45rem;
+            border-radius: 0.5rem;
+            border: 1px solid var(--btn-secondary-border);
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .btn-control:hover {
+            background-color: var(--btn-secondary-hover);
+            color: #34d399;
+        }
+        .icon-control {
+            width: 1.25rem;
+            height: 1.25rem;
+            stroke: currentColor;
+        }
+
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: var(--bg-color); }
+        ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 10px; }
     </style>
 
     <!-- PWA Meta Tags -->
@@ -80,1293 +175,605 @@
     <link rel="apple-touch-icon" href="icon-192.png">
 
 </head>
-<body class="flex flex-col min-h-screen">
-    
-    <!-- 改進為橘色漸層風格後的導覽列 -->
-    <header class="w-full bg-gradient-to-r from-orange-500 via-orange-600 to-red-600 p-6 text-white flex justify-between items-center border-b border-orange-500/30 sticky top-0 z-50 shadow-md">
-        <div>
-            <h1 class="text-2xl font-black tracking-tight" data-i18n="appTitle">轉檔工具 (切割)</h1>
-        </div>
-        <div class="flex gap-3 items-center">
-            <!-- 增加明暗主題切換按鈕，配置在中英切換按鈕左側 -->
-            <button id="theme-toggle" class="p-1.5 rounded-lg text-[11px] font-bold bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-all flex items-center justify-center" aria-label="Toggle Theme">
-                <svg id="theme-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <!-- 圖示由 JS 動態注入 -->
+<body class="pb-4">
+
+<!-- 頂部導航 -->
+<div class="bg-emerald-500 shadow-lg mb-4">
+    <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+        <h1 id="txt-header-title" class="text-gray-900 font-black text-lg md:text-xl tracking-tight">
+            Gcode 即時調整
+        </h1>
+        <div class="flex items-center space-x-2">
+            <!-- 明暗主題切換按鈕 -->
+            <button class="btn-control" onclick="toggleTheme()" aria-label="Toggle Theme">
+                <svg id="theme-icon" class="icon-control" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <!-- JavaScript 將在此注入對應的主題 SVG 路徑 -->
                 </svg>
             </button>
-            <!-- 語系切換按鈕 -->
-            <button id="lang-toggle" class="px-3 py-1.5 rounded-lg text-[11px] font-bold bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-all flex items-center gap-2">
-                <span>中文 / EN</span>
+            <!-- 綁定 onclick 的語言切換按鈕 -->
+            <button id="langBtn" onclick="toggleLanguage()" class="bg-gray-900 text-emerald-400 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-black transition border border-gray-700 shadow-sm">
+                EN
             </button>
-            <!-- 版本徽章，維持原有 V1.4 版本 -->
-            <span class="text-[10px] bg-white/10 px-3 py-1 rounded-full border border-white/20 font-mono">V1.4</span>
         </div>
-    </header>
+    </div>
+</div>
 
-    <main class="p-4 md:p-8 flex-grow">
-        <div class="max-w-[1600px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
-            <!-- 左側控制面板 -->
-            <div class="lg:col-span-3 space-y-6">
-                <div class="panel p-5 rounded-xl shadow-2xl">
-                    <h2 class="text-xs font-bold uppercase tracking-widest text-orange-500 mb-4" data-i18n="step1">第一步：檔案與解析</h2>
-                    <div class="space-y-4">
-                        <div>
-                            <label for="file-input" class="file-custom-label">
-                                <span id="file-label-text" data-i18n="chooseFile">選擇檔案</span>
-                            </label>
-                            <input type="file" id="file-input" accept="image/*,.svg,.dxf">
-                            <p id="file-name-display" class="text-[10px] text-slate-400 dark:text-slate-500 mt-2 truncate text-center" data-i18n="noFile">尚未選擇任何檔案</p>
-                        </div>
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-[10px] text-slate-500 dark:text-slate-400 font-bold mb-1" data-i18n="targetWidth">整體寬 (mm)</label>
-                                <input type="number" id="target-width" value="100">
-                            </div>
-                            <div id="threshold-container">
-                                <label class="block text-[10px] text-slate-500 dark:text-slate-400 font-bold mb-1" data-i18n="threshold">黑白門檻</label>
-                                <input type="number" id="threshold" value="128" min="0" max="255">
-                            </div>
-                        </div>
-                        <div>
-                            <div class="flex justify-between items-center mb-2">
-                                <label class="text-[10px] text-slate-500 dark:text-slate-400 font-bold" data-i18n="smoothness">解析/平滑度</label>
-                            </div>
-                            <input type="range" id="smooth-range" min="0.01" max="2.0" step="0.01" value="0.1" class="accent-orange-600">
-                        </div>
-                        <button id="process-img-btn" class="w-full py-3 btn-orange rounded-lg font-bold text-sm shadow-lg" data-i18n="reprocess">重新解析檔案</button>
+<div class="container mx-auto px-4 max-w-7xl">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        
+        <!-- 左側控制面板 -->
+        <div class="lg:col-span-3 space-y-4 order-2 lg:order-1">
+            
+            <!-- 1. 檔案上傳 -->
+            <div class="controls-card">
+                <h2 class="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-2 flex items-center">
+                    <span id="txt-sec-upload">1. 檔案上傳</span>
+                </h2>
+                <div class="flex flex-col gap-2">
+                    <button onclick="document.getElementById('fileInput').click()" class="btn-secondary w-full font-bold py-2 px-4 rounded transition text-sm flex items-center justify-center shadow-inner">
+                        <svg class="w-4 h-4 mr-2 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                        <span id="txt-btn-upload">選擇 G-code 檔案</span>
+                    </button>
+                    <input type="file" id="fileInput" accept=".gcode,.nc,.txt" class="hidden" />
+                    <div id="fileInfo" class="p-2 alert-success rounded text-[10px] font-bold hidden truncate">
+                        <span id="txt-file-name">檔名</span>: <span id="fileNameDisplay" class="opacity-90">-</span>
                     </div>
-                </div>
-
-                <div class="panel p-5 rounded-xl flex flex-col h-[400px] lg:h-[500px] shadow-2xl">
-                    <div class="flex justify-between items-center mb-4">
-                        <h2 class="text-xs font-bold uppercase tracking-widest text-orange-500" data-i18n="step2">第二步：零件清單</h2>
-                        <button id="select-all" class="text-[10px] btn-gray px-3 py-1 rounded" data-i18n="selectAll">全選 / 反選</button>
-                    </div>
-                    <div id="part-list" class="flex-grow overflow-y-auto space-y-2"></div>
                 </div>
             </div>
 
-            <!-- 中間預覽面板 -->
-            <div class="lg:col-span-6 space-y-6">
-                <div id="three-container" class="shadow-2xl relative">
-                    <div class="absolute top-4 left-4 z-10 space-y-2 bg-white/90 dark:bg-slate-900/80 p-3 rounded-lg border border-slate-200 dark:border-slate-700 backdrop-blur-sm text-slate-800 dark:text-slate-200 shadow-lg">
-                        <div class="flex items-center gap-2"><span class="w-3 h-3 bg-slate-400 dark:bg-slate-500 rounded-full"></span><span class="text-[10px] font-bold" data-i18n="legendOriginal">未選零件輪廓</span></div>
-                        <div class="flex items-center gap-2"><span class="w-3 h-3 bg-green-500 rounded-full"></span><span class="text-[10px] font-bold" data-i18n="legendSelected">已選零件輪廓</span></div>
-                        <div class="flex items-center gap-2"><span class="w-3 h-3 bg-yellow-400 rounded-full"></span><span class="text-[10px] font-bold" data-i18n="legendToolpath">加工路徑 (黃色覆蓋)</span></div>
+            <!-- 2. 參數調整 -->
+            <div class="controls-card">
+                <h2 class="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-3 flex items-center">
+                    <span id="txt-sec-params">2. 參數調整 (不影響 Z/F)</span>
+                </h2>
+                <div class="space-y-3">
+                    <div class="grid grid-cols-2 gap-2">
+                        <div class="col-span-2">
+                            <label class="label-text block mb-1" id="txt-label-scale">縮放比例 (僅限 XY)</label>
+                            <input type="number" id="scaleInput" value="1" step="0.1" class="w-full">
+                        </div>
+                        <div>
+                            <label class="label-text block mb-1" id="txt-label-ox">X 偏移</label>
+                            <input type="number" id="offsetX" value="0" step="1" class="w-full">
+                        </div>
+                        <div>
+                            <label class="label-text block mb-1" id="txt-label-oy">Y 偏移</label>
+                            <input type="number" id="offsetY" value="0" step="1" class="w-full">
+                        </div>
                     </div>
-                </div>
-                
-                <div class="panel p-6 rounded-xl flex flex-col sm:flex-row justify-between items-center gap-4 shadow-2xl">
-                    <div class="text-center sm:text-left">
-                        <p class="text-[10px] text-slate-400 uppercase font-bold mb-1" data-i18n="estTime">預估總加工時間</p>
-                        <p id="est-time" class="text-3xl font-mono font-bold text-orange-500">00:00:00</p>
+                    <div>
+                        <label class="label-text block mb-1" id="txt-label-rot">旋轉角度 (Z軸中心)</label>
+                        <input type="number" id="rotationInput" value="0" step="1" class="w-full">
                     </div>
-                    <button id="export-gcode" class="w-full sm:w-auto px-10 py-4 btn-orange rounded-xl font-black text-sm uppercase shadow-xl" data-i18n="downloadBtn">下載檔案</button>
+                    <div>
+                        <label class="label-text block mb-1" id="txt-label-res">解析度 (最小 XY 位移 mm)</label>
+                        <input type="number" id="resInput" value="0.1" min="0.1" step="0.1" class="w-full">
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 pt-1">
+                        <button id="centerBtn" class="btn-secondary font-bold py-2 rounded transition text-xs">自動置中</button>
+                        <button id="applyBtn" class="btn-green font-bold py-2 rounded shadow-sm text-xs">更新預覽</button>
+                    </div>
                 </div>
             </div>
 
-            <!-- 右側設定面板 -->
-            <div class="lg:col-span-3">
-                <div id="job-panel" class="panel p-6 rounded-xl hidden shadow-2xl border-t-4 border-t-orange-600">
-                    <h2 class="text-sm font-bold none text-orange-500 mb-6" data-i18n="jobSettings">第三步：加工參數設定</h2>
-                    <div class="space-y-6">
-                        <div class="p-4 bg-slate-100 dark:bg-slate-950/50 rounded-lg space-y-4">
-                            <h3 class="text-[10px] font-bold text-slate-500 dark:text-slate-400 none" data-i18n="groupSize">選中零件群組尺寸 (mm)</h3>
-                            <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block text-[9px] text-slate-400 mb-1" data-i18n="width">寬度</label>
-                                    <input type="number" id="resize-w" step="0.1">
-                                </div>
-                                <div>
-                                    <label class="block text-[9px] text-slate-400 mb-1" data-i18n="height">高度</label>
-                                    <input type="number" id="resize-h" step="0.1">
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-[10px] text-slate-500 dark:text-slate-400 font-bold mb-1" data-i18n="resolution">解析度 (mm)</label>
-                                <input type="number" id="resolution" value="0.1" min="0.1" step="0.01">
-                            </div>
-                            <div>
-                                <label class="block text-[10px] text-slate-500 dark:text-slate-400 font-bold mb-1" data-i18n="feedRate">進給速率</label>
-                                <input type="number" id="job-f" value="1500">
-                            </div>
-                        </div>
-
+            <!-- 3. 參考底圖 -->
+            <div class="controls-card">
+                <h2 class="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-2 flex items-center">
+                    <span id="txt-sec-refimg">3. 參考底圖 (選填)</span>
+                </h2>
+                <div class="space-y-3">
+                    <button onclick="document.getElementById('imageInput').click()" class="btn-secondary w-full font-bold py-2 px-4 rounded transition text-xs flex items-center justify-center shadow-inner">
+                        <svg class="w-4 h-4 mr-2 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                        <span id="txt-btn-upload-img">選擇參考圖片</span>
+                    </button>
+                    <input type="file" id="imageInput" accept="image/*" class="hidden" />
+                    
+                    <div id="imgControls" class="space-y-2 hidden">
                         <div>
-                            <label class="block text-[10px] text-slate-500 dark:text-slate-400 font-bold mb-1" data-i18n="mode">加工模式</label>
-                            <select id="job-type">
-                                <option value="laser" data-i18n="optLaser">雷射切割</option>
-                                <option value="outer" data-i18n="optOuter">CNC 外輪廓</option>
-                                <option value="inner" data-i18n="optInner">CNC 內輪廓</option>
-                                <option value="pocket" selected data-i18n="optPocket">CNC 槽加工</option>
-                            </select>
+                            <label class="label-text block mb-1" id="txt-label-imgwidth">圖片實際寬度 (mm)</label>
+                            <input type="number" id="imgWidthInput" value="100" min="1" step="10" class="w-full">
                         </div>
-
-                        <!-- 橋位設定 (TAB)，僅外加工/內加工時顯示 -->
-                        <div id="tab-opts-container" class="hidden">
-                            <label class="flex items-center gap-2 cursor-pointer mt-2 bg-slate-100 dark:bg-slate-900/40 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800">
-                                <input type="checkbox" id="job-use-tab" class="w-4 h-4 accent-orange-600 rounded">
-                                <span class="text-xs font-bold text-slate-700 dark:text-slate-300" data-i18n="useTab">啟用橋位 (TAB)</span>
-                            </label>
-                        </div>
-
-                        <div id="milling-opts" class="space-y-4 pt-4 border-t border-slate-200 dark:border-slate-700">
-                            <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block text-[10px] text-slate-500 dark:text-slate-400 font-bold mb-1" data-i18n="toolDia">刀具直徑</label>
-                                    <input type="number" id="mill-d" value="3.175" step="0.001">
-                                </div>
-                                <div>
-                                    <label class="block text-[10px] text-slate-500 dark:text-slate-400 font-bold mb-1" data-i18n="totalDepth">加工深度</label>
-                                    <input type="number" id="mill-depth" value="3.0" step="0.1">
-                                </div>
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <label class="label-text" id="txt-label-imgopacity">不透明度</label>
+                                <span id="opacityVal" class="text-xs text-emerald-400 font-mono">0.5</span>
                             </div>
-                            <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block text-[10px] text-slate-500 dark:text-slate-400 font-bold mb-1" data-i18n="stepDown">每次下刀</label>
-                                    <input type="number" id="mill-step" value="1.0" step="0.1">
-                                </div>
-                                <div id="pocket-opts">
-                                    <label class="block text-[10px] text-slate-500 dark:text-slate-400 font-bold mb-1" data-i18n="overlap">路徑重疊</label>
-                                    <input type="number" id="mill-overlap" value="0.5" min="0.1" max="0.9" step="0.1">
-                                </div>
-                            </div>
+                            <input type="range" id="imgOpacityInput" min="0.1" max="1.0" step="0.05" value="0.5" class="w-full accent-emerald-500">
                         </div>
-
-                        <button id="apply-job-btn" class="w-full py-4 btn-orange rounded-xl font-bold text-sm uppercase shadow-lg" data-i18n="updateBtn">更新計算路徑</button>
                     </div>
                 </div>
-                
-                <div id="no-selection-hint" class="panel p-12 rounded-xl text-center text-slate-400 dark:text-slate-500 shadow-2xl h-full flex flex-col justify-center">
-                    <svg class="mx-auto mb-4 opacity-25" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
-                    <p class="text-sm leading-relaxed" data-i18n="selectionHint">請先在左側清單中勾選零件<br>以進行後續調整</p>
+            </div>
+
+            <!-- 4. 加工預估 & 下載 -->
+            <div class="info-card rounded-lg p-4 shadow-xl space-y-3 border-t-4 border-emerald-500">
+                <div class="flex justify-between items-end">
+                    <div>
+                        <p class="text-[9px] text-emerald-500 font-bold uppercase tracking-wider" id="txt-info-time">預估時間</p>
+                        <p class="text-sm font-mono font-bold text-emerald-400" id="timeEst">0 min 0 sec</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-[9px] text-emerald-500 font-bold uppercase tracking-wider" id="txt-info-dist">路徑長度</p>
+                        <p class="text-sm font-mono font-bold" id="distContainer"><span id="distEst">0</span> <span class="text-[10px] text-gray-500">mm</span></p>
+                    </div>
+                </div>
+                <button id="downloadBtn" class="w-full bg-emerald-500 text-gray-900 py-3 rounded-lg font-black text-xs uppercase hover:bg-emerald-400 transition shadow-lg disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed" disabled>
+                    下載修改後的 G-code
+                </button>
+            </div>
+        </div>
+
+        <!-- 3D 預覽區域 -->
+        <div class="lg:col-span-9 order-1 lg:order-2">
+            <div id="preview-container" class="shadow-2xl ring-1 ring-gray-700">
+                <div class="absolute top-3 right-3 z-10">
+                    <div class="bg-black/80 backdrop-blur-md text-emerald-400 px-3 py-1 rounded-full text-[9px] font-black border border-emerald-500/30" id="txt-preview-hint">
+                        3D REALTIME VIEW
+                    </div>
+                </div>
+                <div class="absolute bottom-3 left-3 z-10 text-gray-400 text-[9px] space-y-0.5 bg-black/60 p-2 rounded-lg backdrop-blur-sm border border-white/5">
+                    <p id="txt-mouse-l" class="flex items-center"><span class="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-1.5"></span>左鍵: 旋轉</p>
+                    <p id="txt-mouse-r" class="flex items-center"><span class="w-1.5 h-1.5 bg-blue-500 rounded-full mr-1.5"></span>右鍵: 平移</p>
+                    <p id="txt-mouse-w" class="flex items-center"><span class="w-1.5 h-1.5 bg-white rounded-full mr-1.5"></span>滾輪: 縮放</p>
                 </div>
             </div>
         </div>
-    </main>
+    </div>
+</div>
 
-    <canvas id="hidden-canvas" class="hidden"></canvas>
+<script>
+    // --- 語言配置 ---
+    const i18n = {
+        zh: {
+            headerTitle: "Gcode 即時調整",
+            langBtn: "EN",
+            secUpload: "1. 檔案上傳",
+            btnUpload: "選擇 G-code 檔案",
+            fileName: "檔名",
+            secParams: "2. 參數調整 (不影響 Z/F)",
+            labelScale: "縮放比例 (僅 XY)",
+            labelOX: "X 偏移 (mm)",
+            labelOY: "Y 偏移 (mm)",
+            labelRot: "旋轉角度 (Z軸中心)",
+            labelRes: "解析度 (最小 XY 位移 mm)",
+            secRefImg: "3. 參考底圖 (選填)",
+            btnUploadImg: "選擇參考圖片",
+            labelImgWidth: "圖片實際寬度 (mm)",
+            labelImgOpacity: "不透明度",
+            btnCenter: "自動置中",
+            btnUpdate: "更新預覽",
+            infoTime: "預估時間",
+            infoDist: "路徑長度",
+            btnDownload: "下載修改後的 G-code",
+            mouseL: "左鍵: 旋轉",
+            mouseR: "右鍵: 平移",
+            mouseW: "滾輪: 縮放",
+            unitMin: "分",
+            unitSec: "秒"
+        },
+        en: {
+            headerTitle: "Gcode Adjuster",
+            langBtn: "中文",
+            secUpload: "1. File Upload",
+            btnUpload: "Choose G-code File",
+            fileName: "File",
+            secParams: "2. Parameters (Fixed Z/F)",
+            labelScale: "Scale (XY Only)",
+            labelOX: "X Offset",
+            labelOY: "Y Offset",
+            labelRot: "Rotation (Z-Axis)",
+            labelRes: "Resolution (Min XY mm)",
+            secRefImg: "3. Reference Image (Optional)",
+            btnUploadImg: "Choose Reference Image",
+            labelImgWidth: "Image Width (mm)",
+            labelImgOpacity: "Opacity",
+            btnCenter: "Auto Center",
+            btnUpdate: "Update",
+            infoTime: "Est. Time",
+            infoDist: "Total Path",
+            btnDownload: "Download Processed G-code",
+            mouseL: "L-Click: Rotate",
+            mouseR: "R-Click: Pan",
+            mouseW: "Wheel: Zoom",
+            unitMin: "min",
+            unitSec: "sec"
+        }
+    };
 
-    <script>
-        // --- 主題切換設定與函數 ---
+    let currentLang = 'zh';
+    let lastTimeSec = 0, lastDistance = 0;
+    let scene, camera, renderer, gcodeGroup, grid;
+    let originalGcode = "";
+    let originalFileName = "output";
+
+    // 參考圖片 Three.js 物件
+    let refMesh = null;
+    let refAspect = 1.0;
+
+    // --- 語言切換核心 ---
+    function toggleLanguage() {
+        currentLang = currentLang === 'zh' ? 'en' : 'zh';
+        updateLanguage();
+    }
+
+    function updateLanguage() {
+        const lang = i18n[currentLang];
+        document.getElementById('txt-header-title').innerText = lang.headerTitle;
+        document.getElementById('langBtn').innerText = lang.langBtn;
+        document.getElementById('txt-sec-upload').innerText = lang.secUpload;
+        document.getElementById('txt-btn-upload').innerText = lang.btnUpload;
+        document.getElementById('txt-file-name').innerText = lang.fileName;
+        document.getElementById('txt-sec-params').innerText = lang.secParams;
+        document.getElementById('txt-label-scale').innerText = lang.labelScale;
+        document.getElementById('txt-label-ox').innerText = lang.labelOX;
+        document.getElementById('txt-label-oy').innerText = lang.labelOY;
+        document.getElementById('txt-label-rot').innerText = lang.labelRot;
+        document.getElementById('txt-label-res').innerText = lang.labelRes;
+        document.getElementById('txt-sec-refimg').innerText = lang.secRefImg;
+        document.getElementById('txt-btn-upload-img').innerText = lang.btnUploadImg;
+        document.getElementById('txt-label-imgwidth').innerText = lang.labelImgWidth;
+        document.getElementById('txt-label-imgopacity').innerText = lang.labelImgOpacity;
+        document.getElementById('centerBtn').innerText = lang.btnCenter;
+        document.getElementById('applyBtn').innerText = lang.btnUpdate;
+        document.getElementById('txt-info-time').innerText = lang.infoTime;
+        document.getElementById('txt-info-dist').innerText = lang.infoDist;
+        document.getElementById('downloadBtn').innerText = lang.btnDownload;
+        document.getElementById('txt-mouse-l').innerHTML = `<span class="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-1.5"></span>${lang.mouseL}`;
+        document.getElementById('txt-mouse-r').innerHTML = `<span class="w-1.5 h-1.5 bg-blue-500 rounded-full mr-1.5"></span>${lang.mouseR}`;
+        document.getElementById('txt-mouse-w').innerHTML = `<span class="w-1.5 h-1.5 bg-white rounded-full mr-1.5"></span>${lang.mouseW}`;
+        
+        displayStats(lastTimeSec, lastDistance);
+    }
+
+    function displayStats(timeSec, dist) {
+        lastTimeSec = timeSec; lastDistance = dist;
+        const lang = i18n[currentLang];
+        const mins = Math.floor(timeSec / 60);
+        const secs = Math.round(timeSec % 60);
+        document.getElementById('timeEst').innerText = `${mins} ${lang.unitMin} ${secs} ${lang.unitSec}`;
+        document.getElementById('distEst').innerText = dist.toFixed(2);
+    }
+
+    // --- 主題切換邏輯 ---
+    function toggleTheme() {
+        document.body.classList.toggle('light-theme');
+        const isLight = document.body.classList.contains('light-theme');
+        const currentTheme = isLight ? 'light' : 'dark';
+        localStorage.setItem('gcode-editor-theme', currentTheme);
+        updateThemeIcon(currentTheme);
+        updateThreeGrid();
+    }
+
+    function updateThemeIcon(currentTheme) {
         const themeIcon = document.getElementById('theme-icon');
-
-        function setTheme(theme) {
-            if (theme === 'dark') {
-                document.documentElement.classList.add('dark');
+        if (themeIcon) {
+            if (currentTheme === 'dark') {
                 // Sun 圖示 (點擊變亮)
                 themeIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m0-12.728l.707.707m12.728 12.728l.707.707M12 8a4 4 0 100 8 4 4 0 000-8z" />`;
-                localStorage.setItem('theme', 'dark');
             } else {
-                document.documentElement.classList.remove('dark');
                 // Moon 圖示 (點擊變暗)
                 themeIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />`;
-                localStorage.setItem('theme', 'light');
-            }
-            if (typeof renderer !== 'undefined' && renderer !== null) {
-                updateRendererBg();
-                update3D();
             }
         }
+    }
 
-        function updateRendererBg() {
-            const isDark = document.documentElement.classList.contains('dark');
-            renderer.setClearColor(isDark ? 0x020617 : 0xf1f5f9);
-        }
+    function updateThreeGrid() {
+        if (!scene || !grid) return;
+        scene.remove(grid);
+        const isLight = document.body.classList.contains('light-theme');
+        
+        const gridColor = isLight ? 0xcccccc : 0x222222;
+        const centerColor = isLight ? 0x059669 : 0x10b981;
+        
+        grid = new THREE.GridHelper(2000, 40, centerColor, gridColor);
+        grid.rotation.x = Math.PI / 2;
+        scene.add(grid);
+    }
 
-        // 綁定點擊事件
-        document.getElementById('theme-toggle').onclick = () => {
-            const isDark = document.documentElement.classList.contains('dark');
-            setTheme(isDark ? 'light' : 'dark');
-        };
-
-        // --- 1. 基礎影像演算法與輔助函式 ---
-        function tracePath(sx, sy, w, h, isBlack, visited){
-            const path = []; let cx = sx, cy = sy;
-            const dirs = [[0,-1],[1,-1],[1,0],[1,1],[0,1],[-1,1],[-1,0],[-1,-1]];
-            let d = 7;
-            for(let i=0; i<30000; i++){
-                visited[cy*w+cx] = 1; path.push({x:cx, y:cy});
-                let found = false;
-                for(let j=0; j<8; j++){
-                    let nd = (d+j)%8, nx = cx+dirs[nd][0], ny = cy+dirs[nd][1];
-                    if(isBlack(nx, ny)){ cx = nx; cy = ny; d = (nd+5)%8; found = true; break; }
-                }
-                if(!found || (cx === sx && cy === sy && path.length > 5)) break;
-            }
-            return path;
-        }
-
-        function laplacianSmooth(points, iterations = 3) {
-            if (points.length < 3) return points;
-            let current = JSON.parse(JSON.stringify(points));
-            for (let iter = 0; iter < iterations; iter++) {
-                let next = JSON.parse(JSON.stringify(current));
-                for (let i = 1; i < current.length - 1; i++) {
-                    next[i].x = 0.5 * current[i].x + 0.25 * (current[i - 1].x + current[i + 1].x);
-                    next[i].y = 0.5 * current[i].y + 0.25 * (current[i - 1].y + current[i + 1].y);
-                }
-                current = next;
-            }
-            return current;
-        }
-
-        function simplifyPath(points, tolerance) {
-            if (points.length <= 2) return points;
-            let maxSqDist = 0, index = 0;
-            for (let i = 1; i < points.length - 1; i++) {
-                const sqDist = getSqSegDist(points[i], points[0], points[points.length - 1]);
-                if (sqDist > maxSqDist) { index = i; maxSqDist = sqDist; }
-            }
-            if (maxSqDist > tolerance * tolerance) {
-                const res1 = simplifyPath(points.slice(0, index + 1), tolerance);
-                const res2 = simplifyPath(points.slice(index), tolerance);
-                return res1.slice(0, res1.length - 1).concat(res2);
-            }
-            return [points[0], points[points.length - 1]];
-        }
-
-        function getSqSegDist(p, p1, p2) {
-            let x = p1.x, y = p1.y, dx = p2.x - x, dy = p2.y - y;
-            if (dx !== 0 || dy !== 0) {
-                let t = ((p.x - x) * dx + (p.y - y) * dy) / (dx * dx + dy * dy);
-                if (t > 1) { x = p2.x; y = p2.y; }
-                else if (t > 0) { x += dx * t; y += dy * t; }
-            }
-            dx = p.x - x; dy = p.y - y;
-            return dx * dx + dy * dy;
-        }
-
-        function cleanPath(path, resolution) {
-            if (path.length < 2) return path;
-            let filtered = [path[0]], lastPt = path[0];
-            for (let i = 1; i < path.length; i++) {
-                const pt = path[i], dist = Math.sqrt(Math.pow(pt.x - lastPt.x, 2) + Math.pow(pt.y - lastPt.y, 2));
-                if (dist >= resolution || i === path.length - 1) { filtered.push(pt); lastPt = pt; }
-            }
-            return filtered;
-        }
-
-        // --- 橋位 (TAB) 計算核心輔助演算法 ---
-        // 1. 細分路徑，確保在大跨距的線段中有充足的頂點做 Z-lift 精細偵測
-        function subdividePath(path, maxLen = 0.5) {
-            if (path.length < 2) return path;
-            const result = [path[0]];
-            for (let i = 0; i < path.length - 1; i++) {
-                const p1 = path[i];
-                const p2 = path[i + 1];
-                const dx = p2.x - p1.x;
-                const dy = p2.y - p1.y;
-                const len = Math.sqrt(dx * dx + dy * dy);
-                if (len > maxLen) {
-                    const divisions = Math.ceil(len / maxLen);
-                    for (let j = 1; j < divisions; j++) {
-                        const t = j / divisions;
-                        result.push({
-                            x: p1.x + dx * t,
-                            y: p1.y + dy * t
-                        });
-                    }
-                }
-                result.push(p2);
-            }
-            return result;
-        }
-
-        // 2. 獲取橋位的中心投影座標點
-        function getTabPointsForPath(path) {
-            if (!path || path.length < 3) return [];
-            
-            // 計算 Bounding Box 外框
-            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-            path.forEach(pt => {
-                minX = Math.min(minX, pt.x);
-                maxX = Math.max(maxX, pt.x);
-                minY = Math.min(minY, pt.y);
-                maxY = Math.max(maxY, pt.y);
-            });
-            
-            // 四個對角頂點
-            const A = { x: minX, y: minY };
-            const B = { x: maxX, y: maxY };
-            const C = { x: minX, y: maxY };
-            const D = { x: maxX, y: minY };
-            
-            // 第一對角線 (A-B) 尋找路徑上最靠近之投射點
-            let ptA = path[0], ptB = path[0];
-            let minDistA = Infinity, minDistB = Infinity;
-            
-            path.forEach(pt => {
-                const distA = Math.pow(pt.x - A.x, 2) + Math.pow(pt.y - A.y, 2);
-                if (distA < minDistA) { minDistA = distA; ptA = pt; }
-                
-                const distB = Math.pow(pt.x - B.x, 2) + Math.pow(pt.y - B.y, 2);
-                if (distB < minDistB) { minDistB = distB; ptB = pt; }
-            });
-            
-            const centers = [ptA, ptB];
-            
-            // 計算路徑圍成之面積
-            let area = 0;
-            for (let i = 0; i < path.length; i++) {
-                let j = (i + 1) % path.length;
-                area += path[i].x * path[j].y;
-                area -= path[j].x * path[i].y;
-            }
-            area = Math.abs(area / 2); // 單位為 mm2
-            
-            // 當面積大於 1600 mm2 時，在第二對角線 (C-D) 處多配置一對橋位
-            if (area > 1600) {
-                let ptC = path[0], ptD = path[0];
-                let minDistC = Infinity, minDistD = Infinity;
-                
-                path.forEach(pt => {
-                    const distC = Math.pow(pt.x - C.x, 2) + Math.pow(pt.y - C.y, 2);
-                    if (distC < minDistC) { minDistC = distC; ptC = pt; }
-                    
-                    const distD = Math.pow(pt.x - D.x, 2) + Math.pow(pt.y - D.y, 2);
-                    if (distD < minDistD) { minDistD = distD; ptD = pt; }
-                });
-                
-                const distToExisting = (p) => centers.some(c => Math.pow(p.x - c.x, 2) + Math.pow(p.y - c.y, 2) < 1.0);
-                if (!distToExisting(ptC)) centers.push(ptC);
-                if (!distToExisting(ptD)) centers.push(ptD);
-            }
-            
-            return centers;
-        }
-
-        // 3. 判斷特定點是否位在橋位保護區間內 (半寬 3mm，合計 6mm)
-        function isPointInTab(pt, tabCenters, tabLength = 6) {
-            const halfLenSq = Math.pow(tabLength / 2, 2);
-            for (let i = 0; i < tabCenters.length; i++) {
-                const tc = tabCenters[i];
-                const distSq = Math.pow(pt.x - tc.x, 2) + Math.pow(pt.y - tc.y, 2);
-                if (distSq < halfLenSq) return true;
-            }
-            return false;
-        }
-
-        // --- 多國語言設定 ---
-        const i18n = {
-            zh: {
-                appTitle: "轉檔工具 (切割)",
-                step1: "第一步：檔案與解析",
-                chooseFile: "選擇檔案",
-                noFile: "尚未選擇任何檔案",
-                targetWidth: "整體寬",
-                threshold: "黑白門檻",
-                smoothness: "解析/平滑度",
-                reprocess: "重新解析檔案",
-                step2: "第二步：零件清單",
-                selectAll: "全選 / 反選",
-                legendOriginal: "未選零件輪廓",
-                legendSelected: "已選零件輪廓",
-                legendToolpath: "加工路徑 (黃色覆蓋)",
-                estTime: "預估總加工時間",
-                downloadBtn: "下載檔案",
-                jobSettings: "第三步：加工參數設定(mm)",
-                groupSize: "選中零件群組尺寸",
-                width: "寬度",
-                height: "高度",
-                resolution: "解析度",
-                feedRate: "進給速率",
-                mode: "加工模式",
-                optLaser: "雷射切割",
-                optOuter: "外加工",
-                optInner: "內加工",
-                optPocket: "槽加工",
-                useTab: "啟用橋位 (TAB)",
-                toolDia: "刀具直徑",
-                totalDepth: "加工深度",
-                stepDown: "每次下刀",
-                overlap: "路徑重疊",
-                updateBtn: "更新計算路徑",
-                selectionHint: "請先在左側清單中勾選零件<br>以進行後續調整",
-                partName: "零件",
-                method: "加工方式",
-                notApplied: "NA"
-            },
-            en: {
-                appTitle: "Cut Converter",
-                step1: "Step 1: File & Parsing",
-                chooseFile: "Browse File",
-                noFile: "No file chosen",
-                targetWidth: "Total Width (mm)",
-                threshold: "B/W Threshold",
-                smoothness: "Path Smoothness",
-                reprocess: "Reprocess File",
-                step2: "Step 2: Parts List",
-                selectAll: "Select / Deselect All",
-                legendOriginal: "Deselected Path",
-                legendSelected: "Selected Path",
-                legendToolpath: "Toolpath (Yellow)",
-                estTime: "Estimated Total Time",
-                downloadBtn: "Download file",
-                jobSettings: "Step 3: Job Parameters(mm)",
-                groupSize: "Selection Group Size",
-                width: "Width",
-                height: "Height",
-                resolution: "Resolution",
-                feedRate: "Feed Rate (F)",
-                mode: "Process Mode",
-                optLaser: "Laser Cutting",
-                optOuter: "Mill Outside",
-                optInner: "Mill Inside",
-                optPocket: "Mill Pocket",
-                useTab: "Enable Tabs (Bridge)",
-                toolDia: "Tool Diameter",
-                totalDepth: "Total Depth",
-                stepDown: "Step Down",
-                overlap: "Overlap Ratio",
-                updateBtn: "Update Toolpaths",
-                selectionHint: "Please select a part from the list<br>to start adjusting parameters",
-                partName: "Part",
-                method: "Method",
-                notApplied: "NA"
-            }
-        };
-
-        let currentLang = 'zh';
-        function updateLanguage() {
-            document.querySelectorAll('[data-i18n]').forEach(el => {
-                const key = el.getAttribute('data-i18n');
-                if (i18n[currentLang][key]) el.innerHTML = i18n[currentLang][key];
-            });
-            renderPartList();
-        }
-
-        document.getElementById('lang-toggle').onclick = () => { currentLang = currentLang === 'zh' ? 'en' : 'zh'; updateLanguage(); };
-
-        // --- 全局變數 ---
-        const fileInput = document.getElementById('file-input');
-        const fileNameDisplay = document.getElementById('file-name-display');
-        let rawFileData = null;
-        let fileExtension = "";
-        let originalFileName = "cnc_work";
-        let parts = []; 
-        let selectedIndices = new Set();
-        const SAFE_Z = "2.000";
-
-        // --- 檔案讀取功能 ---
-        fileInput.onchange = (e) => {
-            const file = e.target.files[0];
-            if(!file) return;
-            fileNameDisplay.innerText = file.name;
-            originalFileName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
-            fileExtension = file.name.split('.').pop().toLowerCase();
-
-            const r = new FileReader();
-            r.onload = (ev) => {
-                rawFileData = ev.target.result;
-                document.getElementById('process-img-btn').click();
-            };
-
-            const isImg = ["jpg","jpeg","png","bmp","webp"].includes(fileExtension);
-            document.getElementById('threshold-container').style.display = isImg ? 'block' : 'none';
-
-            if (isImg) {
-                r.readAsDataURL(file);
-            } else {
-                r.readAsText(file);
-            }
-        };
-
-        // --- 核心解析流程 ---
-        document.getElementById('process-img-btn').onclick = async () => {
-            if(!rawFileData) return;
-            
-            const targetW = parseFloat(document.getElementById('target-width').value);
-            const smoothTol = parseFloat(document.getElementById('smooth-range').value);
-            
-            let vectorPaths = [];
-
-            if (["jpg","jpeg","png","bmp","webp"].includes(fileExtension)) {
-                vectorPaths = await parseBitmap(rawFileData, targetW, smoothTol);
-            } else if (fileExtension === 'svg') {
-                vectorPaths = parseSVG(rawFileData, targetW, smoothTol);
-            } else if (fileExtension === 'dxf') {
-                vectorPaths = parseDXF(rawFileData, targetW, smoothTol);
-            }
-
-            if (vectorPaths.length > 0) {
-                processVectorIntoParts(vectorPaths);
-            }
-        };
-
-        // --- 點陣圖處理 ---
-        async function parseBitmap(dataUrl, targetW, smoothTol) {
-            return new Promise((resolve) => {
-                const img = new Image();
-                img.onload = () => {
-                    const canvas = document.getElementById('hidden-canvas');
-                    const ctx = canvas.getContext('2d');
-                    const threshold = parseInt(document.getElementById('threshold').value);
-                    canvas.width = img.width; canvas.height = img.height;
-                    ctx.drawImage(img, 0, 0);
-                    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                    const w = canvas.width, h = canvas.height;
-                    const visited = new Uint8Array(w * h);
-                    const mmScale = targetW / w;
-
-                    const isBlack = (x, y) => {
-                        if(x < 1 || y < 1 || x >= w-1 || y >= h-1) return false;
-                        const i = (y * w + x) * 4;
-                        const gray = imgData.data[i] * 0.299 + imgData.data[i+1] * 0.587 + imgData.data[i+2] * 0.114;
-                        return gray < threshold;
-                    };
-
-                    let paths = [];
-                    for(let y=1; y<h-1; y++){
-                        for(let x=1; x<w-1; x++){
-                            if(isBlack(x,y) && !visited[y*w+x]){
-                                let edge = false;
-                                for(let dy=-1; dy<=1; dy++) for(let dx=-1; dx<=1; dx++) if(!isBlack(x+dx, y+dy)) edge = true;
-                                if(edge){
-                                    const path = tracePath(x, y, w, h, isBlack, visited);
-                                    if(path.length > 10){
-                                        const mmPoints = path.map(p => ({ x: p.x * mmScale, y: (h - p.y) * mmScale }));
-                                        const smoothed = laplacianSmooth(mmPoints, 3);
-                                        paths.push(simplifyPath(smoothed, smoothTol));
-                                    }
-                                } else visited[y*w+x] = 1;
-                            }
-                        }
-                    }
-                    resolve(paths);
-                };
-                img.src = dataUrl;
-            });
-        }
-
-        // --- SVG 向量解析 ---
-        function parseSVG(svgString, targetW, smoothTol) {
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(svgString, 'image/svg+xml');
-            const svgEl = doc.querySelector('svg');
-            if (!svgEl) return [];
-
-            const paths = [];
-            const elements = doc.querySelectorAll('path, rect, circle, ellipse, line, polyline, polygon');
-            
-            elements.forEach(el => {
-                let pts = [];
-                const type = el.tagName.toLowerCase();
-
-                if (type === 'path') {
-                    const tempPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
-                    tempPath.setAttribute("d", el.getAttribute("d"));
-                    const len = tempPath.getTotalLength();
-                    const segments = Math.max(10, Math.ceil(len / (smoothTol * 5))); 
-                    for(let i=0; i<=segments; i++) {
-                        const p = tempPath.getPointAtLength(i * len / segments);
-                        pts.push({ x: p.x, y: -p.y });
-                    }
-                } else if (type === 'rect') {
-                    const x = parseFloat(el.getAttribute('x')||0), y = parseFloat(el.getAttribute('y')||0);
-                    const w = parseFloat(el.getAttribute('width')), h = parseFloat(el.getAttribute('height'));
-                    pts = [{x,y:-y}, {x:x+w,y:-y}, {x:x+w,y:-(y+h)}, {x,y:-(y+h)}, {x,y:-y}];
-                } else if (type === 'circle' || type === 'ellipse') {
-                    const cx = parseFloat(el.getAttribute('cx')||0), cy = parseFloat(el.getAttribute('cy')||0);
-                    const rx = type === 'circle' ? parseFloat(el.getAttribute('r')) : parseFloat(el.getAttribute('rx'));
-                    const ry = type === 'circle' ? rx : parseFloat(el.getAttribute('ry'));
-                    for(let i=0; i<=64; i++) {
-                        const a = (i/64) * Math.PI * 2;
-                        pts.push({ x: cx + Math.cos(a)*rx, y: -(cy + Math.sin(a)*ry) });
-                    }
-                } else if (type === 'line') {
-                    pts = [{x:parseFloat(el.getAttribute('x1')), y:-parseFloat(el.getAttribute('y1'))}, {x:parseFloat(el.getAttribute('x2')), y:-parseFloat(el.getAttribute('y2'))}];
-                } else if (type === 'polyline' || type === 'polygon') {
-                    const pstr = el.getAttribute('points').trim().split(/[\s,]+/);
-                    for(let i=0; i<pstr.length; i+=2) pts.push({ x: parseFloat(pstr[i]), y: -parseFloat(pstr[i+1]) });
-                    if(type === 'polygon' && pts.length > 0) pts.push(pts[0]);
-                }
-
-                if (pts.length > 1) {
-                    paths.push(simplifyPath(pts, smoothTol));
-                }
-            });
-
-            return scaleVectorPaths(paths, targetW);
-        }
-
-        // --- DXF 向量解析 ---
-        function parseDXF(dxfString, targetW, smoothTol) {
-            const parser = new DxfParser();
-            try {
-                const dxf = parser.parseSync(dxfString);
-                const paths = [];
-
-                dxf.entities.forEach(ent => {
-                    let pts = [];
-                    if (ent.type === 'LINE') {
-                        pts = [{x: ent.vertices[0].x, y: ent.vertices[0].y}, {x: ent.vertices[1].x, y: ent.vertices[1].y}];
-                    } else if (ent.type === 'LWPOLYLINE' || ent.type === 'POLYLINE') {
-                        ent.vertices.forEach(v => pts.push({x: v.x, y: v.y}));
-                        if (ent.shape) pts.push(pts[0]);
-                    } else if (ent.type === 'CIRCLE' || ent.type === 'ARC') {
-                        const start = ent.startAngle || 0, end = ent.endAngle !== undefined ? ent.endAngle : Math.PI*2;
-                        const r = ent.radius, steps = 64;
-                        for(let i=0; i<=steps; i++) {
-                            const a = start + (end-start)*(i/steps);
-                            pts.push({ x: ent.center.x + Math.cos(a)*r, y: ent.center.y + Math.sin(a)*r });
-                        }
-                    }
-                    if (pts.length > 1) paths.push(simplifyPath(pts, smoothTol));
-                });
-                return scaleVectorPaths(paths, targetW);
-            } catch(e) {
-                console.error("DXF Parse Error", e);
-                return [];
-            }
-        }
-
-        // --- 輔助：縮放向量以符合設定寬度並置中 ---
-        function scaleVectorPaths(paths, targetW) {
-            if (paths.length === 0) return [];
-            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-            paths.forEach(p => p.forEach(pt => {
-                minX = Math.min(minX, pt.x); minY = Math.min(minY, pt.y);
-                maxX = Math.max(maxX, pt.x); maxY = Math.max(maxY, pt.y);
-            }));
-
-            const curW = maxX - minX;
-            const scale = targetW / curW;
-            const offsetX = -minX * scale;
-            const offsetY = -minY * scale;
-
-            return paths.map(p => p.map(pt => ({
-                x: pt.x * scale + offsetX,
-                y: pt.y * scale + offsetY
-            })));
-        }
-
-        // --- 將路徑處理成 UI 使用的零件格式 ---
-        function processVectorIntoParts(vectorPaths) {
-            let gMinX = Infinity, gMaxX = -Infinity, gMinY = Infinity, gMaxY = -Infinity;
-            vectorPaths.forEach(p => p.forEach(pt => {
-                gMinX = Math.min(gMinX, pt.x); gMaxX = Math.max(gMaxX, pt.x);
-                gMinY = Math.min(gMinY, pt.y); gMaxY = Math.max(gMaxY, pt.y);
-            }));
-
-            const gCx = (gMinX + gMaxX) / 2;
-            const gCy = (gMinY + gMaxY) / 2;
-
-            parts = vectorPaths.map((p, idx) => {
-                let pMinX = Infinity, pMaxX = -Infinity, pMinY = Infinity, pMaxY = -Infinity;
-                p.forEach(pt => { pMinX = Math.min(pMinX, pt.x); pMaxX = Math.max(pMaxX, pt.x); pMinY = Math.min(pMinY, pt.y); pMaxY = Math.max(pMaxY, pt.y); });
-                
-                const centeredPath = p.map(pt => ({ x: pt.x - gCx, y: pt.y - gCy }));
-                
-                if(centeredPath.length > 2 && (centeredPath[0].x !== centeredPath[centeredPath.length-1].x || centeredPath[0].y !== centeredPath[centeredPath.length-1].y)) {
-                    centeredPath.push({...centeredPath[0]});
-                }
-                
-                return { 
-                    id: idx+1, rawPath: centeredPath, 
-                    originalDim: { w: pMaxX-pMinX, h: pMaxY-pMinY }, 
-                    currentDim: { w: pMaxX-pMinX, h: pMaxY-pMinY }, 
-                    visible: true, 
-                    jobConfig: { type: 'pocket', f: 1500, d: 3.175, depth: 3.0, step: 1.0, overlap: 0.5, resolution: 0.1, useTab: false }, 
-                    toolpath: null, appliedMethod: null 
-                };
-            });
-
-            selectedIndices.clear(); 
-            renderPartList(); 
-            update3D(); 
-            updateStats();
-        }
-
-        // --- 3D 預覽與控制 ---
-        const container = document.getElementById('three-container');
-        const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 10000);
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
+    function initThree() {
+        const container = document.getElementById('preview-container');
+        scene = new THREE.Scene();
+        camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 10000);
+        
+        renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setPixelRatio(window.devicePixelRatio);
         renderer.setSize(container.clientWidth, container.clientHeight);
-        updateRendererBg(); // 動態依據當前主題設定 ClearColor
         container.appendChild(renderer.domElement);
-        const controls = new THREE.OrbitControls(camera, renderer.domElement);
-        camera.position.set(0, 0, 200);
 
-        function animate() { requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); }
+        scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+        const light = new THREE.DirectionalLight(0xffffff, 0.8);
+        light.position.set(200, 500, 300);
+        scene.add(light);
+
+        grid = new THREE.GridHelper(2000, 40, 0x10b981, 0x222222);
+        grid.rotation.x = Math.PI / 2;
+        scene.add(grid);
+
+        camera.position.set(200, -200, 200);
+        camera.up.set(0, 0, 1);
+        camera.lookAt(0, 0, 0);
+
+        let isDragging = false;
+        let previousMouse = { x: 0, y: 0 };
+
+        const handleMove = (x, y, buttons) => {
+            if (!isDragging) return;
+            const deltaX = x - previousMouse.x;
+            const deltaY = y - previousMouse.y;
+            if (buttons === 1) {
+                const offset = new THREE.Vector3().subVectors(camera.position, new THREE.Vector3(0,0,0));
+                const radius = offset.length();
+                let phi = Math.atan2(offset.y, offset.x) - deltaX * 0.005;
+                let theta = Math.acos(offset.z / radius) - deltaY * 0.005;
+                theta = Math.max(0.01, Math.min(Math.PI - 0.01, theta));
+                camera.position.x = radius * Math.sin(theta) * Math.cos(phi);
+                camera.position.y = radius * Math.sin(theta) * Math.sin(phi);
+                camera.position.z = radius * Math.cos(theta);
+            } else if (buttons === 2) {
+                camera.position.x -= deltaX * 0.1;
+                camera.position.y += deltaY * 0.1;
+            }
+            camera.lookAt(0,0,0);
+            previousMouse = { x, y };
+        };
+
+        container.addEventListener('mousedown', e => { isDragging = true; previousMouse = { x: e.clientX, y: e.clientY }; });
+        window.addEventListener('mouseup', () => isDragging = false);
+        container.addEventListener('mousemove', e => handleMove(e.clientX, e.clientY, e.buttons));
+        container.addEventListener('wheel', e => {
+            if (e.deltaY > 0) camera.position.multiplyScalar(1.1);
+            else camera.position.divideScalar(1.1);
+            camera.lookAt(0,0,0);
+        });
+        container.oncontextmenu = e => e.preventDefault();
+
         animate();
+    }
 
-        window.addEventListener('resize', () => {
-            camera.aspect = container.clientWidth / container.clientHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(container.clientWidth, container.clientHeight);
+    function animate() { requestAnimationFrame(animate); renderer.render(scene, camera); }
+
+    function parseGcode(text) {
+        const lines = text.split('\n');
+        let currentPos = { x: 0, y: 0, z: 0, f: 1000 };
+        const pathData = [];
+        lines.forEach((line, index) => {
+            const cmd = line.trim().toUpperCase();
+            if (!cmd || cmd.startsWith('(') || cmd.startsWith(';')) return;
+            if (cmd.startsWith('G0') || cmd.startsWith('G1')) {
+                let nX = currentPos.x, nY = currentPos.y, nZ = currentPos.z, hM = false;
+                const parts = cmd.split(/[\s;]/);
+                parts.forEach(p => {
+                    if (p.startsWith('X')) { nX = parseFloat(p.substring(1)); hM = true; }
+                    if (p.startsWith('Y')) { nY = parseFloat(p.substring(1)); hM = true; }
+                    if (p.startsWith('Z')) { nZ = parseFloat(p.substring(1)); hM = true; }
+                    if (p.startsWith('F')) { currentPos.f = parseFloat(p.substring(1)); }
+                });
+                if (hM) {
+                    pathData.push({ from: {...currentPos}, to: {x: nX, y: nY, z: nZ}, f: currentPos.f, type: cmd.substring(0, 2), lineIdx: index });
+                    currentPos.x = nX; currentPos.y = nY; currentPos.z = nZ;
+                }
+            }
+        });
+        return pathData;
+    }
+
+    function processAndPreview() {
+        if (!originalGcode) return;
+        const scale = parseFloat(document.getElementById('scaleInput').value) || 1;
+        const offX = parseFloat(document.getElementById('offsetX').value) || 0;
+        const offY = parseFloat(document.getElementById('offsetY').value) || 0;
+        const rotRad = (parseFloat(document.getElementById('rotationInput').value) || 0) * Math.PI / 180;
+        const res = parseFloat(document.getElementById('resInput').value) || 0.1;
+
+        const pathData = parseGcode(originalGcode);
+        if (gcodeGroup) scene.remove(gcodeGroup);
+        gcodeGroup = new THREE.Group();
+        const mat = new THREE.LineBasicMaterial({ color: 0x10b981 });
+
+        let totalDist = 0, totalTime = 0, lastP = { x: 0, y: 0, z: 0 }, isF = true;
+
+        pathData.forEach((seg, idx) => {
+            const trans = (p) => ({
+                x: (p.x * Math.cos(rotRad) - p.y * Math.sin(rotRad)) * scale + offX,
+                y: (p.x * Math.sin(rotRad) + p.y * Math.cos(rotRad)) * scale + offY,
+                z: p.z
+            });
+
+            const p2 = trans(seg.to);
+            const dXY = Math.sqrt((p2.x - lastP.x)**2 + (p2.y - lastP.y)**2);
+            const zM = Math.abs(seg.to.z - lastP.z) > 0.0001;
+            const isLast = (idx === pathData.length - 1);
+
+            if (!isF && seg.type === 'G1' && dXY < res && !zM && !isLast) return;
+
+            const p1 = isF ? trans(seg.from) : { ...lastP };
+            const segD = Math.sqrt((p2.x - p1.x)**2 + (p2.y - p1.y)**2 + (p2.z - p1.z)**2);
+            totalDist += segD;
+            if (seg.f > 0) totalTime += segD / (seg.f / 60);
+
+            const geo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(p1.x, p1.y, p1.z), new THREE.Vector3(p2.x, p2.y, p2.z)]);
+            gcodeGroup.add(new THREE.Line(geo, mat));
+            lastP = { ...p2 }; isF = false;
         });
 
-        // --- 其他 UI 控制邏輯 ---
-        function renderPartList(){
-            const list = document.getElementById('part-list');
-            list.innerHTML = '';
-            parts.forEach((p, i) => {
-                const isSelected = selectedIndices.has(i);
-                let methodText = i18n[currentLang].notApplied;
-                if (p.appliedMethod) {
-                    const methodMap = {'laser':'optLaser','outer':'optOuter','inner':'optInner','pocket':'optPocket'};
-                    methodText = i18n[currentLang][methodMap[p.appliedMethod]] || p.appliedMethod;
-                }
-                const div = document.createElement('div');
-                // 將框線與 Hover 配色優化為響應主題的形式
-                div.className = `p-4 border border-slate-300 dark:border-slate-700 rounded-xl flex flex-col transition-all cursor-pointer ${isSelected ? 'active-part shadow-lg' : 'hover:bg-slate-100 dark:hover:bg-slate-800'}`;
-                div.innerHTML = `
-                    <div class="flex justify-between items-center mb-2">
-                        <div class="flex items-center gap-3">
-                            <input type="checkbox" class="w-5 h-5 accent-green-600" ${isSelected ? 'checked' : ''}>
-                            <span class="text-xs font-bold text-slate-800 dark:text-slate-100">${i18n[currentLang].partName} ${p.id}</span>
-                        </div>
-                        <button class="toggle-vis p-1">
-                            ${p.visible ? '<svg class="w-5 h-5 stroke-slate-500 dark:stroke-slate-400" fill="none" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>' : '<svg class="w-5 h-5 stroke-slate-400 dark:stroke-slate-600" fill="none" stroke-width="2" viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>'}
-                        </button>
-                    </div>
-                    <div class="flex flex-wrap gap-2 ml-8 items-center">
-                        <span class="dimension-badge">${p.currentDim.w.toFixed(1)} x ${p.currentDim.h.toFixed(1)} mm</span>
-                        <div class="flex items-center gap-1">
-                            <span class="text-[9px] text-slate-400 dark:text-slate-500 uppercase font-bold">${i18n[currentLang].method}:</span>
-                            <span class="method-badge">${methodText}</span>
-                        </div>
-                    </div>
-                `;
-                div.onclick = (e) => {
-                    if(e.target.tagName === 'INPUT' || e.target.closest('.toggle-vis')) return;
-                    if(isSelected) selectedIndices.delete(i); else selectedIndices.add(i);
-                    renderPartList(); updateJobUI(); update3D();
-                };
-                div.querySelector('input').onchange = () => { if(isSelected) selectedIndices.delete(i); else selectedIndices.add(i); renderPartList(); updateJobUI(); update3D(); };
-                div.querySelector('.toggle-vis').onclick = (e) => { e.stopPropagation(); p.visible = !p.visible; if(!p.visible && selectedIndices.has(i)) selectedIndices.delete(i); renderPartList(); update3D(); };
-                list.appendChild(div);
-            });
-            updateJobUI();
-        }
+        displayStats(totalTime, totalDist);
+        scene.add(gcodeGroup);
+        document.getElementById('downloadBtn').disabled = false;
+    }
 
-        document.getElementById('select-all').onclick = () => {
-            const vis = parts.map((p, i) => p.visible ? i : -1).filter(idx => idx !== -1);
-            if (vis.length === 0) return;
-            if (vis.every(idx => selectedIndices.has(idx))) vis.forEach(idx => selectedIndices.delete(idx));
-            else vis.forEach(idx => selectedIndices.add(idx));
-            renderPartList(); updateJobUI(); update3D();
-        };
+    function generateGcode() {
+        const scale = parseFloat(document.getElementById('scaleInput').value) || 1;
+        const offX = parseFloat(document.getElementById('offsetX').value) || 0;
+        const offY = parseFloat(document.getElementById('offsetY').value) || 0;
+        const rotRad = (parseFloat(document.getElementById('rotationInput').value) || 0) * Math.PI / 180;
+        const res = parseFloat(document.getElementById('resInput').value) || 0.1;
 
-        function updateJobUI(){
-            const panel = document.getElementById('job-panel'), hint = document.getElementById('no-selection-hint');
-            if(selectedIndices.size > 0){
-                panel.classList.remove('hidden'); hint.classList.add('hidden');
-                let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-                selectedIndices.forEach(idx => { parts[idx].rawPath.forEach(pt => { minX = Math.min(minX, pt.x); maxX = Math.max(maxX, pt.x); minY = Math.min(minY, pt.y); maxY = Math.max(maxY, pt.y); }); });
-                document.getElementById('resize-w').value = (maxX - minX).toFixed(2);
-                document.getElementById('resize-h').value = (maxY - minY).toFixed(2);
-                const lastP = parts[Array.from(selectedIndices).pop()];
-                ['resolution','job-f','job-type','mill-d','mill-depth','mill-step','mill-overlap'].forEach(id => {
-                    const key = id.replace('job-','').replace('mill-','');
-                    document.getElementById(id).value = lastP.jobConfig[key] || lastP.jobConfig[id.split('-')[1]];
-                });
-                document.getElementById('job-use-tab').checked = !!lastP.jobConfig.useTab;
-            } else { panel.classList.add('hidden'); hint.classList.remove('hidden'); }
-            toggleMillingOptions();
-        }
+        let lastX = 0, lastY = 0, lastZ = 0, isF = true;
+        const lines = originalGcode.split('\n');
+        
+        let lastMoveIdx = -1;
+        lines.forEach((l, i) => {
+            const up = l.trim().toUpperCase();
+            if (up.startsWith('G0') || up.startsWith('G1')) {
+                const xM = l.match(/X/i), yM = l.match(/Y/i), zM = l.match(/Z/i);
+                if (xM || yM || zM) lastMoveIdx = i;
+            }
+        });
 
-        document.getElementById('resize-w').oninput = (e) => {
-            if(selectedIndices.size === 0) return;
-            const val = parseFloat(e.target.value); if(!val) return;
-            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-            selectedIndices.forEach(idx => { parts[idx].rawPath.forEach(pt => { minX = Math.min(minX, pt.x); maxX = Math.max(maxX, pt.x); minY = Math.min(minY, pt.y); maxY = Math.max(maxY, pt.y); }); });
-            document.getElementById('resize-h').value = (val * (maxY - minY) / (maxX - minX)).toFixed(2);
-        };
+        const output = [];
+        lines.forEach((line, i) => {
+            let cmd = line.trim();
+            if (!cmd || cmd.startsWith('(') || cmd.startsWith(';')) { output.push(line); return; }
 
-        document.getElementById('job-f').oninput = (e) => {
-            const val = parseFloat(e.target.value);
-            if (!val || val <= 0) return;
-            selectedIndices.forEach(idx => {
-                if (parts[idx]) {
-                    parts[idx].jobConfig.f = val;
-                }
-            });
-            updateStats();
-        };
+            const up = cmd.toUpperCase();
+            if (up.startsWith('G0') || up.startsWith('G1')) {
+                const isG1 = up.startsWith('G1');
+                const xM = cmd.match(/X([-+]?[0-9]*\.?[0-9]+)/i);
+                const yM = cmd.match(/Y([-+]?[0-9]*\.?[0-9]+)/i);
+                const zM = cmd.match(/Z([-+]?[0-9]*\.?[0-9]+)/i);
+                const fM = cmd.match(/F([-+]?[0-9]*\.?[0-9]+)/i);
 
-        function toggleMillingOptions() {
-            const val = document.getElementById('job-type').value;
-            document.getElementById('milling-opts').classList.toggle('hidden', val === 'laser');
-            document.getElementById('pocket-opts').classList.toggle('hidden', val !== 'pocket');
-            // 橋位(TAB)選項僅在外加工(outer)或內加工(inner)時顯示
-            document.getElementById('tab-opts-container').classList.toggle('hidden', val !== 'outer' && val !== 'inner');
-        }
-        document.getElementById('job-type').onchange = toggleMillingOptions;
+                if (!xM && !yM && !zM && !fM) { output.push(line); return; }
 
-        // 計算路徑與 Gcode 生成
-        document.getElementById('apply-job-btn').onclick = () => {
-            const newRes = Math.max(0.1, parseFloat(document.getElementById('resolution').value) || 0.1);
-            const newF = parseFloat(document.getElementById('job-f').value);
-            const newType = document.getElementById('job-type').value;
-            const newD = parseFloat(document.getElementById('mill-d').value);
-            const newDepth = parseFloat(document.getElementById('mill-depth').value);
-            const newStep = parseFloat(document.getElementById('mill-step').value);
-            const newOverlap = Math.max(0.1, Math.min(0.9, parseFloat(document.getElementById('mill-overlap').value) || 0.5));
-            const newUseTab = document.getElementById('job-use-tab').checked;
+                let rX = xM ? parseFloat(xM[1]) : lastX;
+                let rY = yM ? parseFloat(yM[1]) : lastY;
+                let rZ = zM ? parseFloat(zM[1]) : lastZ;
 
-            let minX = Infinity, maxX = -Infinity;
-            selectedIndices.forEach(idx => { parts[idx].rawPath.forEach(pt => { minX = Math.min(minX, pt.x); maxX = Math.max(maxX, pt.x); }); });
-            const groupScale = parseFloat(document.getElementById('resize-w').value) / (maxX - minX);
+                let fX = (rX * Math.cos(rotRad) - rY * Math.sin(rotRad)) * scale + offX;
+                let fY = (rX * Math.sin(rotRad) + rY * Math.cos(rotRad)) * scale + offY;
+                let fZ = rZ;
 
-            selectedIndices.forEach(idx => {
-                parts[idx].toolpath = null;
-                parts[idx].jobConfig = { type: newType, f: newF, d: newD, depth: newDepth, step: newStep, overlap: newOverlap, resolution: newRes, useTab: newUseTab };
-                parts[idx].currentDim = { w: parts[idx].originalDim.w * groupScale, h: parts[idx].originalDim.h * groupScale };
-                parts[idx].appliedMethod = newType; 
-            });
+                const dXY = Math.sqrt((fX - lastX)**2 + (fY - lastY)**2);
+                const zChanged = zM !== null && Math.abs(rZ - lastZ) > 0.0001;
+                const fChanged = fM !== null;
+                const isLastMove = (i === lastMoveIdx);
 
-            if (newType === 'pocket') calculateV3PocketPaths(groupScale);
-            else selectedIndices.forEach(idx => parts[idx].toolpath = calculateStandardToolpath(parts[idx], groupScale));
+                if (!isF && isG1 && dXY < res && !zChanged && !fChanged && !isLastMove) return;
 
-            renderPartList(); update3D(); updateStats();
-        };
-
-        function calculateStandardToolpath(p, groupScale) {
-            const cfg = p.jobConfig, scale = 10000;
-            const scaledPath = p.rawPath.map(pt => ({ x: pt.x * groupScale, y: pt.y * groupScale }));
-            const pX = scaledPath.map(pt => ({ X: Math.round(pt.x * scale), Y: Math.round(pt.y * scale) }));
-            let intermediatePaths = [];
-            if (cfg.type === 'laser') {
-                intermediatePaths.push([...scaledPath, scaledPath[0]]);
+                let nL = cmd;
+                if (xM) nL = nL.replace(/X([-+]?[0-9]*\.?[0-9]+)/i, `X${fX.toFixed(4)}`);
+                if (yM) nL = nL.replace(/Y([-+]?[0-9]*\.?[0-9]+)/i, `Y${fY.toFixed(4)}`);
+                if (zM) nL = nL.replace(/Z([-+]?[0-9]*\.?[0-9]+)/i, `Z${fZ.toFixed(4)}`);
+                if (fM) nL = nL.replace(/F([-+]?[0-9]*\.?[0-9]+)/i, `F${fM[1]}`);
+                
+                lastX = fX; lastY = fY; lastZ = fZ; isF = false;
+                output.push(nL);
             } else {
-                const co = new ClipperLib.ClipperOffset();
-                co.AddPath(pX, ClipperLib.JoinType.jtRound, ClipperLib.EndType.etClosedPolygon);
-                let delta = cfg.type === 'outer' ? (cfg.d/2)*scale : -(cfg.d/2)*scale;
-                let offsetResult = new ClipperLib.Paths();
-                co.Execute(offsetResult, delta);
-                offsetResult.forEach(pts => {
-                    let loop = pts.map(pt => ({ x: pt.X/scale, y: pt.Y/scale })); 
-                    if(loop.length > 0) loop.push(loop[0]);
-                    intermediatePaths.push(loop);
-                });
+                output.push(line);
             }
-            return intermediatePaths.map(path => cleanPath(path, cfg.resolution));
-        }
+        });
+        return output.join('\n');
+    }
 
-        function calculateV3PocketPaths(groupScale) {
-            const scale = 10000;
-            const selectedArr = Array.from(selectedIndices);
-            const allClipperPaths = selectedArr.map(idx => {
-                return parts[idx].rawPath.map(pt => ({ X: Math.round(pt.x * groupScale * scale), Y: Math.round(pt.y * groupScale * scale) }));
-            });
-            const cl = new ClipperLib.Clipper();
-            cl.AddPaths(allClipperPaths, ClipperLib.PolyType.ptSubject, true);
-            const polyTree = new ClipperLib.PolyTree();
-            cl.Execute(ClipperLib.ClipType.ctUnion, polyTree, ClipperLib.PolyFillType.pftNonZero, ClipperLib.PolyFillType.pftNonZero);
-            const firstIdx = selectedArr[0];
-            const cfg = parts[firstIdx].jobConfig;
-            const finalResults = [];
-            function traverseTree(node) {
-                const children = node.Childs();
-                for (let i = 0; i < children.length; i++) {
-                    const outerNode = children[i];
-                    if (!outerNode.IsHole()) {
-                        const subjectPath = outerNode.Contour();
-                        const islands = outerNode.Childs().map(n => n.Contour());
-                        if (islands.length > 0) {
-                            const islandOffsetter = new ClipperLib.ClipperOffset();
-                            islands.forEach(isl => islandOffsetter.AddPath(isl, ClipperLib.JoinType.jtRound, ClipperLib.EndType.etClosedPolygon));
-                            let islandOuters = new ClipperLib.Paths();
-                            islandOffsetter.Execute(islandOuters, (cfg.d/2)*scale);
-                            islandOuters.forEach(l => {
-                                let p = l.map(pt => ({ x: pt.X/scale, y: pt.Y/scale })); 
-                                if(p.length > 0) p.push(p[0]);
-                                finalResults.push(cleanPath(p, cfg.resolution));
-                            });
-                        }
-                        const subjectOffsetter = new ClipperLib.ClipperOffset();
-                        subjectOffsetter.AddPath(subjectPath, ClipperLib.JoinType.jtRound, ClipperLib.EndType.etClosedPolygon);
-                        let subjectInners = new ClipperLib.Paths();
-                        subjectOffsetter.Execute(subjectInners, -(cfg.d/2)*scale);
-                        subjectInners.forEach(l => {
-                            let p = l.map(pt => ({ x: pt.X/scale, y: pt.Y/scale })); 
-                            if(p.length > 0) p.push(p[0]);
-                            finalResults.push(cleanPath(p, cfg.resolution));
-                        });
-                        const scanPaths = computeScanlinePocket(subjectPath, islands, cfg, scale);
-                        finalResults.push(...scanPaths);
-                        outerNode.Childs().forEach(holeNode => traverseTree(holeNode));
-                    }
-                }
-            }
-            traverseTree(polyTree);
-            
-            selectedArr.forEach(idx => {
-                parts[idx].toolpath = (idx === firstIdx) ? finalResults : []; 
-                parts[idx].appliedMethod = 'pocket';
-            });
-        }
+    // --- 參考背景圖加載與處理 ---
+    function handleImageLoad(event) {
+        const file = event.target.files[0];
+        if (!file) return;
 
-        function computeScanlinePocket(subject, islands, cfg, scale) {
-            const toolRadius = (cfg.d / 2) * scale;
-            const shrinkAmount = (cfg.d * 0.5) * scale;
-            const co = new ClipperLib.ClipperOffset();
-            co.AddPath(subject, ClipperLib.JoinType.jtMiter, ClipperLib.EndType.etClosedPolygon);
-            let outerBound = new ClipperLib.Paths();
-            co.Execute(outerBound, -toolRadius);
-            let workingArea = outerBound;
-            if (islands.length > 0 && outerBound.length > 0) {
-                let islandNoGo = new ClipperLib.Paths();
-                const coIsl = new ClipperLib.ClipperOffset();
-                islands.forEach(isl => coIsl.AddPath(isl, ClipperLib.JoinType.jtMiter, ClipperLib.EndType.etClosedPolygon));
-                coIsl.Execute(islandNoGo, toolRadius);
-                const cl = new ClipperLib.Clipper();
-                cl.AddPaths(outerBound, ClipperLib.PolyType.ptSubject, true);
-                cl.AddPaths(islandNoGo, ClipperLib.PolyType.ptClip, true);
-                let finalArea = new ClipperLib.Paths();
-                cl.Execute(ClipperLib.ClipType.ctDifference, finalArea, ClipperLib.PolyFillType.pftNonZero, ClipperLib.PolyFillType.pftNonZero);
-                workingArea = finalArea;
-            }
-            if (workingArea.length === 0) return [];
-            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-            workingArea.forEach(p => p.forEach(pt => { 
-                minX = Math.min(minX, pt.X); maxX = Math.max(maxX, pt.X); 
-                minY = Math.min(minY, pt.Y); maxY = Math.max(maxY, pt.Y); 
-            }));
-            const scanStep = Math.max(1, (cfg.d * (1 - cfg.overlap)) * scale);
-            let segmentGroups = [];
-            for (let y = minY + scanStep/2; y <= maxY; y += scanStep) {
-                const scanLine = [{X: minX - 100, Y: Math.round(y)}, {X: maxX + 100, Y: Math.round(y)}];
-                const cl = new ClipperLib.Clipper();
-                cl.AddPath(scanLine, ClipperLib.PolyType.ptSubject, false);
-                cl.AddPaths(workingArea, ClipperLib.PolyType.ptClip, true);
-                const segmentsTree = new ClipperLib.PolyTree();
-                cl.Execute(ClipperLib.ClipType.ctIntersection, segmentsTree, ClipperLib.PolyFillType.pftNonZero, ClipperLib.PolyFillType.pftNonZero);
-                const openPaths = ClipperLib.Clipper.PolyTreeToPaths(segmentsTree);
-                if (openPaths.length > 0) {
-                    openPaths.sort((a,b) => a[0].X - b[0].X);
-                    openPaths.forEach((path, groupIdx) => {
-                        if (!segmentGroups[groupIdx]) segmentGroups[groupIdx] = [];
-                        segmentGroups[groupIdx].push(path);
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = new Image();
+            img.onload = function() {
+                // 計算原圖的 寬高比（高度/寬度）
+                refAspect = img.height / img.width;
+                
+                const loader = new THREE.TextureLoader();
+                loader.load(e.target.result, function(texture) {
+                    if (refMesh) scene.remove(refMesh);
+
+                    // 修正關鍵：建立 Plane 時使用 1x1 正方形，完美交給 Scale 屬性依比例縮放，避免重複套用比例導致變形
+                    const geo = new THREE.PlaneGeometry(1, 1);
+                    const mat = new THREE.MeshBasicMaterial({
+                        map: texture,
+                        transparent: true,
+                        opacity: parseFloat(document.getElementById('imgOpacityInput').value),
+                        side: THREE.DoubleSide,
+                        depthWrite: false
                     });
-                }
-            }
-            const optimizedPaths = [];
-            segmentGroups.forEach((group, idx) => {
-                let reverse = false;
-                group.forEach(path => {
-                    if (path.length >= 2) {
-                        const p1 = path[0], p2 = path[path.length - 1];
-                        const dx = p2.X - p1.X, dy = p2.Y - p1.Y;
-                        const len = Math.sqrt(dx*dx + dy*dy);
-                        if (len > shrinkAmount * 2.5) { 
-                            const unitX = dx / len, unitY = dy / len;
-                            p1.X = Math.round(p1.X + unitX * shrinkAmount);
-                            p1.Y = Math.round(p1.Y + unitY * shrinkAmount);
-                            p2.X = Math.round(p2.X - unitX * shrinkAmount);
-                            p2.Y = Math.round(p2.Y - unitY * shrinkAmount);
-                        }
-                    }
-                    let p = path.map(pt => ({ x: pt.X / scale, y: pt.Y / scale }));
-                    if (reverse) p.reverse();
-                    optimizedPaths.push(p);
-                    reverse = !reverse;
+
+                    refMesh = new THREE.Mesh(geo, mat);
+                    refMesh.position.set(0, 0, -0.2);
+
+                    updateImageDimensions();
+                    scene.add(refMesh);
+
+                    document.getElementById('imgControls').classList.remove('hidden');
                 });
-            });
-            return optimizedPaths;
-        }
-
-        function update3D() {
-            while(scene.children.length > 0) scene.remove(scene.children[0]);
-            
-            // 依據當前明暗主題來決定網格線條的顯色
-            const isDark = document.documentElement.classList.contains('dark');
-            const gridColor1 = isDark ? 0x334155 : 0xcbd5e1;
-            const gridColor2 = isDark ? 0x1e293b : 0xf1f5f9;
-            scene.add(new THREE.GridHelper(500, 50, gridColor1, gridColor2).rotateX(Math.PI/2));
-            
-            parts.forEach((p, idx) => {
-                if(!p.visible) return;
-                const isSelected = selectedIndices.has(idx);
-                // 零件未選中時，亮色模式下改為較深的 Slate 以提供足夠對比度
-                const color = isSelected ? 0x22c55e : (isDark ? 0xFFFFFF : 0x475569);
-                const opacity = isSelected ? 0.8 : 0.5;
-                const geomOrig = new THREE.BufferGeometry().setFromPoints(p.rawPath.map(pt => new THREE.Vector3(pt.x, pt.y, 0)));
-                scene.add(new THREE.LineLoop(geomOrig, new THREE.LineBasicMaterial({ color: color, opacity: opacity, transparent: true })));
-                if(p.toolpath && p.toolpath.length > 0) {
-                    const cfg = p.jobConfig, passes = cfg.type === 'laser' ? 1 : Math.ceil(cfg.depth / cfg.step);
-                    for(let i=0; i<passes; i++){
-                        const currentZ = cfg.type === 'laser' ? 0.2 : -(Math.min(cfg.depth, (i + 1) * cfg.step)) + 0.2;
-                        const matTool = new THREE.LineBasicMaterial({ color: 0xfacc15, opacity: 1.0 - (i * 0.1), transparent: true });
-                        p.toolpath.forEach(path => {
-                            // 判斷該道次是否啟用 6mm 安全抬刀橋位 (最後一圈且啟用 TAB)
-                            const useTabThisPass = (cfg.useTab && (i === passes - 1) && (cfg.type === 'outer' || cfg.type === 'inner'));
-                            if (useTabThisPass) {
-                                const tabCenters = getTabPointsForPath(path);
-                                const subPath = subdividePath(path, 0.5);
-                                const tabZVal = Math.min(0, currentZ + cfg.step);
-                                const points3D = subPath.map(pt => {
-                                    const z = isPointInTab(pt, tabCenters, 6) ? tabZVal : currentZ;
-                                    return new THREE.Vector3(pt.x, pt.y, z);
-                                });
-                                const geomTool = new THREE.BufferGeometry().setFromPoints(points3D);
-                                scene.add(new THREE.Line(geomTool, matTool));
-                            } else {
-                                const geomTool = new THREE.BufferGeometry().setFromPoints(path.map(pt => new THREE.Vector3(pt.x, pt.y, currentZ)));
-                                scene.add(new THREE.Line(geomTool, matTool));
-                            }
-                        });
-                    }
-                }
-            });
-        }
-
-        function updateStats() {
-            let totalSec = 0;
-            let currentX = 0, currentY = 0;
-            let currentZ = parseFloat(SAFE_Z) || 2.0; 
-            const SAFE_Z_VAL = parseFloat(SAFE_Z) || 2.0;
-
-            const G0_SPEED = 2000;      
-            const PLUNGE_SPEED = 300;   
-
-            let activeParts = parts.filter(p => p.visible && p.toolpath && p.toolpath.length > 0);
-            if (activeParts.length === 0) {
-                document.getElementById('est-time').innerText = "00:00:00";
-                return;
-            }
-
-            const orderPriority = { "laser": 0, "pocket": 1, "inner": 2, "outer": 3 };
-            const grouped = {};
-            activeParts.forEach(p => {
-                const type = p.jobConfig.type;
-                if (!grouped[type]) grouped[type] = [];
-                grouped[type].push(p);
-            });
-
-            const sortedTypes = Object.keys(grouped).sort((a, b) => (orderPriority[a] ?? 99) - (orderPriority[b] ?? 99));
-
-            sortedTypes.forEach(type => {
-                let unvisitedInGroup = [...grouped[type]];
-                while (unvisitedInGroup.length > 0) {
-                    let nearestIdx = -1;
-                    let minDistSq = Infinity;
-                    for (let i = 0; i < unvisitedInGroup.length; i++) {
-                        const firstPath = unvisitedInGroup[i].toolpath[0];
-                        if (!firstPath || firstPath.length === 0) continue;
-                        const dx = firstPath[0].x - currentX;
-                        const dy = firstPath[0].y - currentY;
-                        const distSq = dx * dx + dy * dy;
-                        if (distSq < minDistSq) { minDistSq = distSq; nearestIdx = i; }
-                    }
-                    if (nearestIdx === -1) break;
-
-                    const p = unvisitedInGroup.splice(nearestIdx, 1)[0];
-                    const cfg = p.jobConfig;
-                    const isLaser = cfg.type === 'laser';
-                    const passes = isLaser ? 1 : Math.ceil(cfg.depth / cfg.step);
-                    const cuttingFeedrate = cfg.f || 1500; 
-
-                    let lastPointOfPart = null;
-
-                    for (let i = 1; i <= passes; i++) {
-                        const targetZ = isLaser ? 0 : -(Math.min(cfg.depth, i * cfg.step));
-                        let lastPtInLayer = null;
-
-                        p.toolpath.forEach((path, pathIdx) => {
-                            if (path.length < 2) return;
-                            
-                            const useTabThisPass = (!isLaser && cfg.useTab && i === passes && (cfg.type === 'outer' || cfg.type === 'inner'));
-                            const finalPath = useTabThisPass ? subdividePath(path, 0.5) : path;
-                            const tabCenters = useTabThisPass ? getTabPointsForPath(path) : [];
-                            const tabZVal = useTabThisPass ? Math.min(0, targetZ + cfg.step) : targetZ;
-
-                            const start = finalPath[0];
-                            const startZ = useTabThisPass && isPointInTab(start, tabCenters, 6) ? tabZVal : targetZ;
-
-                            let needRetract = true;
-                            if (i > 1 && pathIdx === 0 && lastPointOfPart) {
-                                const dToStart = Math.sqrt(Math.pow(start.x - lastPointOfPart.x, 2) + Math.pow(start.y - lastPointOfPart.y, 2));
-                                if (dToStart < 0.5) needRetract = false; 
-                            } else if (lastPtInLayer) {
-                                const dToLast = Math.sqrt(Math.pow(start.x - lastPtInLayer.x, 2) + Math.pow(start.y - lastPtInLayer.y, 2));
-                                if (dToLast < (cfg.d * 1.5)) needRetract = false;
-                            }
-
-                            if (needRetract) {
-                                if (!isLaser) {
-                                    const travelZToSafe = Math.abs(currentZ - SAFE_Z_VAL);
-                                    totalSec += (travelZToSafe / G0_SPEED) * 60;
-                                    currentZ = SAFE_Z_VAL;
-                                }
-
-                                const travelXY = Math.sqrt(Math.pow(start.x - currentX, 2) + Math.pow(start.y - currentY, 2));
-                                totalSec += (travelXY / G0_SPEED) * 60;
-                                currentX = start.x;
-                                currentY = start.y;
-
-                                if (!isLaser) {
-                                    const plungeZ = Math.abs(currentZ - startZ);
-                                    totalSec += (plungeZ / PLUNGE_SPEED) * 60;
-                                    currentZ = startZ;
-                                }
-                            } else {
-                                const travelXY = Math.sqrt(Math.pow(start.x - currentX, 2) + Math.pow(start.y - currentY, 2));
-                                totalSec += (travelXY / cuttingFeedrate) * 60;
-                                currentX = start.x;
-                                currentY = start.y;
-                            }
-
-                            let lastZ = startZ;
-                            for (let j = 1; j < finalPath.length; j++) {
-                                const pt = finalPath[j];
-                                const ptZ = useTabThisPass && isPointInTab(pt, tabCenters, 6) ? tabZVal : targetZ;
-                                const segmentDist = Math.sqrt(Math.pow(pt.x - finalPath[j - 1].x, 2) + Math.pow(pt.y - finalPath[j - 1].y, 2));
-                                const zDist = Math.abs(ptZ - lastZ);
-                                
-                                // 合併 X/Y 移動與 Z 軸抬升
-                                const totalTravel = Math.sqrt(segmentDist * segmentDist + zDist * zDist);
-                                totalSec += (totalTravel / cuttingFeedrate) * 60;
-                                lastZ = ptZ;
-                            }
-
-                            const lastPtInPath = finalPath[finalPath.length - 1];
-                            currentX = lastPtInPath.x;
-                            currentY = lastPtInPath.y;
-                            currentZ = useTabThisPass && isPointInTab(lastPtInPath, tabCenters, 6) ? tabZVal : targetZ;
-
-                            lastPtInLayer = lastPtInPath;
-                            lastPointOfPart = lastPtInPath;
-                        });
-                    }
-
-                    if (!isLaser) {
-                        const travelZToSafe = Math.abs(currentZ - SAFE_Z_VAL);
-                        totalSec += (travelZToSafe / G0_SPEED) * 60;
-                        currentZ = SAFE_Z_VAL;
-                    }
-
-                    if (lastPointOfPart) {
-                        currentX = lastPointOfPart.x;
-                        currentY = lastPointOfPart.y;
-                    }
-                }
-            });
-
-            const returnXY = Math.sqrt(currentX * currentX + currentY * currentY);
-            totalSec += (returnXY / G0_SPEED) * 60;
-            currentX = 0;
-            currentY = 0;
-
-            const h = Math.floor(totalSec / 3600), m = Math.floor((totalSec % 3600) / 60), s = Math.floor(totalSec % 60);
-            document.getElementById('est-time').innerText = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-        }
-
-        // --- 產生 Gcode 輸出 ---
-        document.getElementById('export-gcode').onclick = () => {
-            if(parts.length === 0) return;
-            let gc = ["; CNC V4.0", "G21", "G90", "G0 X0 Y0 F2000"];
-            
-            const orderPriority = { "laser": 0, "pocket": 1, "inner": 2, "outer": 3 };
-            let activeParts = parts.filter(p => p.visible && p.toolpath && p.toolpath.length > 0);
-            if (activeParts.length === 0) return;
-            const grouped = {};
-            activeParts.forEach(p => {
-                const type = p.jobConfig.type;
-                if (!grouped[type]) grouped[type] = [];
-                grouped[type].push(p);
-            });
-            let currentX = 0, currentY = 0;
-            const sortedTypes = Object.keys(grouped).sort((a, b) => (orderPriority[a] ?? 99) - (orderPriority[b] ?? 99));
-            sortedTypes.forEach(type => {
-                let unvisitedInGroup = [...grouped[type]];
-                while (unvisitedInGroup.length > 0) {
-                    let nearestIdx = -1;
-                    let minDistSq = Infinity;
-                    for (let i = 0; i < unvisitedInGroup.length; i++) {
-                        const firstPath = unvisitedInGroup[i].toolpath[0];
-                        if (!firstPath || firstPath.length === 0) continue;
-                        const dx = firstPath[0].x - currentX;
-                        const dy = firstPath[0].y - currentY;
-                        const distSq = dx * dx + dy * dy;
-                        if (distSq < minDistSq) { minDistSq = distSq; nearestIdx = i; }
-                    }
-                    if (nearestIdx === -1) break;
-                    const p = unvisitedInGroup.splice(nearestIdx, 1)[0];
-                    const cfg = p.jobConfig, isLaser = cfg.type === 'laser', passes = isLaser ? 1 : Math.ceil(cfg.depth / cfg.step);
-                    let lastPointOfPart = null;
-                    for (let i = 1; i <= passes; i++) {
-                        const targetZ = isLaser ? 0 : -(Math.min(cfg.depth, i * cfg.step)).toFixed(3);
-                        let lastPtInLayer = null;
-                        let isFirstMoveOfPass = true;
-                        p.toolpath.forEach((path, pathIdx) => {
-                            if (path.length < 2) return;
-                            
-                            const useTabThisPass = (!isLaser && cfg.useTab && i === passes && (cfg.type === 'outer' || cfg.type === 'inner'));
-                            const finalPath = useTabThisPass ? subdividePath(path, 0.5) : path;
-                            const tabCenters = useTabThisPass ? getTabPointsForPath(path) : [];
-                            const tabZVal = useTabThisPass ? Math.min(0, targetZ + cfg.step) : targetZ;
-
-                            const start = finalPath[0];
-                            const startZ = useTabThisPass && isPointInTab(start, tabCenters, 6) ? tabZVal : targetZ;
-
-                            let needRetract = true;
-                            if (i > 1 && pathIdx === 0 && lastPointOfPart) {
-                                const dToStart = Math.sqrt(Math.pow(start.x - lastPointOfPart.x, 2) + Math.pow(start.y - lastPointOfPart.y, 2));
-                                if (dToStart < 0.5) needRetract = false; 
-                            } else if (lastPtInLayer) {
-                                const dToLast = Math.sqrt(Math.pow(start.x - lastPtInLayer.x, 2) + Math.pow(start.y - lastPtInLayer.y, 2));
-                                if (dToLast < (cfg.d * 1.5)) needRetract = false;
-                            }
-                            
-                            let forceFeedrate = false;
-                            if (needRetract) {
-                                if (!isLaser) gc.push(`G0 Z${SAFE_Z}`);
-                                gc.push(`G0 X${start.x.toFixed(3)} Y${start.y.toFixed(3)}`);
-                                if (!isLaser) {
-                                    gc.push(`G1 Z${startZ.toFixed(3)} F300`);
-                                    forceFeedrate = true; 
-                                } else {
-                                    gc.push("M3 S255");
-                                }
-                            } else {
-                                if (!isLaser) gc.push(`G1 X${start.x.toFixed(3)} Y${start.y.toFixed(3)} Z${startZ.toFixed(3)} ${isFirstMoveOfPass ? 'F' + cfg.f : ''}`);
-                                else gc.push(`G1 X${start.x.toFixed(3)} Y${start.y.toFixed(3)} ${isFirstMoveOfPass ? 'F' + cfg.f : ''}`);
-                            }
-                            
-                            let lastZ = startZ;
-                            for (let j = 1; j < finalPath.length; j++) {
-                                const pt = finalPath[j];
-                                const ptZ = useTabThisPass && isPointInTab(pt, tabCenters, 6) ? tabZVal : targetZ;
-                                const fStr = (isFirstMoveOfPass || forceFeedrate) ? ` F${cfg.f}` : "";
-                                
-                                if (Math.abs(ptZ - lastZ) > 0.001) {
-                                    // 橋位邊界：X、Y、Z 聯動拉升或下插，達成平滑的斜面或抬升
-                                    gc.push(`G1 X${pt.x.toFixed(3)} Y${pt.y.toFixed(3)} Z${ptZ.toFixed(3)}${fStr}`);
-                                    lastZ = ptZ;
-                                } else {
-                                    gc.push(`G1 X${pt.x.toFixed(3)} Y${pt.y.toFixed(3)}${fStr}`);
-                                }
-                                isFirstMoveOfPass = false;
-                                forceFeedrate = false; 
-                            }
-                            lastPtInLayer = finalPath[finalPath.length - 1];
-                            lastPointOfPart = lastPtInLayer;
-                        });
-                        if (isLaser) gc.push("M5");
-                    }
-                    if (!isLaser) gc.push(`G0 Z${SAFE_Z}`);
-                    if (lastPointOfPart) { currentX = lastPointOfPart.x; currentY = lastPointOfPart.y; }
-                }
-            });
-            gc.push("G0 X0Y0");
-            const blob = new Blob([gc.join('\n')], { type: 'text/plain' });
-            const a = document.createElement('a'); 
-            a.href = URL.createObjectURL(blob); 
-            a.download = `${originalFileName}.gcode`; 
-            a.click();
+            };
+            img.src = e.target.result;
         };
+        reader.readAsDataURL(file);
+    }
 
-        // 啟動初始化語言與明暗主題圖示
-        updateLanguage();
-        setTheme(savedTheme);
-    </script>
+    function updateImageDimensions() {
+        if (!refMesh) return;
+        const width = parseFloat(document.getElementById('imgWidthInput').value) || 100;
+        // 寬度設定為 width，高度則自動等比例縮放為 width * refAspect，完美還原原圖 XY 比例
+        refMesh.scale.set(width, width * refAspect, 1);
+    }
+
+    // --- 初始化綁定與系統偏好載入 ---
+    document.getElementById('fileInput').addEventListener('change', e => {
+        const file = e.target.files[0]; if (!file) return;
+        originalFileName = file.name.split('.').slice(0, -1).join('.');
+        document.getElementById('fileNameDisplay').innerText = file.name;
+        document.getElementById('fileInfo').classList.remove('hidden');
+        const r = new FileReader(); r.onload = ev => { originalGcode = ev.target.result; processAndPreview(); }; r.readAsText(file);
+    });
+
+    document.getElementById('imageInput').addEventListener('change', handleImageLoad);
+    document.getElementById('imgWidthInput').addEventListener('input', updateImageDimensions);
+    
+    document.getElementById('imgOpacityInput').addEventListener('input', e => {
+        const val = parseFloat(e.target.value);
+        document.getElementById('opacityVal').innerText = val.toFixed(2);
+        if (refMesh) {
+            refMesh.material.opacity = val;
+        }
+    });
+
+    document.getElementById('applyBtn').addEventListener('click', processAndPreview);
+    document.getElementById('centerBtn').addEventListener('click', () => {
+        if (!originalGcode) return;
+        const p = parseGcode(originalGcode), s = parseFloat(document.getElementById('scaleInput').value) || 1;
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        p.forEach(seg => {
+            minX = Math.min(minX, seg.to.x, seg.from.x); maxX = Math.max(maxX, seg.to.x, seg.from.x);
+            minY = Math.min(minY, seg.to.y, seg.from.y); maxY = Math.max(maxY, seg.to.y, seg.from.y);
+        });
+        document.getElementById('offsetX').value = (-( (minX+maxX)/2 * s)).toFixed(2);
+        document.getElementById('offsetY').value = (-( (minY+maxY)/2 * s)).toFixed(2);
+        processAndPreview();
+    });
+
+    document.getElementById('downloadBtn').addEventListener('click', () => {
+        const b = new Blob([generateGcode()], { type: 'text/plain' });
+        const a = document.createElement('a'); a.href = URL.createObjectURL(b);
+        a.download = `${originalFileName}_re.gcode`; a.click();
+    });
+
+    window.addEventListener('resize', () => {
+        const c = document.getElementById('preview-container');
+        camera.aspect = c.clientWidth / c.clientHeight; camera.updateProjectionMatrix();
+        renderer.setSize(c.clientWidth, c.clientHeight);
+    });
+
+    window.onload = () => {
+        initThree();
+        
+        // 載入主題偏好
+        const savedTheme = localStorage.getItem('gcode-editor-theme') || 'dark';
+        if (savedTheme === 'light') {
+            document.body.classList.add('light-theme');
+        } else {
+            document.body.classList.remove('light-theme');
+        }
+        
+        updateThemeIcon(savedTheme);
+        updateThreeGrid();
+        updateLanguage(); // 根據 currentLang ('zh') 進行初始文字渲染
+    };
+</script>
+
     <!-- PWA Service Worker Registration -->
     <script>
         if ('serviceWorker' in navigator) {
@@ -1377,5 +784,6 @@
             });
         }
     </script>
+
 </body>
 </html>
