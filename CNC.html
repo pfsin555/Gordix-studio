@@ -3,8 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CNC_V1.3</title>
+    <title>CNC</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // 設定 Tailwind CSS 以支援 class 模式的黑夜模式
+        tailwind.config = {
+            darkMode: 'class'
+        }
+    </script>
+    <script>
+        // 立即在網頁頂部設定主題，防範載入時的背景閃爍問題
+        const savedTheme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        if (savedTheme === 'dark') {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/clipper-lib@6.4.2/clipper.js"></script>
@@ -12,26 +27,41 @@
     <script src="https://cdn.jsdelivr.net/npm/dxf-parser@1.1.2/dist/dxf-parser.min.js"></script>
 
     <style>
-        body { background: #0f172a; color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-        .panel { background: #1e293b; border: 1px solid #334155; }
-        #three-container { width: 100%; height: 400px; border-radius: 8px; overflow: hidden; background: #020617; position: relative; }
+        body { background: #f8fafc; color: #0f172a; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; transition: background-color 0.2s, color 0.2s; }
+        .dark body { background: #0f172a; color: #f8fafc; }
+
+        .panel { background: #ffffff; border: 1px solid #cbd5e1; transition: background-color 0.2s, border-color 0.2s; }
+        .dark .panel { background: #1e293b; border: 1px solid #334155; }
+        
+        #three-container { width: 100%; height: 400px; border-radius: 8px; overflow: hidden; background: #e2e8f0; position: relative; border: 1px solid #cbd5e1; transition: background-color 0.2s, border-color 0.2s; }
+        .dark #three-container { background: #020617; border: 1px solid #1e293b; }
         @media (min-width: 1024px) { #three-container { height: 600px; } }
         
-        input, select { background: #0f172a; border: 1px solid #475569; color: white; border-radius: 6px; padding: 8px 12px; font-size: 14px; width: 100%; }
+        input, select { background: #ffffff; border: 1px solid #cbd5e1; color: #0f172a; border-radius: 6px; padding: 8px 12px; font-size: 14px; width: 100%; transition: background-color 0.2s, border-color 0.2s, color 0.2s; }
+        .dark input, .dark select { background: #0f172a; border: 1px solid #475569; color: white; }
         input:focus { border-color: #ea580c; outline: none; ring: 1px solid #ea580c; }
         
         .btn-orange { background: #ea580c; color: white; transition: background 0.2s; }
         .btn-orange:hover { background: #f97316; }
-        .btn-gray { background: #475569; color: white; transition: background 0.2s; }
-        .btn-gray:hover { background: #64748b; }
+        .btn-gray { background: #e2e8f0; color: #334155; transition: background-color 0.2s, color 0.2s; }
+        .dark .btn-gray { background: #475569; color: white; }
+        .btn-gray:hover { background: #cbd5e1; }
+        .dark .btn-gray:hover { background: #64748b; }
         
-        .active-part { border-left: 4px solid #22c55e; background: rgba(34, 197, 94, 0.1); }
-        .dimension-badge { font-size: 11px; background: #020617; padding: 2px 8px; border-radius: 4px; color: #94a3b8; }
-        .method-badge { font-size: 11px; background: #334155; padding: 2px 8px; border-radius: 4px; color: #fb923c; font-weight: bold; }
+        .active-part { border-left: 4px solid #22c55e; background: rgba(34, 197, 94, 0.05); }
+        .dark class="active-part" { background: rgba(34, 197, 94, 0.1); }
+        
+        .dimension-badge { font-size: 11px; background: #e2e8f0; padding: 2px 8px; border-radius: 4px; color: #475569; transition: background-color 0.2s, color 0.2s; }
+        .dark .dimension-badge { background: #020617; color: #94a3b8; }
+
+        .method-badge { font-size: 11px; background: #f1f5f9; padding: 2px 8px; border-radius: 4px; color: #ea580c; font-weight: bold; transition: background-color 0.2s, color 0.2s; }
+        .dark .method-badge { background: #334155; color: #fb923c; }
         
         ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: #1e293b; }
-        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 10px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        .dark ::-webkit-scrollbar-track { background: #1e293b; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .dark ::-webkit-scrollbar-thumb { background: #475569; }
 
         #file-input { display: none; }
         .file-custom-label { 
@@ -52,15 +82,24 @@
 </head>
 <body class="flex flex-col min-h-screen">
     
-    <header class="w-full bg-orange-600 shadow-md py-3 px-6 flex items-center justify-between sticky top-0 z-50">
-        <div class="flex items-center gap-3">
-            <h1 class="text-white font-black text-lg tracking-wider" data-i18n="appTitle">轉檔工具 (切割)</h1>
+    <!-- 改進為橘色漸層風格後的導覽列 -->
+    <header class="w-full bg-gradient-to-r from-orange-500 via-orange-600 to-red-600 p-6 text-white flex justify-between items-center border-b border-orange-500/30 sticky top-0 z-50 shadow-md">
+        <div>
+            <h1 class="text-2xl font-black tracking-tight" data-i18n="appTitle">轉檔工具 (切割)</h1>
         </div>
-        <div class="flex items-center gap-4">
-            <button id="lang-toggle" class="bg-orange-800 hover:bg-orange-900 text-white text-[10px] font-bold py-1 px-3 rounded-full border border-orange-400 transition-colors">
-                中文 / EN
+        <div class="flex gap-3 items-center">
+            <!-- 增加明暗主題切換按鈕，配置在中英切換按鈕左側 -->
+            <button id="theme-toggle" class="p-1.5 rounded-lg text-[11px] font-bold bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-all flex items-center justify-center" aria-label="Toggle Theme">
+                <svg id="theme-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <!-- 圖示由 JS 動態注入 -->
+                </svg>
             </button>
-            <span class="text-orange-100 text-xs font-mono hidden md:block">V1.3</span>
+            <!-- 語系切換按鈕 -->
+            <button id="lang-toggle" class="px-3 py-1.5 rounded-lg text-[11px] font-bold bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-all flex items-center gap-2">
+                <span>中文 / EN</span>
+            </button>
+            <!-- 版本徽章，維持原有 V1.4 版本 -->
+            <span class="text-[10px] bg-white/10 px-3 py-1 rounded-full border border-white/20 font-mono">V1.4</span>
         </div>
     </header>
 
@@ -76,21 +115,21 @@
                                 <span id="file-label-text" data-i18n="chooseFile">選擇檔案</span>
                             </label>
                             <input type="file" id="file-input" accept="image/*,.svg,.dxf">
-                            <p id="file-name-display" class="text-[10px] text-slate-500 mt-2 truncate text-center" data-i18n="noFile">尚未選擇任何檔案</p>
+                            <p id="file-name-display" class="text-[10px] text-slate-400 dark:text-slate-500 mt-2 truncate text-center" data-i18n="noFile">尚未選擇任何檔案</p>
                         </div>
                         <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-[10px] text-slate-400 font-bold mb-1" data-i18n="targetWidth">整體寬 (mm)</label>
+                                <label class="block text-[10px] text-slate-500 dark:text-slate-400 font-bold mb-1" data-i18n="targetWidth">整體寬 (mm)</label>
                                 <input type="number" id="target-width" value="100">
                             </div>
                             <div id="threshold-container">
-                                <label class="block text-[10px] text-slate-400 font-bold mb-1" data-i18n="threshold">黑白門檻</label>
+                                <label class="block text-[10px] text-slate-500 dark:text-slate-400 font-bold mb-1" data-i18n="threshold">黑白門檻</label>
                                 <input type="number" id="threshold" value="128" min="0" max="255">
                             </div>
                         </div>
                         <div>
                             <div class="flex justify-between items-center mb-2">
-                                <label class="text-[10px] text-slate-400 font-bold" data-i18n="smoothness">解析/平滑度</label>
+                                <label class="text-[10px] text-slate-500 dark:text-slate-400 font-bold" data-i18n="smoothness">解析/平滑度</label>
                             </div>
                             <input type="range" id="smooth-range" min="0.01" max="2.0" step="0.01" value="0.1" class="accent-orange-600">
                         </div>
@@ -109,9 +148,9 @@
 
             <!-- 中間預覽面板 -->
             <div class="lg:col-span-6 space-y-6">
-                <div id="three-container" class="shadow-2xl border border-slate-800 relative">
-                    <div class="absolute top-4 left-4 z-10 space-y-2 bg-slate-900/80 p-3 rounded-lg border border-slate-700 backdrop-blur-sm">
-                        <div class="flex items-center gap-2"><span class="w-3 h-3 bg-slate-500 rounded-full"></span><span class="text-[10px] font-bold" data-i18n="legendOriginal">未選零件輪廓</span></div>
+                <div id="three-container" class="shadow-2xl relative">
+                    <div class="absolute top-4 left-4 z-10 space-y-2 bg-white/90 dark:bg-slate-900/80 p-3 rounded-lg border border-slate-200 dark:border-slate-700 backdrop-blur-sm text-slate-800 dark:text-slate-200 shadow-lg">
+                        <div class="flex items-center gap-2"><span class="w-3 h-3 bg-slate-400 dark:bg-slate-500 rounded-full"></span><span class="text-[10px] font-bold" data-i18n="legendOriginal">未選零件輪廓</span></div>
                         <div class="flex items-center gap-2"><span class="w-3 h-3 bg-green-500 rounded-full"></span><span class="text-[10px] font-bold" data-i18n="legendSelected">已選零件輪廓</span></div>
                         <div class="flex items-center gap-2"><span class="w-3 h-3 bg-yellow-400 rounded-full"></span><span class="text-[10px] font-bold" data-i18n="legendToolpath">加工路徑 (黃色覆蓋)</span></div>
                     </div>
@@ -131,15 +170,15 @@
                 <div id="job-panel" class="panel p-6 rounded-xl hidden shadow-2xl border-t-4 border-t-orange-600">
                     <h2 class="text-sm font-bold none text-orange-500 mb-6" data-i18n="jobSettings">第三步：加工參數設定</h2>
                     <div class="space-y-6">
-                        <div class="p-4 bg-slate-950/50 rounded-lg space-y-4">
-                            <h3 class="text-[10px] font-bold text-slate-400 none" data-i18n="groupSize">選中零件群組尺寸 (mm)</h3>
+                        <div class="p-4 bg-slate-100 dark:bg-slate-950/50 rounded-lg space-y-4">
+                            <h3 class="text-[10px] font-bold text-slate-500 dark:text-slate-400 none" data-i18n="groupSize">選中零件群組尺寸 (mm)</h3>
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label class="block text-[9px] text-slate-500 mb-1" data-i18n="width">寬度</label>
+                                    <label class="block text-[9px] text-slate-400 mb-1" data-i18n="width">寬度</label>
                                     <input type="number" id="resize-w" step="0.1">
                                 </div>
                                 <div>
-                                    <label class="block text-[9px] text-slate-500 mb-1" data-i18n="height">高度</label>
+                                    <label class="block text-[9px] text-slate-400 mb-1" data-i18n="height">高度</label>
                                     <input type="number" id="resize-h" step="0.1">
                                 </div>
                             </div>
@@ -147,17 +186,17 @@
 
                         <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-[10px] text-slate-400 font-bold mb-1" data-i18n="resolution">解析度 (mm)</label>
+                                <label class="block text-[10px] text-slate-500 dark:text-slate-400 font-bold mb-1" data-i18n="resolution">解析度 (mm)</label>
                                 <input type="number" id="resolution" value="0.1" min="0.1" step="0.01">
                             </div>
                             <div>
-                                <label class="block text-[10px] text-slate-400 font-bold mb-1" data-i18n="feedRate">進給速率</label>
+                                <label class="block text-[10px] text-slate-500 dark:text-slate-400 font-bold mb-1" data-i18n="feedRate">進給速率</label>
                                 <input type="number" id="job-f" value="1500">
                             </div>
                         </div>
 
                         <div>
-                            <label class="block text-[10px] text-slate-400 font-bold mb-1" data-i18n="mode">加工模式</label>
+                            <label class="block text-[10px] text-slate-500 dark:text-slate-400 font-bold mb-1" data-i18n="mode">加工模式</label>
                             <select id="job-type">
                                 <option value="laser" data-i18n="optLaser">雷射切割</option>
                                 <option value="outer" data-i18n="optOuter">CNC 外輪廓</option>
@@ -166,24 +205,32 @@
                             </select>
                         </div>
 
-                        <div id="milling-opts" class="space-y-4 pt-4 border-t border-slate-700">
+                        <!-- 橋位設定 (TAB)，僅外加工/內加工時顯示 -->
+                        <div id="tab-opts-container" class="hidden">
+                            <label class="flex items-center gap-2 cursor-pointer mt-2 bg-slate-100 dark:bg-slate-900/40 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800">
+                                <input type="checkbox" id="job-use-tab" class="w-4 h-4 accent-orange-600 rounded">
+                                <span class="text-xs font-bold text-slate-700 dark:text-slate-300" data-i18n="useTab">啟用橋位 (TAB)</span>
+                            </label>
+                        </div>
+
+                        <div id="milling-opts" class="space-y-4 pt-4 border-t border-slate-200 dark:border-slate-700">
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label class="block text-[10px] text-slate-400 font-bold mb-1" data-i18n="toolDia">刀具直徑</label>
+                                    <label class="block text-[10px] text-slate-500 dark:text-slate-400 font-bold mb-1" data-i18n="toolDia">刀具直徑</label>
                                     <input type="number" id="mill-d" value="3.175" step="0.001">
                                 </div>
                                 <div>
-                                    <label class="block text-[10px] text-slate-400 font-bold mb-1" data-i18n="totalDepth">加工深度</label>
+                                    <label class="block text-[10px] text-slate-500 dark:text-slate-400 font-bold mb-1" data-i18n="totalDepth">加工深度</label>
                                     <input type="number" id="mill-depth" value="3.0" step="0.1">
                                 </div>
                             </div>
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label class="block text-[10px] text-slate-400 font-bold mb-1" data-i18n="stepDown">每次下刀</label>
+                                    <label class="block text-[10px] text-slate-500 dark:text-slate-400 font-bold mb-1" data-i18n="stepDown">每次下刀</label>
                                     <input type="number" id="mill-step" value="1.0" step="0.1">
                                 </div>
                                 <div id="pocket-opts">
-                                    <label class="block text-[10px] text-slate-400 font-bold mb-1" data-i18n="overlap">路徑重疊</label>
+                                    <label class="block text-[10px] text-slate-500 dark:text-slate-400 font-bold mb-1" data-i18n="overlap">路徑重疊</label>
                                     <input type="number" id="mill-overlap" value="0.5" min="0.1" max="0.9" step="0.1">
                                 </div>
                             </div>
@@ -193,8 +240,8 @@
                     </div>
                 </div>
                 
-                <div id="no-selection-hint" class="panel p-12 rounded-xl text-center text-slate-500 shadow-2xl h-full flex flex-col justify-center">
-                    <svg class="mx-auto mb-4 opacity-20" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+                <div id="no-selection-hint" class="panel p-12 rounded-xl text-center text-slate-400 dark:text-slate-500 shadow-2xl h-full flex flex-col justify-center">
+                    <svg class="mx-auto mb-4 opacity-25" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
                     <p class="text-sm leading-relaxed" data-i18n="selectionHint">請先在左側清單中勾選零件<br>以進行後續調整</p>
                 </div>
             </div>
@@ -204,6 +251,38 @@
     <canvas id="hidden-canvas" class="hidden"></canvas>
 
     <script>
+        // --- 主題切換設定與函數 ---
+        const themeIcon = document.getElementById('theme-icon');
+
+        function setTheme(theme) {
+            if (theme === 'dark') {
+                document.documentElement.classList.add('dark');
+                // Sun 圖示 (點擊變亮)
+                themeIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m0-12.728l.707.707m12.728 12.728l.707.707M12 8a4 4 0 100 8 4 4 0 000-8z" />`;
+                localStorage.setItem('theme', 'dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+                // Moon 圖示 (點擊變暗)
+                themeIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />`;
+                localStorage.setItem('theme', 'light');
+            }
+            if (typeof renderer !== 'undefined' && renderer !== null) {
+                updateRendererBg();
+                update3D();
+            }
+        }
+
+        function updateRendererBg() {
+            const isDark = document.documentElement.classList.contains('dark');
+            renderer.setClearColor(isDark ? 0x020617 : 0xf1f5f9);
+        }
+
+        // 綁定點擊事件
+        document.getElementById('theme-toggle').onclick = () => {
+            const isDark = document.documentElement.classList.contains('dark');
+            setTheme(isDark ? 'light' : 'dark');
+        };
+
         // --- 1. 基礎影像演算法與輔助函式 ---
         function tracePath(sx, sy, w, h, isBlack, visited){
             const path = []; let cx = sx, cy = sy;
@@ -271,6 +350,106 @@
             return filtered;
         }
 
+        // --- 橋位 (TAB) 計算核心輔助演算法 ---
+        // 1. 細分路徑，確保在大跨距的線段中有充足的頂點做 Z-lift 精細偵測
+        function subdividePath(path, maxLen = 0.5) {
+            if (path.length < 2) return path;
+            const result = [path[0]];
+            for (let i = 0; i < path.length - 1; i++) {
+                const p1 = path[i];
+                const p2 = path[i + 1];
+                const dx = p2.x - p1.x;
+                const dy = p2.y - p1.y;
+                const len = Math.sqrt(dx * dx + dy * dy);
+                if (len > maxLen) {
+                    const divisions = Math.ceil(len / maxLen);
+                    for (let j = 1; j < divisions; j++) {
+                        const t = j / divisions;
+                        result.push({
+                            x: p1.x + dx * t,
+                            y: p1.y + dy * t
+                        });
+                    }
+                }
+                result.push(p2);
+            }
+            return result;
+        }
+
+        // 2. 獲取橋位的中心投影座標點
+        function getTabPointsForPath(path) {
+            if (!path || path.length < 3) return [];
+            
+            // 計算 Bounding Box 外框
+            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+            path.forEach(pt => {
+                minX = Math.min(minX, pt.x);
+                maxX = Math.max(maxX, pt.x);
+                minY = Math.min(minY, pt.y);
+                maxY = Math.max(maxY, pt.y);
+            });
+            
+            // 四個對角頂點
+            const A = { x: minX, y: minY };
+            const B = { x: maxX, y: maxY };
+            const C = { x: minX, y: maxY };
+            const D = { x: maxX, y: minY };
+            
+            // 第一對角線 (A-B) 尋找路徑上最靠近之投射點
+            let ptA = path[0], ptB = path[0];
+            let minDistA = Infinity, minDistB = Infinity;
+            
+            path.forEach(pt => {
+                const distA = Math.pow(pt.x - A.x, 2) + Math.pow(pt.y - A.y, 2);
+                if (distA < minDistA) { minDistA = distA; ptA = pt; }
+                
+                const distB = Math.pow(pt.x - B.x, 2) + Math.pow(pt.y - B.y, 2);
+                if (distB < minDistB) { minDistB = distB; ptB = pt; }
+            });
+            
+            const centers = [ptA, ptB];
+            
+            // 計算路徑圍成之面積
+            let area = 0;
+            for (let i = 0; i < path.length; i++) {
+                let j = (i + 1) % path.length;
+                area += path[i].x * path[j].y;
+                area -= path[j].x * path[i].y;
+            }
+            area = Math.abs(area / 2); // 單位為 mm2
+            
+            // 當面積大於 1600 mm2 時，在第二對角線 (C-D) 處多配置一對橋位
+            if (area > 1600) {
+                let ptC = path[0], ptD = path[0];
+                let minDistC = Infinity, minDistD = Infinity;
+                
+                path.forEach(pt => {
+                    const distC = Math.pow(pt.x - C.x, 2) + Math.pow(pt.y - C.y, 2);
+                    if (distC < minDistC) { minDistC = distC; ptC = pt; }
+                    
+                    const distD = Math.pow(pt.x - D.x, 2) + Math.pow(pt.y - D.y, 2);
+                    if (distD < minDistD) { minDistD = distD; ptD = pt; }
+                });
+                
+                const distToExisting = (p) => centers.some(c => Math.pow(p.x - c.x, 2) + Math.pow(p.y - c.y, 2) < 1.0);
+                if (!distToExisting(ptC)) centers.push(ptC);
+                if (!distToExisting(ptD)) centers.push(ptD);
+            }
+            
+            return centers;
+        }
+
+        // 3. 判斷特定點是否位在橋位保護區間內 (半寬 3mm，合計 6mm)
+        function isPointInTab(pt, tabCenters, tabLength = 6) {
+            const halfLenSq = Math.pow(tabLength / 2, 2);
+            for (let i = 0; i < tabCenters.length; i++) {
+                const tc = tabCenters[i];
+                const distSq = Math.pow(pt.x - tc.x, 2) + Math.pow(pt.y - tc.y, 2);
+                if (distSq < halfLenSq) return true;
+            }
+            return false;
+        }
+
         // --- 多國語言設定 ---
         const i18n = {
             zh: {
@@ -300,6 +479,7 @@
                 optOuter: "外加工",
                 optInner: "內加工",
                 optPocket: "槽加工",
+                useTab: "啟用橋位 (TAB)",
                 toolDia: "刀具直徑",
                 totalDepth: "加工深度",
                 stepDown: "每次下刀",
@@ -337,6 +517,7 @@
                 optOuter: "Mill Outside",
                 optInner: "Mill Inside",
                 optPocket: "Mill Pocket",
+                useTab: "Enable Tabs (Bridge)",
                 toolDia: "Tool Diameter",
                 totalDepth: "Total Depth",
                 stepDown: "Step Down",
@@ -589,7 +770,7 @@
                     originalDim: { w: pMaxX-pMinX, h: pMaxY-pMinY }, 
                     currentDim: { w: pMaxX-pMinX, h: pMaxY-pMinY }, 
                     visible: true, 
-                    jobConfig: { type: 'pocket', f: 1500, d: 3.175, depth: 3.0, step: 1.0, overlap: 0.5, resolution: 0.1 }, 
+                    jobConfig: { type: 'pocket', f: 1500, d: 3.175, depth: 3.0, step: 1.0, overlap: 0.5, resolution: 0.1, useTab: false }, 
                     toolpath: null, appliedMethod: null 
                 };
             });
@@ -606,11 +787,10 @@
         const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 10000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(container.clientWidth, container.clientHeight);
-        renderer.setClearColor(0x020617);
+        updateRendererBg(); // 動態依據當前主題設定 ClearColor
         container.appendChild(renderer.domElement);
         const controls = new THREE.OrbitControls(camera, renderer.domElement);
         camera.position.set(0, 0, 200);
-        scene.add(new THREE.GridHelper(500, 50, 0x334155, 0x1e293b).rotateX(Math.PI/2));
 
         function animate() { requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); }
         animate();
@@ -633,21 +813,22 @@
                     methodText = i18n[currentLang][methodMap[p.appliedMethod]] || p.appliedMethod;
                 }
                 const div = document.createElement('div');
-                div.className = `p-4 border border-slate-700 rounded-xl flex flex-col transition-all cursor-pointer ${isSelected ? 'active-part shadow-lg' : 'hover:bg-slate-800'}`;
+                // 將框線與 Hover 配色優化為響應主題的形式
+                div.className = `p-4 border border-slate-300 dark:border-slate-700 rounded-xl flex flex-col transition-all cursor-pointer ${isSelected ? 'active-part shadow-lg' : 'hover:bg-slate-100 dark:hover:bg-slate-800'}`;
                 div.innerHTML = `
                     <div class="flex justify-between items-center mb-2">
                         <div class="flex items-center gap-3">
                             <input type="checkbox" class="w-5 h-5 accent-green-600" ${isSelected ? 'checked' : ''}>
-                            <span class="text-xs font-bold text-slate-100">${i18n[currentLang].partName} ${p.id}</span>
+                            <span class="text-xs font-bold text-slate-800 dark:text-slate-100">${i18n[currentLang].partName} ${p.id}</span>
                         </div>
                         <button class="toggle-vis p-1">
-                            ${p.visible ? '<svg class="w-5 h-5 stroke-slate-400" fill="none" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>' : '<svg class="w-5 h-5 stroke-slate-600" fill="none" stroke-width="2" viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>'}
+                            ${p.visible ? '<svg class="w-5 h-5 stroke-slate-500 dark:stroke-slate-400" fill="none" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>' : '<svg class="w-5 h-5 stroke-slate-400 dark:stroke-slate-600" fill="none" stroke-width="2" viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>'}
                         </button>
                     </div>
                     <div class="flex flex-wrap gap-2 ml-8 items-center">
                         <span class="dimension-badge">${p.currentDim.w.toFixed(1)} x ${p.currentDim.h.toFixed(1)} mm</span>
                         <div class="flex items-center gap-1">
-                            <span class="text-[9px] text-slate-500 uppercase font-bold">${i18n[currentLang].method}:</span>
+                            <span class="text-[9px] text-slate-400 dark:text-slate-500 uppercase font-bold">${i18n[currentLang].method}:</span>
                             <span class="method-badge">${methodText}</span>
                         </div>
                     </div>
@@ -685,6 +866,7 @@
                     const key = id.replace('job-','').replace('mill-','');
                     document.getElementById(id).value = lastP.jobConfig[key] || lastP.jobConfig[id.split('-')[1]];
                 });
+                document.getElementById('job-use-tab').checked = !!lastP.jobConfig.useTab;
             } else { panel.classList.add('hidden'); hint.classList.remove('hidden'); }
             toggleMillingOptions();
         }
@@ -712,6 +894,8 @@
             const val = document.getElementById('job-type').value;
             document.getElementById('milling-opts').classList.toggle('hidden', val === 'laser');
             document.getElementById('pocket-opts').classList.toggle('hidden', val !== 'pocket');
+            // 橋位(TAB)選項僅在外加工(outer)或內加工(inner)時顯示
+            document.getElementById('tab-opts-container').classList.toggle('hidden', val !== 'outer' && val !== 'inner');
         }
         document.getElementById('job-type').onchange = toggleMillingOptions;
 
@@ -724,6 +908,7 @@
             const newDepth = parseFloat(document.getElementById('mill-depth').value);
             const newStep = parseFloat(document.getElementById('mill-step').value);
             const newOverlap = Math.max(0.1, Math.min(0.9, parseFloat(document.getElementById('mill-overlap').value) || 0.5));
+            const newUseTab = document.getElementById('job-use-tab').checked;
 
             let minX = Infinity, maxX = -Infinity;
             selectedIndices.forEach(idx => { parts[idx].rawPath.forEach(pt => { minX = Math.min(minX, pt.x); maxX = Math.max(maxX, pt.x); }); });
@@ -731,7 +916,7 @@
 
             selectedIndices.forEach(idx => {
                 parts[idx].toolpath = null;
-                parts[idx].jobConfig = { type: newType, f: newF, d: newD, depth: newDepth, step: newStep, overlap: newOverlap, resolution: newRes };
+                parts[idx].jobConfig = { type: newType, f: newF, d: newD, depth: newDepth, step: newStep, overlap: newOverlap, resolution: newRes, useTab: newUseTab };
                 parts[idx].currentDim = { w: parts[idx].originalDim.w * groupScale, h: parts[idx].originalDim.h * groupScale };
                 parts[idx].appliedMethod = newType; 
             });
@@ -889,11 +1074,18 @@
 
         function update3D() {
             while(scene.children.length > 0) scene.remove(scene.children[0]);
-            scene.add(new THREE.GridHelper(500, 50, 0x334155, 0x1e293b).rotateX(Math.PI/2));
+            
+            // 依據當前明暗主題來決定網格線條的顯色
+            const isDark = document.documentElement.classList.contains('dark');
+            const gridColor1 = isDark ? 0x334155 : 0xcbd5e1;
+            const gridColor2 = isDark ? 0x1e293b : 0xf1f5f9;
+            scene.add(new THREE.GridHelper(500, 50, gridColor1, gridColor2).rotateX(Math.PI/2));
+            
             parts.forEach((p, idx) => {
                 if(!p.visible) return;
                 const isSelected = selectedIndices.has(idx);
-                const color = isSelected ? 0x22c55e : 0xFFFFFF;
+                // 零件未選中時，亮色模式下改為較深的 Slate 以提供足夠對比度
+                const color = isSelected ? 0x22c55e : (isDark ? 0xFFFFFF : 0x475569);
                 const opacity = isSelected ? 0.8 : 0.5;
                 const geomOrig = new THREE.BufferGeometry().setFromPoints(p.rawPath.map(pt => new THREE.Vector3(pt.x, pt.y, 0)));
                 scene.add(new THREE.LineLoop(geomOrig, new THREE.LineBasicMaterial({ color: color, opacity: opacity, transparent: true })));
@@ -903,8 +1095,22 @@
                         const currentZ = cfg.type === 'laser' ? 0.2 : -(Math.min(cfg.depth, (i + 1) * cfg.step)) + 0.2;
                         const matTool = new THREE.LineBasicMaterial({ color: 0xfacc15, opacity: 1.0 - (i * 0.1), transparent: true });
                         p.toolpath.forEach(path => {
-                            const geomTool = new THREE.BufferGeometry().setFromPoints(path.map(pt => new THREE.Vector3(pt.x, pt.y, currentZ)));
-                            scene.add(new THREE.Line(geomTool, matTool));
+                            // 判斷該道次是否啟用 6mm 安全抬刀橋位 (最後一圈且啟用 TAB)
+                            const useTabThisPass = (cfg.useTab && (i === passes - 1) && (cfg.type === 'outer' || cfg.type === 'inner'));
+                            if (useTabThisPass) {
+                                const tabCenters = getTabPointsForPath(path);
+                                const subPath = subdividePath(path, 0.5);
+                                const tabZVal = Math.min(0, currentZ + cfg.step);
+                                const points3D = subPath.map(pt => {
+                                    const z = isPointInTab(pt, tabCenters, 6) ? tabZVal : currentZ;
+                                    return new THREE.Vector3(pt.x, pt.y, z);
+                                });
+                                const geomTool = new THREE.BufferGeometry().setFromPoints(points3D);
+                                scene.add(new THREE.Line(geomTool, matTool));
+                            } else {
+                                const geomTool = new THREE.BufferGeometry().setFromPoints(path.map(pt => new THREE.Vector3(pt.x, pt.y, currentZ)));
+                                scene.add(new THREE.Line(geomTool, matTool));
+                            }
                         });
                     }
                 }
@@ -965,7 +1171,14 @@
 
                         p.toolpath.forEach((path, pathIdx) => {
                             if (path.length < 2) return;
-                            const start = path[0];
+                            
+                            const useTabThisPass = (!isLaser && cfg.useTab && i === passes && (cfg.type === 'outer' || cfg.type === 'inner'));
+                            const finalPath = useTabThisPass ? subdividePath(path, 0.5) : path;
+                            const tabCenters = useTabThisPass ? getTabPointsForPath(path) : [];
+                            const tabZVal = useTabThisPass ? Math.min(0, targetZ + cfg.step) : targetZ;
+
+                            const start = finalPath[0];
+                            const startZ = useTabThisPass && isPointInTab(start, tabCenters, 6) ? tabZVal : targetZ;
 
                             let needRetract = true;
                             if (i > 1 && pathIdx === 0 && lastPointOfPart) {
@@ -989,9 +1202,9 @@
                                 currentY = start.y;
 
                                 if (!isLaser) {
-                                    const plungeZ = Math.abs(currentZ - targetZ);
+                                    const plungeZ = Math.abs(currentZ - startZ);
                                     totalSec += (plungeZ / PLUNGE_SPEED) * 60;
-                                    currentZ = targetZ;
+                                    currentZ = startZ;
                                 }
                             } else {
                                 const travelXY = Math.sqrt(Math.pow(start.x - currentX, 2) + Math.pow(start.y - currentY, 2));
@@ -1000,15 +1213,23 @@
                                 currentY = start.y;
                             }
 
-                            let pathDist = 0;
-                            for (let j = 1; j < path.length; j++) {
-                                pathDist += Math.sqrt(Math.pow(path[j].x - path[j-1].x, 2) + Math.pow(path[j].y - path[j-1].y, 2));
+                            let lastZ = startZ;
+                            for (let j = 1; j < finalPath.length; j++) {
+                                const pt = finalPath[j];
+                                const ptZ = useTabThisPass && isPointInTab(pt, tabCenters, 6) ? tabZVal : targetZ;
+                                const segmentDist = Math.sqrt(Math.pow(pt.x - finalPath[j - 1].x, 2) + Math.pow(pt.y - finalPath[j - 1].y, 2));
+                                const zDist = Math.abs(ptZ - lastZ);
+                                
+                                // 合併 X/Y 移動與 Z 軸抬升
+                                const totalTravel = Math.sqrt(segmentDist * segmentDist + zDist * zDist);
+                                totalSec += (totalTravel / cuttingFeedrate) * 60;
+                                lastZ = ptZ;
                             }
-                            totalSec += (pathDist / cuttingFeedrate) * 60;
 
-                            const lastPtInPath = path[path.length - 1];
+                            const lastPtInPath = finalPath[finalPath.length - 1];
                             currentX = lastPtInPath.x;
                             currentY = lastPtInPath.y;
+                            currentZ = useTabThisPass && isPointInTab(lastPtInPath, tabCenters, 6) ? tabZVal : targetZ;
 
                             lastPtInLayer = lastPtInPath;
                             lastPointOfPart = lastPtInPath;
@@ -1076,7 +1297,15 @@
                         let isFirstMoveOfPass = true;
                         p.toolpath.forEach((path, pathIdx) => {
                             if (path.length < 2) return;
-                            const start = path[0];
+                            
+                            const useTabThisPass = (!isLaser && cfg.useTab && i === passes && (cfg.type === 'outer' || cfg.type === 'inner'));
+                            const finalPath = useTabThisPass ? subdividePath(path, 0.5) : path;
+                            const tabCenters = useTabThisPass ? getTabPointsForPath(path) : [];
+                            const tabZVal = useTabThisPass ? Math.min(0, targetZ + cfg.step) : targetZ;
+
+                            const start = finalPath[0];
+                            const startZ = useTabThisPass && isPointInTab(start, tabCenters, 6) ? tabZVal : targetZ;
+
                             let needRetract = true;
                             if (i > 1 && pathIdx === 0 && lastPointOfPart) {
                                 const dToStart = Math.sqrt(Math.pow(start.x - lastPointOfPart.x, 2) + Math.pow(start.y - lastPointOfPart.y, 2));
@@ -1091,23 +1320,33 @@
                                 if (!isLaser) gc.push(`G0 Z${SAFE_Z}`);
                                 gc.push(`G0 X${start.x.toFixed(3)} Y${start.y.toFixed(3)}`);
                                 if (!isLaser) {
-                                    gc.push(`G1 Z${targetZ} F300`);
+                                    gc.push(`G1 Z${startZ.toFixed(3)} F300`);
                                     forceFeedrate = true; 
                                 } else {
                                     gc.push("M3 S255");
                                 }
                             } else {
-                                if (!isLaser) gc.push(`G1 X${start.x.toFixed(3)} Y${start.y.toFixed(3)} Z${targetZ} ${isFirstMoveOfPass ? 'F' + cfg.f : ''}`);
+                                if (!isLaser) gc.push(`G1 X${start.x.toFixed(3)} Y${start.y.toFixed(3)} Z${startZ.toFixed(3)} ${isFirstMoveOfPass ? 'F' + cfg.f : ''}`);
                                 else gc.push(`G1 X${start.x.toFixed(3)} Y${start.y.toFixed(3)} ${isFirstMoveOfPass ? 'F' + cfg.f : ''}`);
                             }
                             
-                            for (let j = 1; j < path.length; j++) {
+                            let lastZ = startZ;
+                            for (let j = 1; j < finalPath.length; j++) {
+                                const pt = finalPath[j];
+                                const ptZ = useTabThisPass && isPointInTab(pt, tabCenters, 6) ? tabZVal : targetZ;
                                 const fStr = (isFirstMoveOfPass || forceFeedrate) ? ` F${cfg.f}` : "";
-                                gc.push(`G1 X${path[j].x.toFixed(3)} Y${path[j].y.toFixed(3)}${fStr}`);
+                                
+                                if (Math.abs(ptZ - lastZ) > 0.001) {
+                                    // 橋位邊界：X、Y、Z 聯動拉升或下插，達成平滑的斜面或抬升
+                                    gc.push(`G1 X${pt.x.toFixed(3)} Y${pt.y.toFixed(3)} Z${ptZ.toFixed(3)}${fStr}`);
+                                    lastZ = ptZ;
+                                } else {
+                                    gc.push(`G1 X${pt.x.toFixed(3)} Y${pt.y.toFixed(3)}${fStr}`);
+                                }
                                 isFirstMoveOfPass = false;
                                 forceFeedrate = false; 
                             }
-                            lastPtInLayer = path[path.length - 1];
+                            lastPtInLayer = finalPath[finalPath.length - 1];
                             lastPointOfPart = lastPtInLayer;
                         });
                         if (isLaser) gc.push("M5");
@@ -1124,9 +1363,10 @@
             a.click();
         };
 
+        // 啟動初始化語言與明暗主題圖示
         updateLanguage();
+        setTheme(savedTheme);
     </script>
-
     <!-- PWA Service Worker Registration -->
     <script>
         if ('serviceWorker' in navigator) {
@@ -1137,6 +1377,5 @@
             });
         }
     </script>
-
 </body>
 </html>
