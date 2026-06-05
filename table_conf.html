@@ -1,133 +1,265 @@
 <!DOCTYPE html>
-<html lang="zh-TW" class="dark">
+<html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>V_Carving</title>
-    <!-- 引入 Tailwind CSS 與 Three.js 及其控制庫 -->
+    <title>Table Configurator</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-        }
-    </script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/clipper-lib@6.4.2/clipper.js"></script>
-    <!-- DXF 解析庫 -->
-    <script src="https://cdn.jsdelivr.net/npm/dxf-parser@1.1.2/dist/dxf-parser.min.js"></script>
-
     <style>
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
-        }
-        
-        /* 基礎主題變數樣式適配 */
-        .panel { 
-            background: #ffffff; 
-            border: 1px solid #e2e8f0; 
-            color: #0f172a;
-        }
-        .dark .panel { 
-            background: #1e293b; 
-            border: 1px solid #334155; 
-            color: #f8fafc;
-        }
-        
-        #three-container { 
-            width: 100%; 
-            height: 400px; 
-            border-radius: 8px; 
-            overflow: hidden; 
-            background: #f1f5f9; 
-            position: relative; 
-        }
-        .dark #three-container { 
-            background: #020617; 
-        }
-        @media (min-width: 1024px) { #three-container { height: 600px; } }
-        
-        input, select { 
-            background: #f8fafc; 
-            border: 1px solid #cbd5e1; 
-            color: #0f172a; 
-            border-radius: 6px; 
-            padding: 8px 12px; 
-            font-size: 14px; 
-            width: 100%; 
-        }
-        .dark input, .dark select {
-            background: #0f172a; 
-            border: 1px solid #475569; 
-            color: white; 
-        }
-        input:focus { border-color: #dc2626; outline: none; ring: 1px solid #dc2626; }
-        
-        .btn-red { background: #dc2626; color: white; transition: background 0.2s; }
-        .btn-red:hover { background: #ef4444; }
-        .btn-gray { background: #e2e8f0; color: #475569; transition: background 0.2s; }
-        .dark .btn-gray { background: #475569; color: white; }
-        .btn-gray:hover { background: #cbd5e1; }
-        .dark .btn-gray:hover { background: #64748b; }
-        
-        .active-part { 
-            border-left: 4px solid #22c55e; 
-            background: rgba(34, 197, 94, 0.05); 
-        }
-        .dark .active-part {
-            background: rgba(34, 197, 94, 0.1); 
-        }
-        
-        .dimension-badge { 
-            font-size: 11px; 
-            background: #f1f5f9; 
-            padding: 2px 8px; 
-            border-radius: 4px; 
-            color: #475569; 
-        }
-        .dark .dimension-badge {
-            background: #020617; 
-            color: #94a3b8;
+        :root {
+            /* 深色主題變數 */
+            --bg-body: #0f172a;
+            --text-body: #f1f5f9;
+            --text-primary: #ffffff;
+            --bg-panel: #1e293b;
+            --border-panel: #334155;
+            --bg-input: #0f172a;
+            --text-input: #f8fafc;
+            --border-input: #475569;
+            --bg-active-row: #334155;
+            --border-active-row: #f8fafc;
+            --bg-row: rgba(15, 23, 42, 0.4);
+            --bg-row-hover: rgba(51, 65, 85, 0.5);
+            --text-row-active: #ffffff;
+            --text-row-inactive: #94a3b8;
+            --text-muted: #94a3b8;
+            --bg-secondary-btn: #1e293b;
+            --border-secondary-btn: #334155;
+            --text-secondary-btn: #cbd5e1;
+            --bg-primary-btn: #f1f5f9;
+            --text-primary-btn: #0f172a;
+            --bg-primary-btn-hover: #ffffff;
+            --bg-range-box: rgba(30, 41, 59, 0.5);
+            --border-range-box: rgba(148, 163, 184, 0.3);
+            
+            --tag-bg: #94a3b8;
+            --tag-text: #0f172a;
+            --tag-bg-d: #64748b;
+            --tag-text-d: #ffffff;
+
+            /* 畫布專用變數 */
+            --canvas-bg: #1e293b;
+            --canvas-stroke: #334155;
+            --canvas-wa-fill: rgba(255, 255, 255, 0.05);
+            --canvas-wa-stroke: rgba(255, 255, 255, 0.4);
+            --canvas-dash-stroke: rgba(255, 255, 255, 0.5);
+            --canvas-d-dash-stroke: rgba(148, 163, 184, 0.5);
+            --canvas-corner-fill: #475569;
+            --canvas-dot-fill: #f8fafc;
+            --canvas-text-fill: #ffffff;
+            --canvas-machine-highlight: #ea580c;
         }
 
-        /* 主題切換控制按鈕樣式 */
-        .btn-control {
-            background: #991b1b; /* bg-red-800 */
-            color: #FFFFFF;
-            padding: 8px;
-            border-radius: 9999px;
-            border: 1px solid rgba(254, 202, 202, 0.4); /* border-red-300/40 */
-            transition: background 0.2s, transform 0.1s;
-            cursor: pointer;
+        body.theme-light {
+            /* 明亮主題變數 */
+            --bg-body: #f8fafc;
+            --text-body: #0f172a;
+            --text-primary: #0f172a;
+            --bg-panel: #ffffff;
+            --border-panel: #cbd5e1;
+            --bg-input: #f1f5f9;
+            --text-input: #0f172a;
+            --border-input: #94a3b8;
+            --bg-active-row: #e2e8f0;
+            --border-active-row: #0f172a;
+            --bg-row: rgba(241, 245, 249, 0.8);
+            --bg-row-hover: #cbd5e1;
+            --text-row-active: #0f172a;
+            --text-row-inactive: #475569;
+            --text-muted: #475569;
+            --bg-secondary-btn: #f1f5f9;
+            --border-secondary-btn: #cbd5e1;
+            --text-secondary-btn: #334155;
+            --bg-primary-btn: #0f172a;
+            --text-primary-btn: #ffffff;
+            --bg-primary-btn-hover: #1e293b;
+            --bg-range-box: #f1f5f9;
+            --border-range-box: rgba(15, 23, 42, 0.1);
+            
+            --tag-bg: #cbd5e1;
+            --tag-text: #0f172a;
+            --tag-bg-d: #475569;
+            --tag-text-d: #ffffff;
+
+            /* 明亮畫布變數 */
+            --canvas-bg: #f8fafc;
+            --canvas-stroke: #cbd5e1;
+            --canvas-wa-fill: rgba(15, 23, 42, 0.03);
+            --canvas-wa-stroke: rgba(15, 23, 42, 0.3);
+            --canvas-dash-stroke: rgba(15, 23, 42, 0.4);
+            --canvas-d-dash-stroke: rgba(100, 116, 139, 0.3);
+            --canvas-corner-fill: #94a3b8;
+            --canvas-dot-fill: #0f172a;
+            --canvas-text-fill: #0f172a;
+            --canvas-machine-highlight: #ea580c;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-body);
+            overflow-x: hidden;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        
+        canvas {
+            border-radius: 8px;
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.5);
+            background-color: var(--canvas-bg);
+            border: 1px solid var(--canvas-stroke);
+            max-width: 100%;
+            height: auto;
+            transition: background-color 0.3s ease, border-color 0.3s ease;
+        }
+
+        .panel-bg {
+            background-color: var(--bg-panel);
+            border: 1px solid var(--border-panel);
+            transition: background-color 0.3s ease, border-color 0.3s ease;
+        }
+
+        .text-title {
+            color: var(--text-primary);
+            transition: color 0.3s ease;
+        }
+
+        .uniform-input {
+            width: 100%;
+            height: 32px;
+            outline: none;
+            text-align: center;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-weight: 700;
+            background: var(--bg-input);
+            color: var(--text-input);
+            font-size: 13px;
+            border: none;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        .table-item {
+            border: 1px solid var(--border-panel);
+            background-color: var(--bg-row);
+            transition: all 0.2s ease;
+        }
+
+        .table-item:hover {
+            background-color: var(--bg-row-hover);
+        }
+
+        .table-item.active-row {
+            background-color: var(--bg-active-row);
+            border-left: 4px solid var(--border-active-row);
+        }
+
+        .item-text {
+            color: var(--text-row-inactive);
+            font-weight: 700;
+            transition: color 0.3s ease;
+        }
+
+        .table-item.active-row .item-text {
+            color: var(--text-row-active);
+        }
+
+        .tag-label {
             display: flex;
             align-items: center;
             justify-content: center;
+            width: 28px;
+            background-color: var(--tag-bg);
+            color: var(--tag-text);
+            font-size: 11px;
+            font-weight: 900;
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
-        .btn-control:hover {
-            background: #7f1d1d; /* bg-red-900 */
-        }
-        .btn-control:active {
-            transform: scale(0.95);
-        }
-        .icon-control {
-            width: 18px;
-            height: 18px;
-            fill: currentColor;
-        }
-        
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: #f1f5f9; }
-        .dark ::-webkit-scrollbar-track { background: #1e293b; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        .dark ::-webkit-scrollbar-thumb { background: #475569; }
 
-        #file-input { display: none; }
-        .file-custom-label { 
-            display: flex; align-items: center; justify-content: center; gap: 8px;
-            background: #dc2626; color: white; padding: 10px; border-radius: 8px;
-            font-weight: bold; cursor: pointer; font-size: 13px; transition: 0.2s;
+        .tag-label-d {
+            background-color: var(--tag-bg-d);
+            color: var(--tag-text-d);
         }
-        .file-custom-label:hover { background: #ef4444; }
+
+        .input-card {
+            border: 1px solid var(--border-input);
+            border-radius: 6px;
+            overflow: hidden;
+            display: flex;
+            background: var(--bg-panel);
+            transition: border-color 0.3s ease, background-color 0.3s ease;
+        }
+
+        .custom-border {
+            border: 2px solid var(--border-input);
+            transition: border-color 0.3s ease;
+        }
+
+        .btn-custom-secondary {
+            background-color: var(--bg-secondary-btn);
+            border-color: var(--border-secondary-btn);
+            color: var(--text-secondary-btn);
+            transition: all 0.2s ease;
+        }
+
+        .btn-custom-secondary:hover {
+            background-color: var(--bg-row-hover);
+        }
+
+        .btn-custom-primary {
+            background-color: var(--bg-primary-btn);
+            color: var(--text-primary-btn);
+            transition: all 0.2s ease;
+        }
+
+        .btn-custom-primary:hover {
+            background-color: var(--bg-primary-btn-hover);
+            opacity: 0.9;
+        }
+
+        .range-box {
+            background-color: var(--bg-range-box);
+            border-color: var(--border-range-box);
+            transition: background-color 0.3s ease, border-color 0.3s ease;
+        }
+
+        .text-muted-custom {
+            color: var(--text-muted);
+            transition: color 0.3s ease;
+        }
+
+        .bg-input-custom {
+            background-color: var(--bg-input);
+            transition: background-color 0.3s ease;
+        }
+
+        .border-input-custom {
+            border-color: var(--border-input);
+            transition: border-color 0.3s ease;
+        }
+
+        .text-custom {
+            color: var(--text-input);
+            transition: color 0.3s ease;
+        }
+
+        /* 捲軸美化 */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--bg-body);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-panel);
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-muted);
+        }
     </style>
 
     <!-- PWA Meta Tags -->
@@ -138,2070 +270,547 @@
     <link rel="apple-touch-icon" href="icon-192.png">
 
 </head>
-<body class="flex flex-col min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-900 dark:text-slate-100 transition-colors duration-200">
-    
-    <header class="w-full bg-gradient-to-r from-red-700 to-rose-950 p-6 text-white flex justify-between items-center border-b border-red-500/30 sticky top-0 z-50 shadow-md">
-        <div>
-            <h1 id="i18n-title" class="text-2xl font-black tracking-tight text-white" data-i18n="appTitle">轉檔工具 (V雕刻)</h1>
-        </div>
-        <div class="flex gap-4 items-center">
-            <!-- 太陽/月亮主題切換按鈕 -->
-            <button class="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-all flex items-center justify-center cursor-pointer" onclick="toggleTheme()" aria-label="Toggle Theme">
-                <svg id="theme-icon" class="w-5 h-5 fill-currentColor" viewBox="0 0 24 24" style="width:18px; height:18px;">
-                    <path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1zM5.99 4.58c-.39-.39-1.03-.39-1.41 0s-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.02 0-1.41L5.99 4.58zm12.37 12.37c-.39-.39-1.03-.39-1.41 0s-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41l-1.06-1.06zm1.06-12.37c-.39-.39-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06c.39-.38.39-1.02 0-1.41zm-12.37 12.37c-.39-.39-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06c.39-.38.39-1.02 0-1.41z"/>
-                </svg>
-            </button>
-            
-            <!-- 語言切換按鈕 -->
-            <button id="lang-toggle" class="px-4 py-1.5 rounded-lg text-[11px] font-bold bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-all flex items-center gap-2 cursor-pointer">
-                <span>中文 / EN</span>
-            </button>
-            
-            <span class="text-[10px] bg-white/10 px-3 py-1 rounded-full border border-white/20 font-mono hidden sm:block">V0.9</span>
-        </div>
-    </header>
-
-    <main class="p-4 md:p-8 flex-grow">
-        <div class="max-w-[1600px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
-            <!-- 左側控制面板 -->
-            <div class="lg:col-span-3 space-y-6">
-                <div class="panel p-5 rounded-xl shadow-2xl">
-                    <h2 class="text-xs font-bold uppercase tracking-widest text-red-500 mb-4" data-i18n="step1">第一步：檔案與解析</h2>
-                    <div class="space-y-4">
-                        <div>
-                            <label for="file-input" class="file-custom-label">
-                                <span id="file-label-text" data-i18n="chooseFile">選擇檔案</span>
-                            </label>
-                            <input type="file" id="file-input" accept="image/*,.svg,.dxf">
-                            <p id="file-name-display" class="text-[10px] text-slate-500 mt-2 truncate text-center" data-i18n="noFile">尚未選擇任何檔案</p>
-                        </div>
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-[10px] text-slate-400 font-bold mb-1" data-i18n="targetWidth">整體寬 (mm)</label>
-                                <input type="number" id="target-width" value="100">
-                            </div>
-                            <div id="threshold-container" class="hidden">
-                                <label class="block text-[10px] text-slate-400 font-bold mb-1" data-i18n="threshold">黑白門檻</label>
-                                <input type="number" id="threshold" value="128" min="0" max="255">
-                            </div>
-                        </div>
-                        <div>
-                            <div class="flex justify-between items-center mb-2">
-                                <label class="text-[10px] text-slate-400 font-bold" data-i18n="smoothness">解析/平滑度</label>
-                            </div>
-                            <input type="range" id="smooth-range" min="0.01" max="2.0" step="0.01" value="0.1" class="accent-red-600">
-                        </div>
-                        <button id="process-img-btn" class="w-full py-3 btn-red rounded-lg font-bold text-sm shadow-lg" data-i18n="reprocess">重新解析檔案</button>
-                    </div>
-                </div>
-
-                <div class="panel p-5 rounded-xl flex flex-col h-[400px] lg:h-[500px] shadow-2xl">
-                    <div class="flex justify-between items-center mb-4">
-                        <h2 class="text-xs font-bold uppercase tracking-widest text-red-500" data-i18n="step2">第二步：零件清單</h2>
-                        <button id="select-all" class="text-[10px] btn-gray px-3 py-1 rounded" data-i18n="selectAll">全選 / 反選</button>
-                    </div>
-                    <div id="part-list" class="flex-grow overflow-y-auto space-y-2"></div>
-                </div>
+<body class="p-2 md:p-8">
+    <div class="max-w-6xl mx-auto">
+        <!-- 改良為深灰色主題的高質感 Header -->
+        <header class="mb-4 md:mb-6 bg-gradient-to-r from-neutral-800 via-slate-900 to-zinc-900 p-6 text-white flex justify-between items-center rounded-xl border border-neutral-700/50 shadow-lg">
+            <div>
+                <h1 id="ui-title" class="text-xl md:text-2xl font-black tracking-tight text-white">桌長配置產生器</h1>
             </div>
+            <div class="flex gap-3 items-center">
+                <!-- 主題切換 (太陽/月亮描邊圖示，無任何文字) -->
+                <button id="theme-toggle-btn" onclick="toggleTheme()" class="p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white border border-white/10 transition-all flex items-center justify-center animate-pulse-slow" aria-label="Toggle Theme">
+                    <svg id="theme-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <!-- SVG path 由 JS 動態注入 -->
+                    </svg>
+                </button>
+                <!-- 語言切換 -->
+                <button onclick="toggleLang()" class="px-4 py-1.5 rounded-lg text-[13px] font-bold bg-white/10 hover:bg-white/20 text-white border border-white/10 transition-all flex items-center justify-center gap-2">
+                    <span>中文 / EN</span>
+                </button>
+                <!-- 規格版本號標籤 -->
+                <span class="text-[10px] bg-white/10 px-3 py-1 rounded-full border border-white/10 font-mono text-white">V1.0</span>
+            </div>
+        </header>
 
-            <!-- 中間預覽面板 -->
-            <div class="lg:col-span-6 space-y-6">
-                <div id="three-container" class="shadow-2xl border border-slate-200 dark:border-slate-800 relative">
-                    <div class="absolute top-4 left-4 z-10 space-y-2 bg-white/95 dark:bg-slate-900/80 p-3 rounded-lg border border-slate-300 dark:border-slate-700 backdrop-blur-sm text-slate-800 dark:text-slate-100">
-                        <div class="flex items-center gap-2"><span class="w-3 h-3 bg-slate-400 dark:bg-slate-500 rounded-full"></span><span class="text-[10px] font-bold" data-i18n="legendOriginal">未選零件輪廓</span></div>
-                        <div class="flex items-center gap-2"><span class="w-3 h-3 bg-green-500 rounded-full"></span><span class="text-[10px] font-bold" data-i18n="legendSelected">已選零件輪廓</span></div>
-                        <div class="flex items-center gap-2"><span class="w-3 h-3 bg-blue-500 rounded-full"></span><span class="text-[10px] font-bold" data-i18n="legendCarveArea">V-Carve 削除區域 (藍色)</span></div>
-                        <div class="flex items-center gap-2"><span class="w-3 h-3 bg-yellow-400 rounded-full"></span><span class="text-[10px] font-bold" data-i18n="legendToolpath">加工路徑 (黃色)</span></div>
-                    </div>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
+            <!-- 左側繪圖與數值輸入區 -->
+            <div class="lg:col-span-2 flex flex-col gap-4">
+                <div id="canvas-container" class="relative panel-bg p-3 md:p-4 rounded-xl shadow-xl flex flex-col items-center justify-center overflow-hidden min-h-[300px]">
+                    <canvas id="tableCanvas"></canvas>
                 </div>
                 
-                <div class="panel p-6 rounded-xl flex flex-col sm:flex-row justify-between items-center gap-4 shadow-2xl">
-                    <div class="text-center sm:text-left">
-                        <p class="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-bold mb-1" data-i18n="estTime">預估總加工時間</p>
-                        <p id="est-time" class="text-3xl font-mono font-bold text-red-600 dark:text-red-500">00:00:00</p>
+                <!-- 固定位置的輸入面板 -->
+                <div class="panel-bg p-4 rounded-xl shadow-lg">
+                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                        <div class="flex flex-col gap-1">
+                            <span id="label-n" class="text-[10px] text-muted-custom font-bold ml-1 uppercase">側邊N</span>
+                            <div class="input-card">
+                                <span class="tag-label">N</span>
+                                <input type="number" id="valN" min="600" max="2600" class="uniform-input" oninput="updateCurrentTableData(false)" onblur="updateCurrentTableData(true)">
+                            </div>
+                        </div>
+                        <div class="flex flex-col gap-1">
+                            <span id="label-s" class="text-[10px] text-muted-custom font-bold ml-1 uppercase">側邊S</span>
+                            <div class="input-card">
+                                <span class="tag-label">S</span>
+                                <input type="number" id="valS" min="600" max="2600" class="uniform-input" oninput="updateCurrentTableData(false)" onblur="updateCurrentTableData(true)">
+                            </div>
+                        </div>
+                        <div class="flex flex-col gap-1">
+                            <span id="label-w" class="text-[10px] text-muted-custom font-bold ml-1 uppercase">側邊W</span>
+                            <div class="input-card">
+                                <span class="tag-label">W</span>
+                                <input type="number" id="valW" min="600" max="2600" class="uniform-input" oninput="updateCurrentTableData(false)" onblur="updateCurrentTableData(true)">
+                            </div>
+                        </div>
+                        <div class="flex flex-col gap-1">
+                            <span id="label-e" class="text-[10px] text-muted-custom font-bold ml-1 uppercase">側邊E</span>
+                            <div class="input-card">
+                                <span class="tag-label">E</span>
+                                <input type="number" id="valE" min="600" max="2600" class="uniform-input" oninput="updateCurrentTableData(false)" onblur="updateCurrentTableData(true)">
+                            </div>
+                        </div>
+                        <div class="flex flex-col gap-1">
+                            <span id="label-d" class="text-[10px] text-muted-custom font-bold ml-1 uppercase">對角D</span>
+                            <div class="input-card">
+                                <span class="tag-label tag-label-d">D</span>
+                                <input type="number" id="valD" max="2990" class="uniform-input" oninput="updateCurrentTableData(false)" onblur="updateCurrentTableData(true)">
+                            </div>
+                        </div>
                     </div>
-                    <button id="export-gcode" class="w-full sm:w-auto px-10 py-4 btn-red rounded-xl font-black text-sm uppercase shadow-xl" data-i18n="downloadBtn">下載檔案</button>
+                    
+                    <div class="grid grid-cols-2 gap-4 mt-6 pt-4 border-t border-slate-700/50">
+                        <div>
+                            <label id="ui-scaleX" class="block text-[10px] md:text-xs font-bold text-muted-custom uppercase mb-1">Scale X</label>
+                            <input type="number" id="valX" step="0.0001" class="w-full bg-input-custom border border-input-custom p-2 rounded font-mono text-custom outline-none focus:ring-2 focus:ring-slate-500" oninput="updateCurrentTableData(false)">
+                        </div>
+                        <div>
+                            <label id="ui-scaleY" class="block text-[10px] md:text-xs font-bold text-muted-custom uppercase mb-1">Scale Y</label>
+                            <input type="number" id="valY" step="0.0001" class="w-full bg-input-custom border border-input-custom p-2 rounded font-mono text-custom outline-none focus:ring-2 focus:ring-slate-500" oninput="updateCurrentTableData(false)">
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <!-- 右側設定面板 -->
-            <div class="lg:col-span-3">
-                <div id="job-panel" class="panel p-6 rounded-xl hidden shadow-2xl border-t-4 border-t-red-600">
-                    <h2 class="text-sm font-bold text-red-500 mb-6" data-i18n="jobSettings">加工參數設定(mm)</h2>
-                    <div class="space-y-6">
-                        <div class="p-4 bg-slate-100 dark:bg-slate-950/50 rounded-lg space-y-4">
-                            <h3 class="text-[10px] font-bold text-slate-500 dark:text-slate-400" data-i18n="groupSize">選中零件群組尺寸</h3>
-                            <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block text-[9px] text-slate-500 mb-1" data-i18n="width">寬度</label>
-                                    <input type="number" id="resize-w" step="0.1">
-                                </div>
-                                <div>
-                                    <label class="block text-[9px] text-slate-500 mb-1" data-i18n="height">高度</label>
-                                    <input type="number" id="resize-h" step="0.1">
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-[10px] text-slate-500 dark:text-slate-400 font-bold mb-1" data-i18n="resolution">解析度 (mm)</label>
-                                <input type="number" id="resolution" value="0.1" min="0.1" step="0.01">
-                            </div>
-                            <div>
-                                <label class="block text-[10px] text-slate-500 dark:text-slate-400 font-bold mb-1" data-i18n="feedRate">進給速率</label>
-                                <input type="number" id="job-f" value="1500">
-                            </div>
-                        </div>
-
-                        <!-- 加工模式在此工具中固定為 vcarve 故隱藏 -->
-                        <input type="hidden" id="job-type" value="vcarve">
-
-                        <div id="milling-opts" class="space-y-4 pt-4 border-t border-slate-200 dark:border-slate-700">
-                            <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block text-[10px] text-slate-500 dark:text-slate-400 font-bold mb-1" data-i18n="toolDia">刀具直徑</label>
-                                    <input type="number" id="mill-d" value="6.0" step="0.1">
-                                </div>
-                                <div>
-                                    <label class="block text-[10px] text-slate-500 dark:text-slate-400 font-bold mb-1" data-i18n="totalDepth">加工深度</label>
-                                    <input type="number" id="mill-depth" value="3.0" step="0.1">
-                                </div>
-                            </div>
-                            <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block text-[10px] text-slate-500 dark:text-slate-400 font-bold mb-1" data-i18n="stepDown">每次下刀</label>
-                                    <input type="number" id="mill-step" value="1.0" step="0.1">
-                                </div>
-                            </div>
-                            <div id="vcarve-opts" class="space-y-4">
-                                <div>
-                                    <label class="block text-[10px] text-slate-500 dark:text-slate-400 font-bold mb-1" data-i18n="vbitAngle">V型刀具角度 (度)</label>
-                                    <input type="number" id="vbit-angle" value="90" min="10" max="150" step="1">
-                                </div>
-                                <div>
-                                    <label class="block text-[10px] text-slate-500 dark:text-slate-400 font-bold mb-1" data-i18n="vcarveLayer">V-Carve 雕刻區域選擇</label>
-                                    <select id="vcarve-layer-select" class="w-full">
-                                        <option value="even" selected data-i18n="optVCarveEven">雕刻凹部 (預設藍色填滿)</option>
-                                        <option value="odd" data-i18n="optVCarveOdd">雕刻凸部 (反轉加工)</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-
-                        <button id="apply-job-btn" class="w-full py-4 btn-red rounded-xl font-bold text-sm uppercase shadow-lg" data-i18n="updateBtn">更新計算路徑</button>
-                    </div>
-                </div>
+            <!-- 右側控制 -->
+            <div class="panel-bg p-4 md:p-6 rounded-xl shadow-xl flex flex-col">
+                <h3 id="ui-list-title" class="text-lg font-bold mb-4 text-title flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-400" viewBox="0 0 20 20" fill="currentColor"><path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z"/></svg>
+                    TABLE 數據列表
+                </h3>
                 
-                <div id="no-selection-hint" class="panel p-12 rounded-xl text-center text-slate-400 dark:text-slate-500 shadow-2xl h-full flex flex-col justify-center">
-                    <svg class="mx-auto mb-4 opacity-20" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
-                    <p class="text-sm leading-relaxed" data-i18n="selectionHint">請先在左側清單中勾選零件<br>以進行後續調整</p>
+                <div class="flex-1 overflow-y-auto space-y-2 mb-6 max-h-[300px] lg:max-h-none" id="tableList"></div>
+
+                <div class="space-y-4">
+                    <div class="p-3 md:p-4 range-box rounded-lg border">
+                        <p id="ui-range-label" class="font-bold text-xs text-muted-custom mb-2">加工範圍 (±X, ±Y) mm：</p>
+                        <div id="wa-info" class="text-center font-bold text-lg md:text-xl text-custom bg-input-custom p-3 rounded-lg shadow-inner border border-input-custom"></div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-2">
+                        <button onclick="document.getElementById('fileInput').click()" class="w-full btn-custom-secondary font-bold py-3 px-4 rounded-xl border shadow-md flex items-center justify-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                            <span id="ui-upload-btn">上傳 table.cfg</span>
+                        </button>
+                        <input type="file" id="fileInput" class="hidden" accept=".cfg" onchange="handleFileUpload(event)">
+                        
+                        <button onclick="downloadAll()" class="w-full btn-custom-primary font-bold py-3 px-4 rounded-xl transition-all shadow-md flex items-center justify-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                            <span id="ui-download-btn">下載 table.cfg</span>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
-    </main>
-
-    <canvas id="hidden-canvas" class="hidden"></canvas>
+    </div>
 
     <script>
-        // ==========================================
-        // 1. 多國語言與全域變數宣告
-        // ==========================================
+        const canvas = document.getElementById('tableCanvas');
+        const ctx = canvas.getContext('2d');
+        const container = document.getElementById('canvas-container');
+        
+        let currentLang = 'zh';
+        let currentTheme = 'dark'; // 預設深色模式
+
         const i18n = {
             zh: {
-                appTitle: "轉檔工具 (V雕刻)",
-                step1: "第一步：檔案與解析",
-                chooseFile: "選擇檔案",
-                noFile: "尚未選擇任何檔案",
-                targetWidth: "整體寬 (mm)",
-                threshold: "黑白門檻",
-                smoothness: "解析/平滑度",
-                reprocess: "重新解析檔案",
-                step2: "第二步：零件清單",
-                selectAll: "全選 / 反選",
-                legendOriginal: "未選零件輪廓",
-                legendSelected: "已選零件輪廓",
-                legendCarveArea: "V-Carve 削除區域 (藍色)",
-                legendToolpath: "加工路徑 (黃色)",
-                estTime: "預估總加工時間",
-                downloadBtn: "下載檔案",
-                jobSettings: "加工參數設定(mm)",
-                groupSize: "選中零件群組尺寸",
-                width: "寬度",
-                height: "高度",
-                resolution: "解析度",
-                feedRate: "進給速率",
-                toolDia: "刀具直徑",
-                totalDepth: "加工深度",
-                stepDown: "每次下刀",
-                vbitAngle: "V型刀具角度 (度)",
-                vcarveLayer: "V-Carve 雕刻區域選擇",
-                optVCarveEven: "雕刻凹部 (預設藍色填滿)",
-                optVCarveOdd: "雕刻凸部 (反轉加工)",
-                updateBtn: "更新計算路徑",
-                selectionHint: "請先在左側清單中勾選零件<br>以進行後續調整",
-                partName: "零件",
-                tagConvex: "凸 (不加工)",
-                tagConcave: "凹 (加工)",
-                notApplied: "未應用",
-                themeLight: "明亮模式",
-                themeDark: "深色模式"
+                title: "桌長配置產生器",
+                scaleX: "比例 X",
+                scaleY: "比例 Y",
+                listTitle: "TABLE 數據列表",
+                rangeLabel: "加工範圍 (±X, ±Y) mm：",
+                download: "下載 table.cfg",
+                upload: "上傳 table.cfg",
+                table: "表格",
+                sideN: "側邊N",
+                sideS: "側邊S",
+                sideW: "側邊W",
+                sideE: "側邊E",
+                sideD: "對角D"
             },
             en: {
-                appTitle: "V-Carve Converter",
-                step1: "Step 1: File & Parsing",
-                chooseFile: "Browse File",
-                noFile: "No file chosen",
-                targetWidth: "Total Width (mm)",
-                threshold: "B/W Threshold",
-                smoothness: "Path Smoothness",
-                reprocess: "Reprocess File",
-                step2: "Step 2: Parts List",
-                selectAll: "Select / Deselect All",
-                legendOriginal: "Deselected Path",
-                legendSelected: "Selected Path",
-                legendCarveArea: "Carve Area (Blue)",
-                legendToolpath: "Toolpath (Yellow)",
-                estTime: "Estimated Total Time",
-                downloadBtn: "Download file",
-                jobSettings: "Job Parameters(mm)",
-                groupSize: "Selection Group Size",
-                width: "Width",
-                height: "Height",
-                resolution: "Resolution",
-                feedRate: "Feed Rate (F)",
-                toolDia: "Tool Diameter",
-                totalDepth: "Total Depth",
-                stepDown: "Step Down",
-                vbitAngle: "V-Bit Angle (deg)",
-                vcarveLayer: "V-Carve Region",
-                optVCarveEven: "Carve Concave (Blue Fill)",
-                optVCarveOdd: "Carve Convex (Inverted)",
-                updateBtn: "Update Toolpaths",
-                selectionHint: "Please select a part from the list<br>to start adjusting parameters",
-                partName: "Part",
-                tagConvex: "Convex (No Carve)",
-                tagConcave: "Concave (Carve)",
-                notApplied: "N/A",
-                themeLight: "Light Mode",
-                themeDark: "Dark Mode"
+                title: "Table Configurator",
+                scaleX: "Scale X",
+                scaleY: "Scale Y",
+                listTitle: "TABLE Data List",
+                rangeLabel: "Working range (±X, ±Y) mm:",
+                download: "Download table.cfg",
+                upload: "Upload table.cfg",
+                table: "Table",
+                sideN: "Side N",
+                sideS: "Side S",
+                sideW: "Side W",
+                sideE: "Side E",
+                sideD: "Diagonal D"
             }
         };
 
-        let currentLang = 'zh';
-        let rawFileData = null; 
-        let fileExtension = "";
-        let originalFileName = "cnc_work";
-        let parts = []; 
-        let selectedIndices = new Set();
-        const SAFE_Z = "1.000";
+        // 預設配置符合 600 ~ 2600 限制
+        let allTables = {
+            1: { E: 1460, S: 2560, W: 1460, N: 2560, D: 2947, X: 1.000, Y: 1.000 },
+            2: { E: 1460, S: 1340, W: 1460, N: 1340, D: 1982, X: 1.000, Y: 1.000 },
+            3: { E: 1440, S: 1320, W: 1440, N: 1320, D: 1953, X: 1.000, Y: 1.000 },
+            4: { E: 840, S: 1320, W: 840, N: 1320, D: 1565, X: 1.000, Y: 1.000 },
+            5: { E: 840, S: 720, W: 840, N: 720, D: 1106, X: 1.000, Y: 1.000 }
+        };
 
-        // Three.js 相關變數
-        let container, scene, camera, renderer, controls;
-        
-        // DOM 元素引用
-        let fileInput, fileNameDisplay;
+        let currentTableId = 1;
 
-        // ==========================================
-        // 2. 幾何量測、共線、交點求解與主要軸線 (PCA) 輔助演算法
-        // ==========================================
-        function getLineIntersection(p1, p2, p3, p4) {
-            const denom = (p4.y - p3.y) * (p2.x - p1.x) - (p4.x - p3.x) * (p2.y - p1.y);
-            if (Math.abs(denom) < 1e-6) return null; // 平行
-            const ua = ((p4.x - p3.x) * (p1.y - p3.y) - (p4.y - p3.y) * (p1.x - p3.x)) / denom;
-            const ub = ((p2.x - p1.x) * (p1.y - p3.y) - (p2.y - p1.y) * (p1.x - p3.x)) / denom;
-            if (ua >= 0 && ua <= 1 && ub >= 0 && ub <= 1) {
-                return {
-                    x: p1.x + ua * (p2.x - p1.x),
-                    y: p1.y + ua * (p2.y - p1.y)
-                };
+        function toggleTheme() {
+            currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            if (currentTheme === 'light') {
+                document.body.classList.add('theme-light');
+            } else {
+                document.body.classList.remove('theme-light');
             }
-            return null;
+            updateUI();
+            draw();
         }
 
-        function getPrincipalAxis(poly) {
-            let xm = 0, ym = 0;
-            const N = poly.length;
-            if (N === 0) return { angle: 0, cosA: 1, sinA: 0, center: { x: 0, y: 0 } };
-            poly.forEach(pt => { xm += pt.x; ym += pt.y; });
-            xm /= N; ym /= N;
-
-            let covXX = 0, covYY = 0, covXY = 0;
-            poly.forEach(pt => {
-                const dx = pt.x - xm;
-                const dy = pt.y - ym;
-                covXX += dx * dx;
-                covYY += dy * dy;
-                covXY += dx * dy;
-            });
-            covXX /= N; covYY /= N; covXY /= N;
-
-            const angle = 0.5 * Math.atan2(2 * covXY, covXX - covYY);
-            return {
-                angle,
-                cosA: Math.cos(angle),
-                sinA: Math.sin(angle),
-                center: { x: xm, y: ym }
-            };
+        function toggleLang() {
+            currentLang = currentLang === 'zh' ? 'en' : 'zh';
+            updateUI();
         }
 
-        function isPureStraightLinePath(path, tolerance = 0.05) {
-            if (!path || path.length <= 3) return true;
-            let clean = [...path];
-            if (clean.length > 2 && 
-                Math.abs(clean[0].x - clean[clean.length-1].x) < 1e-4 && 
-                Math.abs(clean[0].y - clean[clean.length-1].y) < 1e-4) {
-                clean.pop();
-            }
-            if (clean.length <= 2) return true;
+        function updateUI() {
+            const t = i18n[currentLang];
+            document.getElementById('ui-title').innerText = t.title;
+            document.getElementById('ui-scaleX').innerText = t.scaleX;
+            document.getElementById('ui-scaleY').innerText = t.scaleY;
+            document.getElementById('ui-range-label').innerText = t.rangeLabel;
+            document.getElementById('ui-list-title').innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-400" viewBox="0 0 20 20" fill="currentColor"><path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z"/></svg> ${t.listTitle}`;
+            document.getElementById('ui-download-btn').innerText = t.download;
+            document.getElementById('ui-upload-btn').innerText = t.upload;
             
-            const simplified = simplifyPath(clean, tolerance);
-            let originalIndices = [];
-            let origIdx = 0;
-            for (let i = 0; i < simplified.length; i++) {
-                const sPt = simplified[i];
-                let found = false;
-                for (let j = origIdx; j < clean.length; j++) {
-                    const oPt = clean[j];
-                    const dist = Math.sqrt((oPt.x - sPt.x)**2 + (oPt.y - sPt.y)**2);
-                    if (dist < 1e-3) {
-                        originalIndices.push(j);
-                        origIdx = j;
-                        found = true;
-                        break;
-                    }
-                }
-                if (!found) {
-                    for (let j = 0; j < clean.length; j++) {
-                        const oPt = clean[j];
-                        const dist = Math.sqrt((oPt.x - sPt.x)**2 + (oPt.y - sPt.y)**2);
-                        if (dist < 1e-3) {
-                            originalIndices.push(j);
-                            break;
-                        }
-                    }
-                }
-            }
-            
-            originalIndices = Array.from(new Set(originalIndices)).sort((a, b) => a - b);
-            if (originalIndices.length < 2) return false;
-            
-            for (let i = 0; i < originalIndices.length; i++) {
-                const startIdx = originalIndices[i];
-                const endIdx = originalIndices[(i + 1) % originalIndices.length];
-                const pStart = clean[startIdx];
-                const pEnd = clean[endIdx];
-                
-                let j = (startIdx + 1) % clean.length;
-                while (j !== endIdx) {
-                    const pMid = clean[j];
-                    const d = pointToSegmentDistance(pMid, pStart, pEnd);
-                    if (d > 0.08) { 
-                        return false; 
-                    }
-                    j = (j + 1) % clean.length;
-                }
-            }
-            return true;
-        }
-
-        function getDistanceToShapeBoundary(pt, segments) {
-            let minDist = Infinity;
-            for (let i = 0; i < segments.length; i++) {
-                const d = pointToSegmentDistance(pt, segments[i].A, segments[i].B);
-                if (d < minDist) minDist = d;
-            }
-            return minDist;
-        }
-
-        function tracePath(sx, sy, w, h, isBlack, visited){
-            const path = []; let cx = sx, cy = sy;
-            const dirs = [[0,-1],[1,-1],[1,0],[1,1],[0,1],[-1,1],[-1,0],[-1,-1]];
-            let d = 7;
-            for(let i=0; i<30000; i++){
-                visited[cy*w+cx] = 1; path.push({x:cx, y:cy});
-                let found = false;
-                for(let j=0; j<8; j++){
-                    let nd = (d+j)%8, nx = cx+dirs[nd][0], ny = cy+dirs[nd][1];
-                    if(isBlack(nx, ny)){ cx = nx; cy = ny; d = (nd+5)%8; found = true; break; }
-                }
-                if(!found || (cx === sx && cy === sy && path.length > 5)) break;
-            }
-            return path;
-        }
-
-        function laplacianSmooth(points, iterations = 3) {
-            if (points.length < 3) return points;
-            let current = JSON.parse(JSON.stringify(points));
-            for (let iter = 0; iter < iterations; iter++) {
-                let next = JSON.parse(JSON.stringify(current));
-                for (let i = 1; i < current.length - 1; i++) {
-                    next[i].x = 0.5 * current[i].x + 0.25 * (current[i - 1].x + current[i + 1].x);
-                    next[i].y = 0.5 * current[i].y + 0.25 * (current[i - 1].y + current[i + 1].y);
-                }
-                current = next;
-            }
-            return current;
-        }
-
-        function simplifyPath(points, tolerance) {
-            if (points.length <= 2) return points;
-            let maxSqDist = 0, index = 0;
-            for (let i = 1; i < points.length - 1; i++) {
-                const sqDist = getSqSegDist(points[i], points[0], points[points.length - 1]);
-                if (sqDist > maxSqDist) { index = i; maxSqDist = sqDist; }
-            }
-            if (maxSqDist > tolerance * tolerance) {
-                const res1 = simplifyPath(points.slice(0, index + 1), tolerance);
-                const res2 = simplifyPath(points.slice(index), tolerance);
-                return res1.slice(0, res1.length - 1).concat(res2);
-            }
-            return [points[0], points[points.length - 1]];
-        }
-
-        function getSqSegDist(p, p1, p2) {
-            let x = p1.x, y = p1.y, dx = p2.x - x, dy = p2.y - y;
-            if (dx !== 0 || dy !== 0) {
-                let t = ((p.x - x) * dx + (p.y - y) * dy) / (dx * dx + dy * dy);
-                if (t > 1) { x = p2.x; y = p2.y; }
-                else if (t > 0) { x += dx * t; y += dy * t; }
-            }
-            dx = p.x - x; dy = p.y - y;
-            return dx * dx + dy * dy;
-        }
-
-        function pointToSegmentDistance(pt, p1, p2) {
-            const dx = p2.x - p1.x;
-            const dy = p2.y - p1.y;
-            const l2 = dx*dx + dy*dy;
-            if (l2 === 0) return Math.sqrt((pt.x - p1.x)**2 + (pt.y - p1.y)**2);
-            let t = ((pt.x - p1.x) * dx + (pt.y - p1.y) * dy) / l2;
-            t = Math.max(0, Math.min(1, t));
-            const proj = { x: p1.x + t * dx, y: p1.y + t * dy };
-            return Math.sqrt((pt.x - proj.x)**2 + (pt.y - proj.y)**2);
-        }
-
-        function cleanPath(path, resolution) {
-            if (path.length < 2) return path;
-            let filtered = [path[0]], lastPt = path[0];
-            for (let i = 1; i < path.length; i++) {
-                const pt = path[i];
-                const dx = pt.x - lastPt.x;
-                const dy = pt.y - lastPt.y;
-                const dz = (pt.z !== undefined && lastPt.z !== undefined) ? (pt.z - lastPt.z) : 0;
-                const dist = Math.sqrt(dx*dx + dy*dy + dz*dz);
-                
-                if (dist >= resolution || i === path.length - 1) { 
-                    filtered.push(pt); 
-                    lastPt = pt; 
-                }
-            }
-            return filtered;
-        }
-
-        function resamplePath(path, spacing) {
-            if (path.length < 2) return path;
-            const resampled = [];
-            for (let i = 0; i < path.length - 1; i++) {
-                const p1 = path[i];
-                const p2 = path[i+1];
-                const dx = p2.x - p1.x;
-                const dy = p2.y - p1.y;
-                const dist = Math.sqrt(dx*dx + dy*dy);
-                resampled.push(p1);
-                if (dist > spacing) {
-                    const steps = Math.floor(dist / spacing);
-                    for (let s = 1; s <= steps; s++) {
-                        const t = s / (steps + 1);
-                        resampled.push({
-                            x: p1.x + dx * t,
-                            y: p1.y + dy * t
-                        });
-                    }
-                }
-            }
-            resampled.push(path[path.length - 1]);
-            return resampled;
-        }
-
-        function isPointInPolygon(pt, poly) {
-            let inside = false;
-            for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
-                const xi = poly[i].x, yi = poly[i].y;
-                const xj = poly[j].x, yj = poly[j].y;
-                const intersect = ((yi > pt.y) !== (yj > pt.y))
-                    && (pt.x < (xj - xi) * (pt.y - yi) / (yj - yi) + xi);
-                if (intersect) inside = !inside;
-            }
-            return inside;
-        }
-
-        function getPolygonArea(poly) {
-            let area = 0;
-            const N = poly.length;
-            if (N < 3) return 0;
-            for (let i = 0; i < N; i++) {
-                const p1 = poly[i];
-                const p2 = poly[(i + 1) % N];
-                area += (p1.x * p2.y - p2.x * p1.y);
-            }
-            return area / 2;
-        }
-
-        /**
-         * 雙端最鄰近旅行商(TSP)路徑最佳化
-         */
-        function optimizePathOrder(paths, startX = 0, startY = 0) {
-            if (paths.length <= 1) return paths;
-            const optimized = [];
-            const unvisited = [...paths];
-            let curX = startX;
-            let curY = startY;
-
-            while (unvisited.length > 0) {
-                let bestIdx = -1;
-                let bestDistSq = Infinity;
-                let reverseBest = false;
-
-                for (let i = 0; i < unvisited.length; i++) {
-                    const path = unvisited[i];
-                    if (path.length === 0) continue;
-
-                    const startPt = path[0];
-                    const dStartSq = Math.pow(startPt.x - curX, 2) + Math.pow(startPt.y - curY, 2);
-                    if (dStartSq < bestDistSq) {
-                        bestDistSq = dStartSq;
-                        bestIdx = i;
-                        reverseBest = false;
-                    }
-
-                    const endPt = path[path.length - 1];
-                    const dEndSq = Math.pow(endPt.x - curX, 2) + Math.pow(endPt.y - curY, 2);
-                    if (dEndSq < bestDistSq) {
-                        bestDistSq = dEndSq;
-                        bestIdx = i;
-                        reverseBest = true;
-                    }
-                }
-
-                if (bestIdx === -1) break;
-
-                let nextPath = unvisited.splice(bestIdx, 1)[0];
-                if (reverseBest) {
-                    nextPath = [...nextPath].reverse();
-                }
-                optimized.push(nextPath);
-                
-                const lastPt = nextPath[nextPath.length - 1];
-                curX = lastPt.x;
-                curY = lastPt.y;
-            }
-            return optimized;
-        }
-
-        /**
-         * 工業級樹狀最小包圍面演算法 (Strict Parent-Child Topology Forest)
-         * 基於當前所有「可見（visible === true）」的零件進行全域即時重算。
-         */
-        function computePartNestingTopology() {
-            const activeIndices = parts.map((p, idx) => p.visible ? idx : -1).filter(idx => idx !== -1);
-            const depths = {};
-            const parents = {};
-            activeIndices.forEach(idx => { depths[idx] = 1; parents[idx] = null; });
-            
-            // 1. 整理所有可見零件的包圍與面積資料
-            const polys = activeIndices.map(idx => {
-                const path = parts[idx].rawPath;
-                const area = Math.abs(getPolygonArea(path));
-                const pt = path.length > 0 ? path[0] : { x: 0, y: 0 };
-                return { idx, path, area, pt };
-            });
-            
-            // 2. 尋求每個零件最緊密的直接父節點 Parent
-            polys.forEach(pA => {
-                let bestParent = null;
-                let minArea = Infinity;
-                
-                polys.forEach(pB => {
-                    if (pA.idx === pB.idx) return;
-                    if (pB.area > pA.area && isPointInPolygon(pA.pt, pB.path)) {
-                        if (pB.area < minArea) {
-                            minArea = pB.area;
-                            bestParent = pB.idx;
-                        }
-                    }
-                });
-                parents[pA.idx] = bestParent;
-            });
-            
-            // 3. 遞迴追蹤其拓撲深度 (Tree Depth)
-            function getDepth(idx) {
-                if (parents[idx] === null || parents[idx] === undefined) {
-                    return 1;
-                }
-                return getDepth(parents[idx]) + 1;
-            }
-            
-            activeIndices.forEach(idx => {
-                depths[idx] = getDepth(idx);
-            });
-            
-            return { depths, parents };
-        }
-
-        function computePartNestingDepths() {
-            return computePartNestingTopology().depths;
-        }
-
-        // ==========================================
-        // 3. 檔案載入與向量/圖片解析函數
-        // ==========================================
-        async function parseBitmap(dataUrl, targetW, smoothTol) {
-            return new Promise((resolve) => {
-                const img = new Image();
-                img.onload = () => {
-                    const canvas = document.getElementById('hidden-canvas');
-                    const ctx = canvas.getContext('2d');
-                    const threshold = parseInt(document.getElementById('threshold').value);
-                    canvas.width = img.width; canvas.height = img.height;
-                    ctx.drawImage(img, 0, 0);
-                    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                    const w = canvas.width, h = canvas.height;
-                    const visited = new Uint8Array(w * h);
-                    const mmScale = targetW / w;
-
-                    const isBlack = (x, y) => {
-                        if(x < 1 || y < 1 || x >= w-1 || y >= h-1) return false;
-                        const i = (y * w + x) * 4;
-                        const gray = imgData.data[i] * 0.299 + imgData.data[i+1] * 0.587 + imgData.data[i+2] * 0.114;
-                        return gray < threshold;
-                    };
-
-                    let paths = [];
-                    for(let y=1; y<h-1; y++){
-                        for(let x=1; x<w-1; x++){
-                            if(isBlack(x,y) && !visited[y*w+x]){
-                                let edge = false;
-                                for(let dy=-1; dy<=1; dy++) for(let dx=-1; dx<=1; dx++) if(!isBlack(x+dx, y+dy)) edge = true;
-                                if(edge){
-                                    const path = tracePath(x, y, w, h, isBlack, visited);
-                                    if(path.length > 10){
-                                        const mmPoints = path.map(p => ({ x: p.x * mmScale, y: (h - p.y) * mmScale }));
-                                        const smoothed = laplacianSmooth(mmPoints, 3);
-                                        paths.push(simplifyPath(smoothed, smoothTol));
-                                    }
-                                } else visited[y*w+x] = 1;
-                            }
-                        }
-                    }
-                    resolve(paths);
-                };
-                img.src = dataUrl;
-            });
-        }
-
-        function parseSVG(svgString, targetW, smoothTol) {
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(svgString, 'image/svg+xml');
-            const svgEl = doc.querySelector('svg');
-            if (!svgEl) return [];
-
-            const paths = [];
-            const elements = doc.querySelectorAll('path, rect, circle, ellipse, line, polyline, polygon');
-            
-            elements.forEach(el => {
-                let pts = [];
-                const type = el.tagName.toLowerCase();
-
-                if (type === 'path') {
-                    const tempPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
-                    tempPath.setAttribute("d", el.getAttribute("d"));
-                    const len = tempPath.getTotalLength();
-                    const segments = Math.max(10, Math.ceil(len / (smoothTol * 5))); 
-                    for(let i=0; i<=segments; i++) {
-                        const p = tempPath.getPointAtLength(i * len / segments);
-                        pts.push({ x: p.x, y: -p.y }); 
-                    }
-                } else if (type === 'rect') {
-                    const x = parseFloat(el.getAttribute('x')||0), y = parseFloat(el.getAttribute('y')||0);
-                    const w = parseFloat(el.getAttribute('width')), h = parseFloat(el.getAttribute('height'));
-                    pts = [{x,y:-y}, {x:x+w,y:-y}, {x:x+w,y:-(y+h)}, {x,y:-(y+h)}, {x,y:-y}];
-                } else if (type === 'circle' || type === 'ellipse') {
-                    const cx = parseFloat(el.getAttribute('cx')||0), cy = parseFloat(el.getAttribute('cy')||0);
-                    const rx = type === 'circle' ? parseFloat(el.getAttribute('r')) : parseFloat(el.getAttribute('rx'));
-                    const ry = type === 'circle' ? rx : parseFloat(el.getAttribute('ry'));
-                    for(let i=0; i<=64; i++) {
-                        const a = (i/64) * Math.PI * 2;
-                        pts.push({ x: cx + Math.cos(a)*rx, y: -(cy + Math.sin(a)*ry) });
-                    }
-                } else if (type === 'line') {
-                    pts = [{x:parseFloat(el.getAttribute('x1')), y:-parseFloat(el.getAttribute('y1'))}, {x:parseFloat(el.getAttribute('x2')), y:-parseFloat(el.getAttribute('y2'))}];
-                } else if (type === 'polyline' || type === 'polygon') {
-                    const pstr = el.getAttribute('points').trim().split(/[\s,]+/);
-                    for(let i=0; i<pstr.length; i+=2) pts.push({ x: parseFloat(pstr[i]), y: -parseFloat(pstr[i+1]) });
-                    if(type === 'polygon' && pts.length > 0) pts.push(pts[0]);
-                }
-
-                if (pts.length > 1) {
-                    paths.push(simplifyPath(pts, smoothTol));
-                }
-            });
-
-            return scaleVectorPaths(paths, targetW);
-        }
-
-        function parseDXF(dxfString, targetW, smoothTol) {
-            const parser = new DxfParser();
-            try {
-                const dxf = parser.parseSync(dxfString);
-                const paths = [];
-
-                dxf.entities.forEach(ent => {
-                    let pts = [];
-                    if (ent.type === 'LINE') {
-                        pts = [{x: ent.vertices[0].x, y: ent.vertices[0].y}, {x: ent.vertices[1].x, y: ent.vertices[1].y}];
-                    } else if (ent.type === 'LWPOLYLINE' || ent.type === 'POLYLINE') {
-                        ent.vertices.forEach(v => pts.push({x: v.x, y: v.y}));
-                        if (ent.shape) pts.push(pts[0]);
-                    } else if (ent.type === 'CIRCLE' || ent.type === 'ARC') {
-                        const start = ent.startAngle || 0, end = ent.endAngle !== undefined ? ent.endAngle : Math.PI*2;
-                        const r = ent.radius, steps = 64;
-                        for(let i=0; i<=steps; i++) {
-                            const a = start + (end-start)*(i/steps);
-                            pts.push({ x: ent.center.x + Math.cos(a)*r, y: ent.center.y + Math.sin(a)*r });
-                        }
-                    }
-                    if (pts.length > 1) paths.push(simplifyPath(pts, smoothTol));
-                });
-                return scaleVectorPaths(paths, targetW);
-            } catch(e) {
-                console.error("DXF Parse Error", e);
-                return [];
-            }
-        }
-
-        function scaleVectorPaths(paths, targetW) {
-            if (paths.length === 0) return [];
-            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-            paths.forEach(p => p.forEach(pt => {
-                minX = Math.min(minX, pt.x); minY = Math.min(minY, pt.y);
-                maxX = Math.max(maxX, pt.x); maxY = Math.max(maxY, pt.y);
-            }));
-
-            const curW = maxX - minX;
-            const scale = targetW / curW;
-            const offsetX = -minX * scale;
-            const offsetY = -minY * scale;
-
-            return paths.map(p => p.map(pt => ({
-                x: pt.x * scale + offsetX,
-                y: pt.y * scale + offsetY
-            })));
-        }
-
-        function processVectorIntoParts(vectorPaths) {
-            let gMinX = Infinity, gMaxX = -Infinity, gMinY = Infinity, gMaxY = -Infinity;
-            vectorPaths.forEach(p => p.forEach(pt => {
-                gMinX = Math.min(gMinX, pt.x); gMaxX = Math.max(gMaxX, pt.x);
-                gMinY = Math.min(gMinY, pt.y); gMaxY = Math.max(gMaxY, pt.y);
-            }));
-
-            const gCx = (gMinX + gMaxX) / 2;
-            const gCy = (gMinY + gMaxY) / 2;
-
-            parts = vectorPaths.map((p, idx) => {
-                let pMinX = Infinity, pMaxX = -Infinity, pMinY = Infinity, pMaxY = -Infinity;
-                p.forEach(pt => { pMinX = Math.min(pMinX, pt.x); pMaxX = Math.max(pMaxX, pt.x); pMinY = Math.min(pMinY, pt.y); pMaxY = Math.max(pMaxY, pt.y); });
-                
-                const centeredPath = p.map(pt => ({ x: pt.x - gCx, y: pt.y - gCy }));
-                
-                if(centeredPath.length > 2 && (centeredPath[0].x !== centeredPath[centeredPath.length-1].x || centeredPath[0].y !== centeredPath[centeredPath.length-1].y)) {
-                    centeredPath.push({...centeredPath[0]});
-                }
-                
-                return { 
-                    id: idx+1, rawPath: centeredPath, 
-                    originalDim: { w: pMaxX-pMinX, h: pMaxY-pMinY }, 
-                    currentDim: { w: pMaxX-pMinX, h: pMaxY-pMinY }, 
-                    visible: true, 
-                    jobConfig: { type: 'vcarve', f: 1500, d: 6.0, depth: 3.0, step: 1.0, overlap: 0.5, resolution: 0.1 }, 
-                    toolpath: null, appliedMethod: null 
-                };
-            });
-
-            selectedIndices.clear(); 
-            renderPartList(); 
-            update3D(); 
-            updateStats();
-        }
-
-        // ==========================================
-        // 4. UI 渲染控制與 3D 更新函數
-        // ==========================================
-        function updateLanguage() {
-            document.querySelectorAll('[data-i18n]').forEach(el => {
-                const key = el.getAttribute('data-i18n');
-                if (i18n[currentLang] && i18n[currentLang][key]) {
-                    el.innerHTML = i18n[currentLang][key];
-                }
-            });
-            updateThemeButtonText();
-            renderPartList();
-        }
-
-        function toggleMillingOptions() {
-            const elMill = document.getElementById('milling-opts');
-            if (elMill) elMill.classList.remove('hidden');
-        }
-
-        function updateVCarveVisuals() {
-            const existingMesh = scene.getObjectByName("vcarveOverlay");
-            if (existingMesh) scene.remove(existingMesh);
-
-            const jobType = document.getElementById('job-type').value;
-            if (jobType === 'vcarve' && selectedIndices.size > 0) {
-                const targetLayer = document.getElementById('vcarve-layer-select')?.value || 'even';
-                
-                const topo = computePartNestingTopology();
-                const depths = topo.depths;
-                const parents = topo.parents;
-
-                let minX = Infinity, maxX = -Infinity;
-                selectedIndices.forEach(idx => { 
-                    if (parts[idx]) {
-                        parts[idx].rawPath.forEach(pt => { minX = Math.min(minX, pt.x); maxX = Math.max(maxX, pt.x); }); 
-                    }
-                });
-                const groupScale = parseFloat(document.getElementById('resize-w').value) / (maxX - minX) || 1.0;
-
-                const shapes = [];
-
-                selectedIndices.forEach(idx => {
-                    if (!parts[idx] || !parts[idx].visible) return;
-                    const depth = depths[idx] || 1;
-                    const isCarve = (targetLayer === 'even' && depth % 2 === 0) || (targetLayer === 'odd' && depth % 2 !== 0);
-
-                    if (isCarve) {
-                        const outerPts = parts[idx].rawPath.map(pt => new THREE.Vector2(pt.x * groupScale, pt.y * groupScale));
-                        const shape = new THREE.Shape(outerPts);
-
-                        parts.forEach((childPart, childIdx) => {
-                            if (childPart.visible && parents[childIdx] === idx) {
-                                const childDepth = depths[childIdx];
-                                const isChildCarve = (targetLayer === 'even' && childDepth % 2 === 0) || (targetLayer === 'odd' && childDepth % 2 !== 0);
-                                if (!isChildCarve) {
-                                    const holePts = childPart.rawPath.map(pt => new THREE.Vector2(pt.x * groupScale, pt.y * groupScale));
-                                    const holePath = new THREE.Path(holePts);
-                                    shape.holes.push(holePath);
-                                }
-                            }
-                        });
-
-                        shapes.push(shape);
-                    }
-                });
-
-                if (shapes.length > 0) {
-                    const geom = new THREE.ShapeGeometry(shapes);
-                    const mat = new THREE.MeshBasicMaterial({
-                        color: 0x3b82f6,
-                        transparent: true,
-                        opacity: 0.35,
-                        side: THREE.DoubleSide,
-                        depthWrite: false
-                    });
-                    const mesh = new THREE.Mesh(geom, mat);
-                    mesh.name = "vcarveOverlay";
-                    mesh.position.z = 0.05; 
-                    scene.add(mesh);
-                }
-            }
-        }
-
-        function update3D() {
-            if (!scene) return;
-            const toRemove = [];
-            scene.children.forEach(child => {
-                if (child.name !== "gridHelper") {
-                    toRemove.push(child);
-                }
-            });
-            toRemove.forEach(child => scene.remove(child));
-            
-            const isDark = document.documentElement.classList.contains('dark');
-
-            parts.forEach((p, idx) => {
-                if(!p.visible) return;
-                const isSelected = selectedIndices.has(idx);
-                const color = isSelected ? 0x22c55e : (isDark ? 0xFFFFFF : 0x475569);
-                const opacity = isSelected ? 0.8 : 0.5;
-                const geomOrig = new THREE.BufferGeometry().setFromPoints(p.rawPath.map(pt => new THREE.Vector3(pt.x, pt.y, 0)));
-                scene.add(new THREE.LineLoop(geomOrig, new THREE.LineBasicMaterial({ color: color, opacity: opacity, transparent: true })));
-                
-                if(p.toolpath && p.toolpath.length > 0) {
-                    const matTool = new THREE.LineBasicMaterial({ color: 0xfacc15, opacity: 1.0 });
-                    p.toolpath.forEach(path => {
-                        const geomTool = new THREE.BufferGeometry().setFromPoints(path.map(pt => new THREE.Vector3(pt.x, pt.y, pt.z)));
-                        scene.add(new THREE.Line(geomTool, matTool));
-                    });
-                }
-            });
-
-            updateVCarveVisuals();
-        }
-
-        /**
-         * 預估總加工時間算法 (同步更新：採用與 G-code 相同的全域 TSP 最短提刀空跑最佳化與免提刀直接過渡規則)
-         */
-        function updateStats() {
-            let totalSec = 0;
-            let currentX = 0, currentY = 0;
-            const SAFE_Z_VAL = parseFloat(SAFE_Z) || 1.0;
-            let currentZ = SAFE_Z_VAL;
-
-            const G0_SPEED = 2000;      
-            const PLUNGE_SPEED = 300;   
-
-            // 1. 蒐集所有零件的全部刀軌線段
-            let allPathsToCut = [];
-            parts.forEach(p => {
-                if (p.visible && p.toolpath && p.toolpath.length > 0) {
-                    p.toolpath.forEach(path => {
-                        if (path.length >= 2) {
-                            allPathsToCut.push({ path: path, cfg: p.jobConfig });
-                        }
-                    });
-                }
-            });
-
-            if (allPathsToCut.length === 0) {
-                document.getElementById('est-time').innerText = "00:00:00";
-                return;
-            }
-
-            // 2. 模擬全域 TSP 排序計算
-            let optimizedPaths = [];
-            let tempX = 0, tempY = 0;
-            let unvisited = [...allPathsToCut];
-
-            while (unvisited.length > 0) {
-                let bestIdx = -1;
-                let bestDistSq = Infinity;
-                let reversePath = false;
-
-                for (let i = 0; i < unvisited.length; i++) {
-                    const item = unvisited[i];
-                    const path = item.path;
-                    
-                    const startPt = path[0];
-                    const dStartSq = Math.pow(startPt.x - tempX, 2) + Math.pow(startPt.y - tempY, 2);
-                    if (dStartSq < bestDistSq) {
-                        bestDistSq = dStartSq;
-                        bestIdx = i;
-                        reversePath = false;
-                    }
-
-                    const endPt = path[path.length - 1];
-                    const dEndSq = Math.pow(endPt.x - tempX, 2) + Math.pow(endPt.y - tempY, 2);
-                    if (dEndSq < bestDistSq) {
-                        bestDistSq = dEndSq;
-                        bestIdx = i;
-                        reversePath = true;
-                    }
-                }
-
-                if (bestIdx === -1) break;
-
-                let bestItem = unvisited.splice(bestIdx, 1)[0];
-                let finalPath = bestItem.path;
-                if (reversePath) {
-                    finalPath = [...finalPath].reverse();
-                }
-                optimizedPaths.push({ path: finalPath, cfg: bestItem.cfg });
-
-                const lastPt = finalPath[finalPath.length - 1];
-                tempX = lastPt.x;
-                tempY = lastPt.y;
-            }
-
-            // 3. 根據優化後的加工排序，模擬計算總切削與空跑耗時
-            optimizedPaths.forEach((item) => {
-                const path = item.path;
-                const cfg = item.cfg;
-                const start = path[0];
-                const startZ = (start.z !== undefined) ? start.z : 0;
-                const cuttingFeedrate = cfg.f || 1500;
-
-                const distSq = Math.pow(start.x - currentX, 2) + Math.pow(start.y - currentY, 2);
-                const contiguous = distSq < 0.01; // 起點間距小於 0.1mm 時視為相連路徑
-
-                if (contiguous) {
-                    // 相連過渡：免提刀，直接 G1 控制
-                    const plungeZ = Math.abs(currentZ - startZ);
-                    totalSec += (plungeZ / PLUNGE_SPEED) * 60;
-                    currentZ = startZ;
-
-                    const travelXY = Math.sqrt(distSq);
-                    totalSec += (travelXY / cuttingFeedrate) * 60;
-                    currentX = start.x;
-                    currentY = start.y;
+            // 更新輸入面板標籤
+            document.getElementById('label-n').innerText = t.sideN;
+            document.getElementById('label-s').innerText = t.sideS;
+            document.getElementById('label-w').innerText = t.sideW;
+            document.getElementById('label-e').innerText = t.sideE;
+            document.getElementById('label-d').innerText = t.sideD;
+
+            // 更新主題按鈕 SVG 圖示
+            const themeIcon = document.getElementById('theme-icon');
+            if (themeIcon) {
+                if (currentTheme === 'dark') {
+                    // Sun 圖示 (點擊變亮)
+                    themeIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m0-12.728l.707.707m12.728 12.728l.707.707M12 8a4 4 0 100 8 4 4 0 000-8z" />`;
+                    localStorage.setItem('theme', 'dark');
                 } else {
-                    // 非連續過渡：抬刀至安全 Z 高度、G0 空跑至目標點、再 Z 軸下刀
-                    const travelZToSafe = Math.abs(currentZ - SAFE_Z_VAL);
-                    totalSec += (travelZToSafe / G0_SPEED) * 60;
-                    currentZ = SAFE_Z_VAL;
-
-                    const travelXY = Math.sqrt(distSq);
-                    totalSec += (travelXY / G0_SPEED) * 60;
-                    currentX = start.x;
-                    currentY = start.y;
-
-                    const plungeZ = Math.abs(currentZ - startZ);
-                    totalSec += (plungeZ / PLUNGE_SPEED) * 60;
-                    currentZ = startZ;
+                    // Moon 圖示 (點擊變暗)
+                    themeIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />`;
+                    localStorage.setItem('theme', 'light');
                 }
+            }
 
-                // 切削進給耗時
-                let pathDist = 0;
-                for (let j = 1; j < path.length; j++) {
-                    const pt1 = path[j-1];
-                    const pt2 = path[j];
-                    const z1 = (pt1.z !== undefined) ? pt1.z : 0;
-                    const z2 = (pt2.z !== undefined) ? pt2.z : 0;
-                    pathDist += Math.sqrt(Math.pow(pt2.x - pt1.x, 2) + Math.pow(pt2.y - pt1.y, 2) + Math.pow(z2 - z1, 2));
-                }
-                totalSec += (pathDist / cuttingFeedrate) * 60;
-
-                const lastPtInPath = path[path.length - 1];
-                currentX = lastPtInPath.x;
-                currentY = lastPtInPath.y;
-                currentZ = (lastPtInPath.z !== undefined) ? lastPtInPath.z : 0;
-            });
-
-            // 回到原點的空跑耗時
-            const travelZToSafe = Math.abs(currentZ - SAFE_Z_VAL);
-            totalSec += (travelZToSafe / G0_SPEED) * 60;
-            currentZ = SAFE_Z_VAL;
-
-            const returnXY = Math.sqrt(currentX * currentX + currentY * currentY);
-            totalSec += (returnXY / G0_SPEED) * 60;
-
-            const h = Math.floor(totalSec / 3600), m = Math.floor((totalSec % 3600) / 60), s = Math.floor(totalSec % 60);
-            document.getElementById('est-time').innerText = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+            renderTableList();
         }
 
-        function renderPartList(){
-            const list = document.getElementById('part-list');
-            if (!list) return;
+        function renderTableList() {
+            const list = document.getElementById('tableList');
+            const t = i18n[currentLang];
             list.innerHTML = '';
-            
-            const topo = computePartNestingTopology();
-            const depths = topo.depths;
-            const targetLayer = document.getElementById('vcarve-layer-select')?.value || 'even';
-
-            parts.forEach((p, i) => {
-                const isSelected = selectedIndices.has(i);
-                const depth = depths[i] || 1;
-                
-                const isCarved = (targetLayer === 'even' && depth % 2 === 0) || (targetLayer === 'odd' && depth % 2 !== 0);
-                
-                let tagText = isCarved ? i18n[currentLang].tagConcave : i18n[currentLang].tagConvex;
-                let badgeClass = isCarved ? "bg-blue-100 text-blue-600 border border-blue-200 dark:bg-blue-900/40 dark:text-blue-400 dark:border-blue-800/60" : "bg-slate-100 text-slate-600 border border-slate-200 dark:bg-slate-900/60 dark:text-slate-400 dark:border-slate-700/50";
-
-                const div = document.createElement('div');
-                div.className = `p-4 border border-slate-200 dark:border-slate-700 rounded-xl flex flex-col transition-all cursor-pointer ${isSelected ? 'active-part shadow-lg' : 'hover:bg-slate-100 dark:hover:bg-slate-850'}`;
-                div.innerHTML = `
-                    <div class="flex justify-between items-center mb-2">
-                        <div class="flex items-center gap-3">
-                            <input type="checkbox" class="w-5 h-5 accent-green-600" ${isSelected ? 'checked' : ''}>
-                            <span class="text-xs font-bold text-slate-800 dark:text-slate-100">${i18n[currentLang].partName} ${p.id}</span>
+            for (let i = 1; i <= 5; i++) {
+                const item = document.createElement('div');
+                item.className = `p-3 rounded-lg cursor-pointer transition-all table-item ${currentTableId == i ? 'active-row shadow-lg' : ''}`;
+                item.onclick = () => switchTable(i);
+                item.innerHTML = `
+                    <div class="flex justify-between items-center">
+                        <span class="item-text">${t.table} ${i}</span>
+                        <div class="text-right">
+                             <div class="text-[10px] font-mono text-muted-custom">S: ${allTables[i].S} W: ${allTables[i].W}</div>
+                             <div class="text-[10px] font-mono text-muted-custom">D: ${allTables[i].D}</div>
                         </div>
-                        <span class="text-[10px] px-2.5 py-0.5 rounded-full font-bold font-mono ${badgeClass}">${p.visible ? tagText : i18n[currentLang].notApplied}</span>
-                        <button class="toggle-vis p-1">
-                            ${p.visible ? '<svg class="w-5 h-5 stroke-slate-500 dark:stroke-slate-400" fill="none" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>' : '<svg class="w-5 h-5 stroke-slate-400 dark:stroke-slate-600" fill="none" stroke-width="2" viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>'}
-                        </button>
-                    </div>
-                    <div class="flex flex-wrap gap-2 ml-8 items-center">
-                        <span class="dimension-badge">${p.currentDim.w.toFixed(1)} x ${p.currentDim.h.toFixed(1)} mm</span>
                     </div>
                 `;
-                div.onclick = (e) => {
-                    if(e.target.tagName === 'INPUT' || e.target.closest('.toggle-vis')) return;
-                    if(isSelected) selectedIndices.delete(i); else selectedIndices.add(i);
-                    renderPartList(); updateJobUI(); update3D();
-                };
-                div.querySelector('input').onchange = () => { if(isSelected) selectedIndices.delete(i); else selectedIndices.add(i); renderPartList(); updateJobUI(); update3D(); };
-                div.querySelector('.toggle-vis').onclick = (e) => { 
-                    e.stopPropagation(); 
-                    p.visible = !p.visible; 
-                    if(!p.visible && selectedIndices.has(i)) selectedIndices.delete(i); 
-                    renderPartList(); 
-                    update3D(); 
-                };
-                list.appendChild(div);
-            });
-            updateJobUI();
+                list.appendChild(item);
+            }
         }
 
-        function updateJobUI(){
-            const panel = document.getElementById('job-panel'), hint = document.getElementById('no-selection-hint');
-            if (!panel || !hint) return;
-            if(selectedIndices.size > 0){
-                panel.classList.remove('hidden'); hint.classList.add('hidden');
-                let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-                selectedIndices.forEach(idx => { parts[idx].rawPath.forEach(pt => { minX = Math.min(minX, pt.x); maxX = Math.max(maxX, pt.x); minY = Math.min(minY, pt.y); maxY = Math.max(maxY, pt.y); }); });
-                document.getElementById('resize-w').value = (maxX - minX).toFixed(2);
-                document.getElementById('resize-h').value = (maxY - minY).toFixed(2);
-                const lastP = parts[Array.from(selectedIndices).pop()];
-                ['resolution','job-f','job-type','mill-d','mill-depth','mill-step'].forEach(id => {
-                    const key = id.replace('job-','').replace('mill-','');
-                    const el = document.getElementById(id);
-                    if (el) {
-                        el.value = lastP.jobConfig[key] || lastP.jobConfig[id.split('-')[1]];
+        function switchTable(id) {
+            currentTableId = id;
+            const data = allTables[id];
+            document.getElementById('valN').value = data.N;
+            document.getElementById('valS').value = data.S;
+            document.getElementById('valW').value = data.W;
+            document.getElementById('valE').value = data.E;
+            document.getElementById('valD').value = data.D;
+            document.getElementById('valX').value = data.X;
+            document.getElementById('valY').value = data.Y;
+            renderTableList();
+            draw();
+        }
+
+        function updateCurrentTableData(forceMin = false) {
+            const nInput = document.getElementById('valN');
+            const sInput = document.getElementById('valS');
+            const wInput = document.getElementById('valW');
+            const eInput = document.getElementById('valE');
+            const dInput = document.getElementById('valD');
+
+            let nVal = parseFloat(nInput.value) || 0;
+            let sVal = parseFloat(sInput.value) || 0;
+            let wVal = parseFloat(wInput.value) || 0;
+            let eVal = parseFloat(eInput.value) || 0;
+            let dVal = parseFloat(dInput.value) || 0;
+
+            // 即時上限值檢查
+            if (nVal > 2600) { nVal = 2600; nInput.value = 2600; }
+            if (sVal > 2600) { sVal = 2600; sInput.value = 2600; }
+            if (wVal > 2600) { wVal = 2600; wInput.value = 2600; }
+            if (eVal > 2600) { eVal = 2600; eInput.value = 2600; }
+            if (dVal > 2990) { dVal = 2990; dInput.value = 2990; }
+
+            // 失焦或強制補正下限值 (最小 600)
+            if (forceMin) {
+                if (nVal < 600 && nInput.value !== "") { nVal = 600; nInput.value = 600; }
+                if (sVal < 600 && sInput.value !== "") { sVal = 600; sInput.value = 600; }
+                if (wVal < 600 && wInput.value !== "") { wVal = 600; wInput.value = 600; }
+                if (eVal < 600 && eInput.value !== "") { eVal = 600; eInput.value = 600; }
+            }
+
+            allTables[currentTableId] = {
+                N: nVal,
+                S: sVal,
+                W: wVal,
+                E: eVal,
+                D: dVal,
+                X: parseFloat(document.getElementById('valX').value) || 0,
+                Y: parseFloat(document.getElementById('valY').value) || 0
+            };
+            renderTableList();
+            draw();
+        }
+
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const lines = e.target.result.split(/\r?\n/);
+                const regex = /TABLE(\d+)([ESWNDXY])\s+([\d.]+)/i;
+                lines.forEach(line => {
+                    const match = line.trim().match(regex);
+                    if (match) {
+                        const id = parseInt(match[1]);
+                        const key = match[2].toUpperCase();
+                        let val = parseFloat(match[3]);
+
+                        // 確保匯入的數據也符合限制
+                        if (['E', 'S', 'W', 'N'].includes(key)) {
+                            if (val < 600) val = 600;
+                            if (val > 2600) val = 2600;
+                        } else if (key === 'D') {
+                            if (val > 2990) val = 2990;
+                        }
+
+                        if (allTables[id]) allTables[id][key] = val;
                     }
                 });
-                const elVBit = document.getElementById('vbit-angle');
-                if (elVBit && lastP.jobConfig.vbitAngle !== undefined) {
-                    elVBit.value = lastP.jobConfig.vbitAngle;
-                }
-            } else { panel.classList.add('hidden'); hint.classList.remove('hidden'); }
-            toggleMillingOptions();
+                switchTable(currentTableId);
+                event.target.value = ''; 
+            };
+            reader.readAsText(file);
         }
 
-        // ==========================================
-        // 5. 刀軌路徑計算與 V-Carving 核心演算法 (雙軸填充與角降骨架整合)
-        // ==========================================
-        function calculateAllVCarvePaths(groupScale) {
-            const selectedArr = Array.from(selectedIndices);
-            if (selectedArr.length === 0) return;
-
-            const targetLayer = document.getElementById('vcarve-layer-select')?.value || 'even';
+        function draw() {
+            const containerWidth = container.clientWidth;
+            const baseWidth = 750;
+            const baseHeight = 500;
+            const ratio = baseHeight / baseWidth;
             
-            const topo = computePartNestingTopology();
-            const depths = topo.depths;
-            const parents = topo.parents;
+            canvas.width = containerWidth;
+            canvas.height = containerWidth * ratio;
 
-            const firstIdx = selectedArr[0];
-            const cfg = parts[firstIdx].jobConfig;
+            const w = canvas.width;
+            const h = canvas.height;
+            const d = allTables[currentTableId];
+
+            // 動態讀取當前主題的 CSS 變數做為繪圖顏色
+            const style = getComputedStyle(document.body);
+            const canvasBg = style.getPropertyValue('--canvas-bg').trim();
+            const canvasStroke = style.getPropertyValue('--canvas-stroke').trim();
+            const canvasWaFill = style.getPropertyValue('--canvas-wa-fill').trim();
+            const canvasWaStroke = style.getPropertyValue('--canvas-wa-stroke').trim();
+            const canvasDashStroke = style.getPropertyValue('--canvas-dash-stroke').trim();
+            const canvasDDashStroke = style.getPropertyValue('--canvas-d-dash-stroke').trim();
+            const canvasCornerFill = style.getPropertyValue('--canvas-corner-fill').trim();
+            const canvasDotFill = style.getPropertyValue('--canvas-dot-fill').trim();
+            const canvasTextFill = style.getPropertyValue('--canvas-text-fill').trim();
+            const canvasMachineHighlight = style.getPropertyValue('--canvas-machine-highlight').trim();
+
+            const maxVal = Math.max(d.S, d.N, d.W, d.E, d.D);
+            const scale = (w * 0.8) / (maxVal || 1); 
+
+            let cosTheta = (Math.pow(d.W, 2) + Math.pow(d.S, 2) - Math.pow(d.D, 2)) / (2 * d.W * d.S || 1);
+            cosTheta = Math.max(-1, Math.min(1, cosTheta)); 
+            const theta = Math.acos(cosTheta);
+
+            const pBL = { x: 0, y: 0 };
+            const pBR = { x: d.S * scale, y: 0 };
+            const pTL = { 
+                x: d.W * scale * Math.cos(theta), 
+                y: -d.W * scale * Math.sin(theta) 
+            };
+
+            const dx = pBR.x - pTL.x;
+            const dy = pBR.y - pTL.y;
+            const angleD = Math.atan2(dy, dx);
+
+            let cosPhi = (Math.pow(d.N, 2) + Math.pow(d.D, 2) - Math.pow(d.E, 2)) / (2 * d.N * d.D || 1);
+            cosPhi = Math.max(-1, Math.min(1, cosPhi));
+            const phi = Math.acos(cosPhi);
+
+            const pTR = {
+                x: pTL.x + d.N * scale * Math.cos(angleD - phi),
+                y: pTL.y + d.N * scale * Math.sin(angleD - phi)
+            };
+
+            const minX = Math.min(pBL.x, pBR.x, pTL.x, pTR.x);
+            const maxX = Math.max(pBL.x, pBR.x, pTL.x, pTR.x);
+            const minY = Math.min(pBL.y, pBR.y, pTL.y, pTR.y);
+            const maxY = Math.max(pBL.y, pBR.y, pTL.y, pTR.y);
+
+            const offsetX = (w - (maxX - minX)) / 2 - minX;
+            const offsetY = (h - (maxY - minY)) / 2 - minY;
+
+            const pts = {
+                BL: { x: pBL.x + offsetX, y: pBL.y + offsetY },
+                BR: { x: pBR.x + offsetX, y: pBR.y + offsetY },
+                TL: { x: pTL.x + offsetX, y: pTL.y + offsetY },
+                TR: { x: pTR.x + offsetX, y: pTR.y + offsetY }
+            };
+
+            const centerX = (pts.TL.x + pts.BR.x) / 2;
+            const centerY = (pts.TL.y + pts.BR.y) / 2;
+
+            ctx.clearRect(0, 0, w, h);
+
+            // 繪製桌面背景
+            ctx.fillStyle = canvasBg;
+            ctx.beginPath();
+            ctx.moveTo(pts.TL.x, pts.TL.y); 
+            ctx.lineTo(pts.TR.x, pts.TR.y);
+            ctx.lineTo(pts.BR.x, pts.BR.y); 
+            ctx.lineTo(pts.BL.x, pts.BL.y);
+            ctx.closePath(); 
+            ctx.fill();
+            ctx.strokeStyle = canvasStroke; ctx.lineWidth = 2; ctx.stroke();
+
+            // 加工範圍計算
+            const tan15 = Math.tan(15 * Math.PI / 180);
+            let xVal = 100 + (d.S / 2) - ((d.W - 240) / 2 * tan15);
+            let yVal = 100 + (d.W / 2) - ((d.S - 240) / 2 * tan15);
+            const xMax = d.S / 2 - 200;
+            const yMax = d.W / 2 - 200;
+            const xDisp = Math.round(xVal > xMax ? xMax : xVal);
+            const yDisp = Math.round(yVal > yMax ? yMax : yVal);
+
+            const pxLeft  = -xDisp * scale;
+            const pxRight = xDisp * scale;
+            const pxUp    = yDisp * scale;
+            const pxDown  = -yDisp * scale;
+
+            ctx.save();
+            ctx.fillStyle = canvasWaFill;
+            ctx.strokeStyle = canvasWaStroke;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.rect(centerX + pxLeft, centerY - pxUp, pxRight - pxLeft, pxUp - pxDown);
+            ctx.fill();
+            ctx.stroke();
+            ctx.restore();
+
+            document.getElementById('wa-info').innerText = `(±${xDisp}, ±${yDisp})`;
+
+            // 繪製線條
+            ctx.save();
+            ctx.setLineDash([8, 6]);
+            ctx.strokeStyle = canvasDashStroke;
+            ctx.lineWidth = Math.max(1.5, 2 * (w / baseWidth));
+            line(pts.TL.x, pts.TL.y, pts.TR.x, pts.TR.y); // N
+            line(pts.BL.x, pts.BL.y, pts.BR.x, pts.BR.y); // S
+            line(pts.TL.x, pts.TL.y, pts.BL.x, pts.BL.y); // W
+            line(pts.TR.x, pts.TR.y, pts.BR.x, pts.BR.y); // E
+            ctx.strokeStyle = canvasDDashStroke;
+            line(pts.TL.x, pts.TL.y, pts.BR.x, pts.BR.y); // D
+            ctx.restore();
+
+            // 繪製標註文字 (標示 N/S/W/E/D)
+            ctx.fillStyle = canvasTextFill;
+            ctx.font = "bold 12px sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText("N", (pts.TL.x + pts.TR.x) / 2, (pts.TL.y + pts.TR.y) / 2 - 10);
+            ctx.fillText("S", (pts.BL.x + pts.BR.x) / 2, (pts.BL.y + pts.BR.y) / 2 + 20);
+            ctx.fillText("W", (pts.TL.x + pts.BL.x) / 2 - 15, (pts.TL.y + pts.BL.y) / 2);
+            ctx.fillText("E", (pts.TR.x + pts.BR.x) / 2 + 15, (pts.TR.y + pts.BR.y) / 2);
             
-            const nestedShapes = [];
+            // 對角線 D 的標籤
+            ctx.save();
+            ctx.fillStyle = canvasTextFill; 
+            ctx.fillText("D", (pts.TL.x + pts.BR.x) / 2 - 30, (pts.TL.y + pts.BR.y) / 2 - 30);
+            ctx.restore();
 
-            selectedArr.forEach(idx => {
-                const depth = depths[idx];
-                const isCarve = (targetLayer === 'even' && depth % 2 === 0) || (targetLayer === 'odd' && depth % 2 !== 0);
-                
-                if (isCarve) {
-                    const outer = parts[idx].rawPath.map(pt => ({ x: pt.x * groupScale, y: pt.y * groupScale }));
-                    const holes = [];
-                    
-                    parts.forEach((childPart, childIdx) => {
-                        if (childPart.visible && parents[childIdx] === idx) {
-                            const childDepth = depths[childIdx];
-                            const isChildCarve = (targetLayer === 'even' && childDepth % 2 === 0) || (targetLayer === 'odd' && childDepth % 2 !== 0);
-                            if (!isChildCarve) {
-                                const holePath = childPart.rawPath.map(pt => ({ x: pt.x * groupScale, y: pt.y * groupScale }));
-                                holes.push(holePath);
-                            }
-                        }
-                    });
-                    
-                    nestedShapes.push({ outer, holes });
-                }
+            drawCorner(pts.TL.x, pts.TL.y, 0, w/baseWidth, canvasCornerFill);
+            drawCorner(pts.TR.x, pts.TR.y, Math.PI / 2, w/baseWidth, canvasCornerFill);
+            drawCorner(pts.BR.x, pts.BR.y, Math.PI, w/baseWidth, canvasCornerFill);
+            drawCorner(pts.BL.x, pts.BL.y, -Math.PI / 2, w/baseWidth, canvasCornerFill);
+
+            ctx.fillStyle = canvasDotFill;
+            Object.values(pts).forEach(p => {
+                ctx.beginPath(); ctx.arc(p.x, p.y, 4 * (w/baseWidth), 0, Math.PI * 2); ctx.fill();
             });
 
-            if (nestedShapes.length === 0) {
-                selectedArr.forEach(idx => {
-                    parts[idx].toolpath = [];
-                    parts[idx].appliedMethod = 'vcarve';
-                });
-                return;
-            }
-
-            const consolidatedPaths = [];
-            const D_max = cfg.depth; 
-            const theta = cfg.vbitAngle || 90;
-            const tanHalf = Math.tan((theta / 2) * Math.PI / 180);
-            const r_max = D_max * tanHalf; 
-            const scale = 10000;
-
-            nestedShapes.forEach(shape => {
-                const spineStrokes = computeNestedVCarve(shape, cfg);
-                consolidatedPaths.push(...spineStrokes);
-
-                let hasWideRegions = false;
-                spineStrokes.forEach(stroke => {
-                    stroke.forEach(pt => {
-                        if (pt.r > r_max) hasWideRegions = true;
-                    });
-                });
-
-                if (hasWideRegions) {
-                    const stepover = (1 - cfg.overlap) * (2 * r_max);
-                    let currentOffset = r_max;
-
-                    const shapePaths = new ClipperLib.Paths();
-                    const outerClipper = shape.outer.map(pt => ({ X: Math.round(pt.x * scale), Y: Math.round(pt.y * scale) }));
-                    shapePaths.push(outerClipper);
-                    shape.holes.forEach(hole => {
-                        const holeClipper = hole.map(pt => ({ X: Math.round(pt.x * scale), Y: Math.round(pt.y * scale) }));
-                        shapePaths.push(holeClipper);
-                    });
-
-                    for (let step = 0; step < 50; step++) {
-                        const co = new ClipperLib.ClipperOffset();
-                        co.AddPaths(shapePaths, ClipperLib.JoinType.jtRound, ClipperLib.EndType.etClosedPolygon);
-                        
-                        const offsetResult = new ClipperLib.Paths();
-                        co.Execute(offsetResult, -currentOffset * scale);
-
-                        if (offsetResult.length === 0) break;
-
-                        offsetResult.forEach(path => {
-                            const p = path.map(pt => ({
-                                x: pt.X / scale,
-                                y: pt.Y / scale,
-                                z: -D_max 
-                            }));
-                            if (p.length > 0) {
-                                p.push(p[0]); 
-                                consolidatedPaths.push(cleanPath(p, cfg.resolution));
-                            }
-                        });
-
-                        currentOffset += stepover;
-                    }
-                }
-            });
-
-            consolidatedPaths.sort((pathA, pathB) => {
-                const maxZA = Math.max(...pathA.map(pt => pt.z !== undefined ? pt.z : 0));
-                const maxZB = Math.max(...pathB.map(pt => pt.z !== undefined ? pt.z : 0));
-                return maxZB - maxZA; 
-            });
-
-            selectedArr.forEach(idx => {
-                if (idx === firstIdx) {
-                    parts[idx].toolpath = consolidatedPaths;
-                    parts[idx].appliedMethod = 'vcarve';
-                } else {
-                    parts[idx].toolpath = [];
-                    parts[idx].appliedMethod = 'vcarve';
-                }
-            });
+            drawMachine(centerX, centerY, w/baseWidth, canvasMachineHighlight);
         }
 
-        /**
-         * 嵌套式 2D 距離變換 Medial Axis 骨架中心路徑與「主要軸/垂直軸共軛補強填滿」求解器
-         */
-        function computeNestedVCarve(shape, cfg) {
-            const outer = [...shape.outer];
-            if (outer.length > 2 && outer[0].x === outer[outer.length-1].x && outer[0].y === outer[outer.length-1].y) {
-                outer.pop();
-            }
-            if (getPolygonArea(outer) < 0) outer.reverse();
-
-            const holes = shape.holes.map(h => {
-                const temp = [...h];
-                if (temp.length > 2 && temp[0].x === temp[temp.length-1].x && temp[0].y === temp[temp.length-1].y) {
-                    temp.pop();
-                }
-                if (getPolygonArea(temp) > 0) temp.reverse();
-                return temp;
-            });
-
-            const isStraight = isPureStraightLinePath(outer, 0.05);
-
-            const tol = Math.max(0.04, cfg.resolution * 0.7);
-            const simpOuter = simplifyPath(outer, tol);
-            const simpHoles = holes.map(h => simplifyPath(h, tol));
-
-            const sampleSpacing = Math.max(0.5, cfg.resolution * 5);
-            const resampledOuter = resamplePath(simpOuter, sampleSpacing);
-            const resampledHoles = simpHoles.map(h => resamplePath(h, sampleSpacing));
-
-            const loops = [resampledOuter, ...resampledHoles];
-
-            const vbitAngle = cfg.vbitAngle || 90;
-            const halfAngleRad = (vbitAngle / 2) * Math.PI / 180;
-            const tanHalf = Math.tan(halfAngleRad);
-            const maxDepth = cfg.depth || 3.0;
-
-            const allSegments = [];
-            loops.forEach((loop, loopIdx) => {
-                const m = loop.length;
-                for (let i = 0; i < m; i++) {
-                    const p1 = loop[i];
-                    const p2 = loop[(i + 1) % m];
-                    allSegments.push({
-                        p1, p2,
-                        loopIdx,
-                        segIdx: i,
-                        minX: Math.min(p1.x, p2.x),
-                        maxX: Math.max(p1.x, p2.x),
-                        minY: Math.min(p1.y, p2.y),
-                        maxY: Math.max(p1.y, p2.y)
-                    });
-                }
-            });
-
-            function getDistanceToRegionBoundary(pt, excludeLoopIdx, excludeSegIndices) {
-                let minDist = Infinity;
-                for (let i = 0; i < allSegments.length; i++) {
-                    const s = allSegments[i];
-                    if (s.loopIdx === excludeLoopIdx && excludeSegIndices.includes(s.segIdx)) {
-                        continue;
-                    }
-                    let dx = 0;
-                    if (pt.x < s.minX) dx = s.minX - pt.x;
-                    else if (pt.x > s.maxX) dx = pt.x - s.maxX;
-                    let dy = 0;
-                    if (pt.y < s.minY) dy = s.minY - pt.y;
-                    else if (pt.y > s.maxY) dy = pt.y - s.maxY;
-
-                    if (dx*dx + dy*dy >= minDist*minDist) continue;
-
-                    const d = pointToSegmentDistance(pt, s.p1, s.p2);
-                    if (d < minDist) minDist = d;
-                }
-                return minDist;
-            }
-
-            const skeletonPoints = [];
-            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-            simpOuter.forEach(pt => {
-                if (pt.x < minX) minX = pt.x; if (pt.x > maxX) maxX = pt.x;
-                if (pt.y < minY) minY = pt.y; if (pt.y > maxY) maxY = pt.y;
-            });
-            const diag = Math.sqrt((maxX - minX)**2 + (maxY - minY)**2);
-
-            let finishedStrokes = [];
-            let bypassedSkeleton = false;
-
-            // ==========================================
-            // 核心優化 1：直線多邊形與小菱形(Quad) 完美十字斜切填充
-            // ==========================================
-            if (isStraight && holes.length === 0) {
-                if (simpOuter.length === 4) {
-                    // 四邊形 (如菱形、長方形) - 直接求解雙對角線交叉十字路徑
-                    const C = getLineIntersection(simpOuter[0], simpOuter[2], simpOuter[1], simpOuter[3]);
-                    if (C !== null) {
-                        let dMin = Infinity;
-                        for (let i = 0; i < 4; i++) {
-                            const d = pointToSegmentDistance(C, simpOuter[i], simpOuter[(i+1)%4]);
-                            if (d < dMin) dMin = d;
-                        }
-                        const Z_C = -dMin / tanHalf;
-                        const targetZC = Math.max(-maxDepth, Z_C);
-
-                        // 對角線 A (0 -> 2)
-                        const stroke1 = [
-                            { x: simpOuter[0].x, y: simpOuter[0].y, z: 0 },
-                            { x: C.x, y: C.y, z: targetZC },
-                            { x: simpOuter[2].x, y: simpOuter[2].y, z: 0 }
-                        ];
-                        // 對角線 B (1 -> 3)
-                        const stroke2 = [
-                            { x: simpOuter[1].x, y: simpOuter[1].y, z: 0 },
-                            { x: C.x, y: C.y, z: targetZC },
-                            { x: simpOuter[3].x, y: simpOuter[3].y, z: 0 }
-                        ];
-
-                        finishedStrokes.push(cleanPath(stroke1, cfg.resolution));
-                        finishedStrokes.push(cleanPath(stroke2, cfg.resolution));
-                        bypassedSkeleton = true; // 直接套用完美對角 miter, 繞過一般骨架與細碎補刀
-                    }
-                } else if (simpOuter.length === 3) {
-                    // 三角形 - 直接求解內心 (Incenter)
-                    const A = simpOuter[0], B = simpOuter[1], Ct = simpOuter[2];
-                    const a = Math.sqrt((B.x - Ct.x)**2 + (B.y - Ct.y)**2);
-                    const b = Math.sqrt((A.x - Ct.x)**2 + (A.y - Ct.y)**2);
-                    const c = Math.sqrt((A.x - B.x)**2 + (A.y - B.y)**2);
-                    
-                    if (a + b + c > 1e-5) {
-                        const x_I = (a * A.x + b * B.x + c * Ct.x) / (a + b + c);
-                        const y_I = (a * A.y + b * B.y + c * Ct.y) / (a + b + c);
-                        const C = { x: x_I, y: y_I };
-
-                        const s = (a + b + c) / 2;
-                        const area = Math.sqrt(Math.max(0, s * (s - a) * (s - b) * (s - c)));
-                        const r = area / s;
-
-                        const Z_C = -r / tanHalf;
-                        const targetZC = Math.max(-maxDepth, Z_C);
-
-                        for (let i = 0; i < 3; i++) {
-                            finishedStrokes.push(cleanPath([
-                                { x: simpOuter[i].x, y: simpOuter[i].y, z: 0 },
-                                { x: C.x, y: C.y, z: targetZC }
-                            ], cfg.resolution));
-                        }
-                        bypassedSkeleton = true;
-                    }
-                }
-            }
-
-            // ==========================================
-            // 若非簡易四邊形/三角形，則執行標準中軸骨架演算法
-            // ==========================================
-            if (!bypassedSkeleton) {
-                loops.forEach((loop, loopIdx) => {
-                    const m = loop.length;
-                    const isHole = (loopIdx > 0);
-
-                    for (let i = 0; i < m; i++) {
-                        const prev = loop[(i - 1 + m) % m];
-                        const curr = loop[i];
-                        const next = loop[(i + 1) % m];
-
-                        const v1 = { x: curr.x - prev.x, y: curr.y - prev.y };
-                        const v2 = { x: next.x - curr.x, y: next.y - curr.y };
-
-                        const len1 = Math.sqrt(v1.x*v1.x + v1.y*v1.y);
-                        const len2 = Math.sqrt(v2.x*v2.x + v2.y*v2.y);
-                        if (len1 < 1e-6 || len2 < 1e-6) continue;
-
-                        const t1 = { x: v1.x / len1, y: v1.y / len1 };
-                        const t2 = { x: v2.x / len2, y: v2.y / len2 };
-
-                        const cross = t1.x * t2.y - t1.y * t2.x;
-                        const isConcave = isHole ? (cross > 1e-5) : (cross < -1e-5);
-                        if (isConcave) continue;
-
-                        const n1 = { x: -t1.y, y: t1.x };
-                        const n2 = { x: -t2.y, y: t2.x };
-
-                        let u = { x: n1.x + n2.x, y: n1.y + n2.y };
-                        let lenU = Math.sqrt(u.x*u.x + u.y*u.y);
-                        if (lenU < 1e-5) {
-                            u = { ...n1 };
-                        } else {
-                            u.x /= lenU; u.y /= lenU;
-                        }
-
-                        const startSegs = [(i - 1 + m) % m, i];
-
-                        let low = 0, high = diag;
-                        for (let step = 0; step < 16; step++) {
-                            const mid = (low + high) / 2;
-                            const Pt = { x: curr.x + mid * u.x, y: curr.y + mid * u.y };
-                            const dStart = Math.min(pointToSegmentDistance(Pt, prev, curr), pointToSegmentDistance(Pt, curr, next));
-                            const dOther = getDistanceToRegionBoundary(Pt, loopIdx, startSegs);
-
-                            if (dStart < dOther) {
-                                low = mid;
-                            } else {
-                                high = mid;
-                            }
-                        }
-
-                        const tStar = (low + high) / 2;
-                        const PtStar = { x: curr.x + tStar * u.x, y: curr.y + tStar * u.y };
-                        const radius = Math.min(pointToSegmentDistance(PtStar, prev, curr), pointToSegmentDistance(PtStar, curr, next));
-
-                        const isInsideSolid = isPointInPolygon(PtStar, simpOuter) && !simpHoles.some(h => isPointInPolygon(PtStar, h));
-
-                        if (radius > 0.05 && isInsideSolid) {
-                            let z = -radius / tanHalf;
-                            skeletonPoints.push({
-                                x: PtStar.x, y: PtStar.y,
-                                z: Math.max(-maxDepth, z),
-                                r: radius
-                            });
-                        }
-                    }
-                });
-
-                // 建立標準中心脊線刀軌
-                const spineStrokes = [];
-                if (skeletonPoints.length > 0) {
-                    const unvisited = [...skeletonPoints];
-                    const chainThreshold = 1.5; 
-
-                    while (unvisited.length > 0) {
-                        let stroke = [unvisited.shift()];
-                        let growing = true;
-
-                        while (growing) {
-                            growing = false;
-                            const lastPt = stroke[stroke.length - 1];
-                            let bestIdx = -1;
-                            let minDist = Infinity;
-
-                            for (let i = 0; i < unvisited.length; i++) {
-                                const d = Math.sqrt((unvisited[i].x - lastPt.x)**2 + (unvisited[i].y - lastPt.y)**2);
-                                if (d < minDist) {
-                                    minDist = d;
-                                    bestIdx = i;
-                                }
-                            }
-
-                            if (bestIdx !== -1 && minDist < chainThreshold) {
-                                stroke.push(unvisited.splice(bestIdx, 1)[0]);
-                                growing = true;
-                            }
-                        }
-
-                        if (stroke.length >= 2) {
-                            spineStrokes.push(stroke);
-                        }
-                    }
-                }
-
-                finishedStrokes = spineStrokes.map(stroke => {
-                    let pts = stroke.map(p => ({ x: p.x, y: p.y, z: p.z, r: p.r }));
-
-                    const alpha = 0.4;
-                    for (let iter = 0; iter < 3; iter++) {
-                        const temp = JSON.parse(JSON.stringify(pts));
-                        for (let j = 1; j < pts.length - 1; j++) {
-                            pts[j].x = temp[j].x * (1 - alpha) + (temp[j-1].x + temp[j+1].x) * 0.5 * alpha;
-                            pts[j].y = temp[j].y * (1 - alpha) + (temp[j-1].y + temp[j+1].y) * 0.5 * alpha;
-                            pts[j].z = temp[j].z * (1 - alpha) + (temp[j-1].z + temp[j+1].z) * 0.5 * alpha;
-                        }
-                    }
-
-                    if (pts.length > 4) {
-                        const taperLength = Math.min(5, Math.floor(pts.length / 2));
-                        for (let k = 0; k < taperLength; k++) {
-                            const factor = k / taperLength;
-                            pts[k].z = pts[k].z * factor;
-                            pts[pts.length - 1 - k].z = pts[pts.length - 1 - k].z * factor;
-                        }
-                    } else {
-                        for (let k = 0; k < pts.length; k++) {
-                            const distToEnd = Math.min(k, pts.length - 1 - k);
-                            const factor = distToEnd / (pts.length / 2);
-                            pts[k].z = pts[k].z * factor;
-                        }
-                    }
-
-                    return pts;
-                }).map(path => cleanPath(path, cfg.resolution)).filter(path => path.length >= 2);
-
-                // 為大於 4 點的多邊形 (如五角星、凹多邊形) 尋找外圍 Convex 頂點並連接至中軸骨架，形成完美清角斜切
-                if (isStraight && simpOuter.length > 4) {
-                    const N_verts = simpOuter.length;
-                    for (let i = 0; i < N_verts; i++) {
-                        const prev = simpOuter[(i - 1 + N_verts) % N_verts];
-                        const curr = simpOuter[i];
-                        const next = simpOuter[(i + 1) % N_verts];
-
-                        const v1 = { x: curr.x - prev.x, y: curr.y - prev.y };
-                        const v2 = { x: next.x - curr.x, y: next.y - curr.y };
-                        const len1 = Math.sqrt(v1.x*v1.x + v1.y*v1.y);
-                        const len2 = Math.sqrt(v2.x*v2.x + v2.y*v2.y);
-                        if (len1 < 1e-6 || len2 < 1e-6) continue;
-
-                        const cross = (v1.x / len1) * (v2.y / len2) - (v1.y / len1) * (v2.x / len2);
-                        if (cross < -1e-5) { // 凸起角點 (Convex vertex)
-                            // 搜尋標準中軸骨架上離該角點最近的脊點
-                            let nearestPtOnSpine = null;
-                            let minDistSq = Infinity;
-                            finishedStrokes.forEach(stroke => {
-                                stroke.forEach(pt => {
-                                    const dSq = (pt.x - curr.x)**2 + (pt.y - curr.y)**2;
-                                    if (dSq < minDistSq) {
-                                        minDistSq = dSq;
-                                        nearestPtOnSpine = pt;
-                                    }
-                                });
-                            });
-
-                            if (nearestPtOnSpine && minDistSq > 0.25) {
-                                const miterLine = [
-                                    { x: curr.x, y: curr.y, z: 0 },
-                                    { x: nearestPtOnSpine.x, y: nearestPtOnSpine.y, z: nearestPtOnSpine.z }
-                                ];
-                                finishedStrokes.push(cleanPath(miterLine, cfg.resolution));
-                            }
-                        }
-                    }
-                }
-            }
-
-            // ==========================================
-            // 核心優化 2：自適應局部寬度過濾，決定是否生成平行副軸切削線段
-            // ==========================================
-            const perpendicularStrokes = [];
-            if (isStraight && outer.length > 2) {
-                const pca = getPrincipalAxis(outer);
-                const cosA = pca.cosA;
-                const sinA = pca.sinA;
-                const center = pca.center;
-
-                let tMin = Infinity, tMax = -Infinity;
-                outer.forEach(pt => {
-                    const dx = pt.x - center.x;
-                    const dy = pt.y - center.y;
-                    const t = dx * cosA + dy * sinA;
-                    if (t < tMin) tMin = t;
-                    if (t > tMax) tMax = t;
-                });
-
-                const wCarveMax = 2 * maxDepth * tanHalf;
-                const stepSize = Math.max(0.8, cfg.d * (1 - (cfg.overlap || 0.5)));
-                
-                const boundarySegments = [];
-                for (let i = 0; i < outer.length; i++) {
-                    boundarySegments.push({ A: outer[i], B: outer[(i + 1) % outer.length] });
-                }
-                holes.forEach(hole => {
-                    for (let i = 0; i < hole.length; i++) {
-                        boundarySegments.push({ A: hole[i], B: hole[(i + 1) % hole.length] });
-                    }
-                });
-
-                // 沿主要軸步進，投影出橫截面切片
-                for (let t = tMin + stepSize * 0.5; t < tMax; t += stepSize) {
-                    const oX = center.x + t * cosA;
-                    const oY = center.y + t * sinA;
-
-                    const intersections = [];
-                    boundarySegments.forEach(seg => {
-                        const Ax = seg.A.x, Ay = seg.A.y;
-                        const Bx = seg.B.x, By = seg.B.y;
-                        const Dx = Bx - Ax;
-                        const Dy = By - Ay;
-
-                        const det = -Dx * cosA - Dy * sinA;
-                        if (Math.abs(det) > 1e-6) {
-                            const detLambda = -(oX - Ax) * cosA - (oY - Ay) * sinA;
-                            const lambda = detLambda / det;
-                            if (lambda >= 0 && lambda <= 1) {
-                                const detP = Dx * (oY - Ay) - Dy * (oX - Ax);
-                                const p = detP / det;
-                                intersections.push(p);
-                            }
-                        }
-                    });
-
-                    intersections.sort((a, b) => a - b);
-
-                    // 在零件內部的實體切割段
-                    for (let j = 0; j < intersections.length - 1; j += 2) {
-                        const pStart = intersections[j];
-                        const pEnd = intersections[j+1];
-                        const segLength = pEnd - pStart;
-                        if (segLength < 0.1) continue;
-
-                        // 核心過濾修正：只有在該特定位置的「局部實際寬度」大於最大平底切削寬度時，才生成補刀。
-                        // 這能確保在大型菱形收窄處、或是已經小於加工極限的窄道上，絕對不生成細碎贅餘的垂直橫切路徑！
-                        if (segLength > Math.min(cfg.d, wCarveMax * 0.95)) {
-                            const perpPath = [];
-                            const sampleSpacing = Math.max(0.2, cfg.resolution * 3);
-                            const steps = Math.ceil(segLength / sampleSpacing);
-
-                            for (let s = 0; s <= steps; s++) {
-                                const pSample = pStart + (segLength * (s / steps));
-                                const ptX = oX - pSample * sinA;
-                                const ptY = oY + pSample * cosA;
-                                const pt = { x: ptX, y: ptY };
-
-                                const dist = getDistanceToShapeBoundary(pt, boundarySegments);
-                                const z = -dist / tanHalf;
-
-                                perpPath.push({
-                                    x: ptX,
-                                    y: ptY,
-                                    z: Math.max(-maxDepth, z)
-                                });
-                            }
-
-                            if (perpPath.length >= 2) {
-                                perpendicularStrokes.push(cleanPath(perpPath, cfg.resolution));
-                            }
-                        }
-                    }
-                }
-            }
-
-            // 合併所有軌跡並套用雙端 TSP 旅行商演算法優化切削順序與空跑行程
-            const allStrokes = [...finishedStrokes, ...perpendicularStrokes];
-            return optimizePathOrder(allStrokes, 0, 0);
+        function drawMachine(cx, cy, s, highlightColor) {
+            ctx.save();
+            ctx.translate(cx, cy); ctx.scale(s, s);
+            ctx.fillStyle = '#000000';
+            ctx.rotate(Math.PI / 4);
+            ctx.fillRect(-33, -10, 66, 20); ctx.fillRect(-10, -33, 20, 66);
+            ctx.rotate(-Math.PI / 4);
+            ctx.fillRect(-7,-10,14,-15);
+            ctx.strokeStyle = highlightColor; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.arc(0, 0, 7, 0, Math.PI * 2); ctx.stroke();
+            ctx.fillStyle = '#cbd5e1';
+            ctx.beginPath(); ctx.arc(0, 15, 5, 0, Math.PI * 2); ctx.fill();
+            ctx.restore();
         }
 
-        // ==========================================
-        // 6. THREE.JS 預覽區域初始化與動畫循環
-        // ==========================================
-        function animate() { 
-            requestAnimationFrame(animate); 
-            if (controls) controls.update(); 
-            if (renderer && scene && camera) renderer.render(scene, camera); 
+        function line(x1, y1, x2, y2) {
+            ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
         }
 
-        function initThreeJS() {
-            container = document.getElementById('three-container');
-            if (!container) return;
-            scene = new THREE.Scene();
-            camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 10000);
-            renderer = new THREE.WebGLRenderer({ antialias: true });
-            renderer.setSize(container.clientWidth, container.clientHeight);
-            renderer.setClearColor(0x020617);
-            container.appendChild(renderer.domElement);
-            controls = new THREE.OrbitControls(camera, renderer.domElement);
-            camera.position.set(0, 0, 200);
-            
-            const grid = new THREE.GridHelper(500, 50, 0x334155, 0x1e293b);
-            grid.name = "gridHelper";
-            grid.rotateX(Math.PI / 2);
-            scene.add(grid);
-
-            window.addEventListener('resize', () => {
-                if (!container || !camera || !renderer) return;
-                camera.aspect = container.clientWidth / container.clientHeight;
-                camera.updateProjectionMatrix();
-                renderer.setSize(container.clientWidth, container.clientHeight);
-            });
-
-            animate();
+        function drawCorner(x, y, rot, s, cornerColor) {
+            ctx.save();
+            ctx.translate(x, y); ctx.rotate(rot); ctx.scale(s, s);
+            ctx.fillStyle = cornerColor || '#475569';
+            ctx.beginPath(); 
+            ctx.moveTo(0,0); ctx.lineTo(15,0); ctx.lineTo(15,5); ctx.lineTo(5,15); ctx.lineTo(0,15); 
+            ctx.closePath(); ctx.fill(); 
+            ctx.restore();
         }
 
-        // ==========================================
-        // 主題管理系統 (Light / Dark Themes Mode)
-        // ==========================================
-        let currentTheme = localStorage.getItem('theme') || 'dark';
-
-        function applyTheme(theme) {
-            const elHtml = document.documentElement;
-            const themeIcon = document.getElementById('theme-icon');
-            
-            if (theme === 'dark') {
-                elHtml.classList.add('dark');
-                if (themeIcon) {
-                    // 深色模式下顯示太陽圖示 (即使用者指定的 path)
-                    themeIcon.innerHTML = `<path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1zM5.99 4.58c-.39-.39-1.03-.39-1.41 0s-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.02 0-1.41L5.99 4.58zm12.37 12.37c-.39-.39-1.03-.39-1.41 0s-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41l-1.06-1.06zm1.06-12.37c-.39-.39-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06c.39-.38.39-1.02 0-1.41zm-12.37 12.37c-.39-.39-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06c.39-.38.39-1.02 0-1.41z"/>`;
-                }
-                localStorage.setItem('theme', 'dark');
-                currentTheme = 'dark';
-            } else {
-                elHtml.classList.remove('dark');
-                if (themeIcon) {
-                    // 明亮模式下顯示精緻的月亮圖示
-                     themeIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />`;
-                }
-                localStorage.setItem('theme', 'light');
-                currentTheme = 'light';
+        function downloadAll() {
+            // 下載前進行最後的限制掃描與修正，確保輸出文件合規
+            for (let i = 1; i <= 5; i++) {
+                const d = allTables[i];
+                if (d.E < 600) d.E = 600; if (d.E > 2600) d.E = 2600;
+                if (d.S < 600) d.S = 600; if (d.S > 2600) d.S = 2600;
+                if (d.W < 600) d.W = 600; if (d.W > 2600) d.W = 2600;
+                if (d.N < 600) d.N = 600; if (d.N > 2600) d.N = 2600;
+                if (d.D > 2990) d.D = 2990;
             }
             
-            updateThemeButtonText();
-            updateThreeJSTheme(theme === 'dark');
-        }
-
-        function updateThemeButtonText() {
-            const themeText = document.getElementById('theme-text');
-            if (themeText) {
-                const key = currentTheme === 'dark' ? 'themeDark' : 'themeLight';
-                themeText.setAttribute('data-i18n', key);
-                if (i18n[currentLang] && i18n[currentLang][key]) {
-                    themeText.innerHTML = i18n[currentLang][key];
-                }
+            let out = "";
+            for (let i = 1; i <= 5; i++) {
+                const d = allTables[i];
+                out += `TABLE${i}E ${d.E}\nTABLE${i}S ${d.S}\nTABLE${i}W ${d.W}\nTABLE${i}N ${d.N}\nTABLE${i}D ${d.D}\nTABLE${i}X ${d.X.toFixed(4)}\nTABLE${i}Y ${d.Y.toFixed(4)}\n\n`;
             }
+            const blob = new Blob([out], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = 'table.cfg'; a.click();
+            URL.revokeObjectURL(url);
         }
 
-        function updateThreeJSTheme(isDark) {
-            if (!renderer || !scene) return;
-            const clearColor = isDark ? 0x020617 : 0xf1f5f9;
-            renderer.setClearColor(clearColor);
-
-            const existingGrid = scene.getObjectByName("gridHelper");
-            if (existingGrid) scene.remove(existingGrid);
-
-            const gridColor = isDark ? 0x334155 : 0x94a3b8;
-            const gridSubColor = isDark ? 0x1e293b : 0xe2e8f0;
-            const grid = new THREE.GridHelper(500, 50, gridColor, gridSubColor);
-            grid.name = "gridHelper";
-            grid.rotateX(Math.PI / 2);
-            scene.add(grid);
-
-            update3D(); 
-        }
-
-        // ==========================================
-        // 7. 初始化執行與事件繫結
-        // ==========================================
+        window.addEventListener('resize', draw);
         window.onload = () => {
-            initThreeJS();
-            
-            // 套用初始化的明亮或黑暗主題
-            applyTheme(currentTheme);
-            
-            fileInput = document.getElementById('file-input');
-            fileNameDisplay = document.getElementById('file-name-display');
-
-            fileInput.onchange = (e) => {
-                const file = e.target.files[0];
-                if(!file) return;
-                fileNameDisplay.innerText = file.name;
-                originalFileName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
-                fileExtension = file.name.split('.').pop().toLowerCase();
-
-                const r = new FileReader();
-                r.onload = (ev) => {
-                    rawFileData = ev.target.result;
-                    document.getElementById('process-img-btn').click();
-                };
-
-                const isImg = ["jpg","jpeg","png","bmp","webp"].includes(fileExtension);
-                document.getElementById('threshold-container').style.display = isImg ? 'block' : 'none';
-
-                if (isImg) {
-                    r.readAsDataURL(file);
+            // 頁面載入時讀取先前的主題設定
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme) {
+                currentTheme = savedTheme;
+                if (currentTheme === 'light') {
+                    document.body.classList.add('theme-light');
                 } else {
-                    r.readAsText(file);
+                    document.body.classList.remove('theme-light');
                 }
-            };
-
-            document.getElementById('process-img-btn').onclick = async () => {
-                if(!rawFileData) return;
-                
-                const targetW = parseFloat(document.getElementById('target-width').value);
-                const smoothTol = parseFloat(document.getElementById('smooth-range').value);
-                
-                let vectorPaths = []; 
-
-                if (["jpg","jpeg","png","bmp","webp"].includes(fileExtension)) {
-                    vectorPaths = await parseBitmap(rawFileData, targetW, smoothTol);
-                } else if (fileExtension === 'svg') {
-                    vectorPaths = parseSVG(rawFileData, targetW, smoothTol);
-                } else if (fileExtension === 'dxf') {
-                    vectorPaths = parseDXF(rawFileData, targetW, smoothTol);
-                }
-
-                if (vectorPaths.length > 0) {
-                    processVectorIntoParts(vectorPaths);
-                }
-            };
-
-            document.getElementById('select-all').onclick = () => {
-                const vis = parts.map((p, i) => p.visible ? i : -1).filter(idx => idx !== -1);
-                if (vis.length === 0) return;
-                if (vis.every(idx => selectedIndices.has(idx))) vis.forEach(idx => selectedIndices.delete(idx));
-                else vis.forEach(idx => selectedIndices.add(idx));
-                renderPartList(); updateJobUI(); update3D();
-            };
-
-            document.getElementById('resize-w').oninput = (e) => {
-                if(selectedIndices.size === 0) return;
-                const val = parseFloat(e.target.value); if(!val) return;
-                let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-                selectedIndices.forEach(idx => { parts[idx].rawPath.forEach(pt => { minX = Math.min(minX, pt.x); maxX = Math.max(maxX, pt.x); minY = Math.min(minY, pt.y); maxY = Math.max(maxY, pt.y); }); });
-                document.getElementById('resize-h').value = (val * (maxY - minY) / (maxX - minX)).toFixed(2);
-            };
-
-            document.getElementById('job-f').oninput = (e) => {
-                const val = parseFloat(e.target.value);
-                if (!val || val <= 0) return;
-                selectedIndices.forEach(idx => {
-                    if (parts[idx]) {
-                        parts[idx].jobConfig.f = val;
-                    }
-                });
-                updateStats();
-            };
-
-            document.getElementById('vcarve-layer-select').onchange = () => {
-                renderPartList();
-                update3D();
-            };
-
-            document.getElementById('apply-job-btn').onclick = () => {
-                const newRes = Math.max(0.1, parseFloat(document.getElementById('resolution').value) || 0.1);
-                const newF = parseFloat(document.getElementById('job-f').value);
-                const newType = 'vcarve';
-                const newD = parseFloat(document.getElementById('mill-d').value);
-                const newDepth = parseFloat(document.getElementById('mill-depth').value);
-                const newStep = parseFloat(document.getElementById('mill-step').value);
-                const newOverlap = 0.5; 
-                const newVBitAngle = parseFloat(document.getElementById('vbit-angle').value) || 90;
-
-                let minX = Infinity, maxX = -Infinity;
-                selectedIndices.forEach(idx => { parts[idx].rawPath.forEach(pt => { minX = Math.min(minX, pt.x); maxX = Math.max(maxX, pt.x); }); });
-                const groupScale = parseFloat(document.getElementById('resize-w').value) / (maxX - minX);
-
-                selectedIndices.forEach(idx => {
-                    parts[idx].toolpath = null;
-                    parts[idx].jobConfig = { 
-                        type: newType, f: newF, d: newD, depth: newDepth, step: newStep, 
-                        overlap: newOverlap, resolution: newRes, vbitAngle: newVBitAngle 
-                    };
-                    parts[idx].currentDim = { w: parts[idx].originalDim.w * groupScale, h: parts[idx].originalDim.h * groupScale };
-                    parts[idx].appliedMethod = newType; 
-                });
-
-                calculateAllVCarvePaths(groupScale);
-
-                renderPartList(); update3D(); updateStats();
-            };
-
-            /**
-             * 高性能 G-code 導出模組 (採用全域扁平 TSP 最佳化與免提刀相鄰過渡規則)
-             */
-            document.getElementById('export-gcode').onclick = () => {
-                if(parts.length === 0) return;
-
-                // 1. 蒐集所有零件的所有雕刻路徑 (扁平化)
-                let allPathsToCut = [];
-                parts.forEach(p => {
-                    if (p.visible && p.toolpath && p.toolpath.length > 0) {
-                        p.toolpath.forEach(path => {
-                            if (path.length >= 2) {
-                                allPathsToCut.push({
-                                    path: path,
-                                    cfg: p.jobConfig,
-                                    partId: p.id
-                                });
-                            }
-                        });
-                    }
-                });
-
-                if (allPathsToCut.length === 0) return;
-
-                // 2. 執行全域雙向最鄰近 (TSP) 最佳化排序
-                let optimizedPaths = [];
-                let currentX = 0, currentY = 0;
-                let unvisited = [...allPathsToCut];
-
-                while (unvisited.length > 0) {
-                    let bestIdx = -1;
-                    let bestDistSq = Infinity;
-                    let reversePath = false;
-
-                    for (let i = 0; i < unvisited.length; i++) {
-                        const item = unvisited[i];
-                        const path = item.path;
-                        
-                        // 正向間距
-                        const startPt = path[0];
-                        const dStartSq = Math.pow(startPt.x - currentX, 2) + Math.pow(startPt.y - currentY, 2);
-                        if (dStartSq < bestDistSq) {
-                            bestDistSq = dStartSq;
-                            bestIdx = i;
-                            reversePath = false;
-                        }
-
-                        // 反向間距
-                        const endPt = path[path.length - 1];
-                        const dEndSq = Math.pow(endPt.x - currentX, 2) + Math.pow(endPt.y - currentY, 2);
-                        if (dEndSq < bestDistSq) {
-                            bestDistSq = dEndSq;
-                            bestIdx = i;
-                            reversePath = true;
-                        }
-                    }
-
-                    if (bestIdx === -1) break;
-
-                    let bestItem = unvisited.splice(bestIdx, 1)[0];
-                    let finalPath = bestItem.path;
-                    if (reversePath) {
-                        finalPath = [...finalPath].reverse();
-                    }
-                    optimizedPaths.push({
-                        path: finalPath,
-                        cfg: bestItem.cfg,
-                        partId: bestItem.partId
-                    });
-
-                    const lastPt = finalPath[finalPath.length - 1];
-                    currentX = lastPt.x;
-                    currentY = lastPt.y;
-                }
-
-                // 3. 輸出極致提刀空跑最佳化的 G-code
-                let gc = [
-                    `; CNC V5.5 - Global TSP V-Carving Pro`, 
-                    `G21`, 
-                    `G90`, 
-                    `G0 X0 Y0 F2000`
-                ];
-                
-                let currentZ = null; // 紀錄當前 Z 軸高度，防止冗餘抬升
-                currentX = 0;
-                currentY = 0;
-                const SAFE_Z_VAL = parseFloat(SAFE_Z) || 1.0;
-
-                optimizedPaths.forEach((item, idx) => {
-                    const path = item.path;
-                    const cfg = item.cfg;
-                    const start = path[0];
-                    const startZ = (start.z !== undefined) ? start.z : 0;
-
-                    const distSq = Math.pow(start.x - currentX, 2) + Math.pow(start.y - currentY, 2);
-                    const contiguous = distSq < 0.01; // 起點間距小於 0.1mm 時視為相連
-
-                    if (contiguous) {
-                        // 【最短抬刀優化 1：相連過渡】免提刀！直接 G1 走向下一段起點
-                        if (currentZ === null || Math.abs(currentZ - startZ) > 1e-4) {
-                            gc.push(`G1 Z${startZ.toFixed(3)} F300`);
-                            currentZ = startZ;
-                        }
-                        if (Math.abs(currentX - start.x) > 1e-4 || Math.abs(currentY - start.y) > 1e-4) {
-                            gc.push(`G1 X${start.x.toFixed(3)} Y${start.y.toFixed(3)} F${cfg.f}`);
-                            currentX = start.x;
-                            currentY = start.y;
-                        }
-                    } else {
-                        // 【最短抬刀優化 2：一般空跑過渡】
-                        // 2.1 提刀（若當前未在安全高度，才提刀至安全 Z）
-                        if (currentZ === null || currentZ < SAFE_Z_VAL) {
-                            gc.push(`G0 Z${SAFE_Z_VAL.toFixed(3)}`);
-                            currentZ = SAFE_Z_VAL;
-                        }
-                        // 2.2 G0 快速橫移至下一路徑起點
-                        if (Math.abs(currentX - start.x) > 1e-4 || Math.abs(currentY - start.y) > 1e-4) {
-                            gc.push(`G0 X${start.x.toFixed(3)} Y${start.y.toFixed(3)}`);
-                            currentX = start.x;
-                            currentY = start.y;
-                        }
-                        // 2.3 快速插刀至切削起點深度
-                        gc.push(`G1 Z${startZ.toFixed(3)} F300`);
-                        currentZ = startZ;
-                    }
-
-                    // 4. 沿著線段進給
-                    let isFirstMoveOfPass = true;
-                    for (let j = 1; j < path.length; j++) {
-                        const pt = path[j];
-                        const ptZ = (pt.z !== undefined) ? ` Z${pt.z.toFixed(3)}` : "";
-                        const fStr = isFirstMoveOfPass ? ` F${cfg.f}` : "";
-                        gc.push(`G1 X${pt.x.toFixed(3)} Y${pt.y.toFixed(3)}${ptZ}${fStr}`);
-                        isFirstMoveOfPass = false;
-                    }
-
-                    // 更新當前位置狀態
-                    const lastPt = path[path.length - 1];
-                    currentX = lastPt.x;
-                    currentY = lastPt.y;
-                    currentZ = (lastPt.z !== undefined) ? lastPt.z : 0;
-                });
-
-                // 回到安全 Z 軸與原點
-                if (currentZ === null || currentZ < SAFE_Z_VAL) {
-                    gc.push(`G0 Z${SAFE_Z_VAL.toFixed(3)}`);
-                }
-                gc.push("G0 X0 Y0");
-
-                const blob = new Blob([gc.join('\n')], { type: 'text/plain' });
-                const a = document.createElement('a'); 
-                a.href = URL.createObjectURL(blob); 
-                a.download = `${originalFileName}.gcode`; 
-                a.click();
-            };
-
-            // 語言切換事件
-            document.getElementById('lang-toggle').onclick = () => { 
-                currentLang = currentLang === 'zh' ? 'en' : 'zh'; 
-                updateLanguage(); 
-            };
-
-            // 全域註冊指定的 toggleTheme 函式
-            window.toggleTheme = function() {
-                const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
-                applyTheme(nextTheme);
-            };
-
-            updateLanguage();
+            }
+            updateUI(); 
+            switchTable(1); 
         };
     </script>
 
