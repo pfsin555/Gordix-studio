@@ -262,7 +262,6 @@
         }
     </style>
 
-    
     <!-- PWA Meta Tags -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0f172a">
@@ -273,21 +272,24 @@
 </head>
 <body class="p-2 md:p-8">
     <div class="max-w-6xl mx-auto">
-        <header class="mb-4 md:mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
-            <div class="text-center md:text-left">
-                <h1 id="ui-title" class="text-2xl md:text-3xl font-bold text-title tracking-tight">桌長配置產生器</h1>
+        <!-- 改良為深灰色主題的高質感 Header -->
+        <header class="mb-4 md:mb-6 bg-gradient-to-r from-neutral-800 via-slate-900 to-zinc-900 p-6 text-white flex justify-between items-center rounded-xl border border-neutral-700/50 shadow-lg">
+            <div>
+                <h1 id="ui-title" class="text-xl md:text-2xl font-black tracking-tight text-white">桌長配置產生器</h1>
             </div>
-            <div class="flex flex-row gap-2 w-full md:w-auto justify-end">
-                <!-- 主題切換按鈕（僅保留圖示） -->
-                <button id="theme-toggle-btn" onclick="toggleTheme()" class="btn-custom-secondary p-2.5 rounded-lg shadow font-bold transition-colors flex items-center justify-center" title="切換主題 / Toggle Theme">
-                    <svg id="theme-icon" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m0-12.728l.707.707m12.728 12.728l.707.707M12 8a4 4 0 100 8 4 4 0 000-8z" />
+            <div class="flex gap-3 items-center">
+                <!-- 主題切換 (太陽/月亮描邊圖示，無任何文字) -->
+                <button id="theme-toggle-btn" onclick="toggleTheme()" class="p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white border border-white/10 transition-all flex items-center justify-center animate-pulse-slow" aria-label="Toggle Theme">
+                    <svg id="theme-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <!-- SVG path 由 JS 動態注入 -->
                     </svg>
                 </button>
-                <!-- 語言切換按鈕 -->
-                <button onclick="toggleLang()" class="btn-custom-secondary px-6 py-2 rounded-lg shadow font-bold transition-colors">
-                    中文 / EN
+                <!-- 語言切換 -->
+                <button onclick="toggleLang()" class="px-4 py-1.5 rounded-lg text-[13px] font-bold bg-white/10 hover:bg-white/20 text-white border border-white/10 transition-all flex items-center justify-center gap-2">
+                    <span>中文 / EN</span>
                 </button>
+                <!-- 規格版本號標籤 -->
+                <span class="text-[10px] bg-white/10 px-3 py-1 rounded-full border border-white/10 font-mono text-white">V1.0</span>
             </div>
         </header>
 
@@ -405,9 +407,7 @@
                 sideS: "側邊S",
                 sideW: "側邊W",
                 sideE: "側邊E",
-                sideD: "對角D",
-                tooltipToLight: "切換至明亮模式",
-                tooltipToDark: "切換至深色模式"
+                sideD: "對角D"
             },
             en: {
                 title: "Table Configurator",
@@ -422,9 +422,7 @@
                 sideS: "Side S",
                 sideW: "Side W",
                 sideE: "Side E",
-                sideD: "Diagonal D",
-                tooltipToLight: "Switch to Light Mode",
-                tooltipToDark: "Switch to Dark Mode"
+                sideD: "Diagonal D"
             }
         };
 
@@ -472,21 +470,17 @@
             document.getElementById('label-e').innerText = t.sideE;
             document.getElementById('label-d').innerText = t.sideD;
 
-            // 更新按鈕提示文字 (Tooltip)
-            const themeBtn = document.getElementById('theme-toggle-btn');
-            if (themeBtn) {
-                themeBtn.title = currentTheme === 'dark' ? t.tooltipToLight : t.tooltipToDark;
-            }
-
             // 更新主題按鈕 SVG 圖示
             const themeIcon = document.getElementById('theme-icon');
             if (themeIcon) {
                 if (currentTheme === 'dark') {
                     // Sun 圖示 (點擊變亮)
                     themeIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m0-12.728l.707.707m12.728 12.728l.707.707M12 8a4 4 0 100 8 4 4 0 000-8z" />`;
+                    localStorage.setItem('theme', 'dark');
                 } else {
                     // Moon 圖示 (點擊變暗)
                     themeIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />`;
+                    localStorage.setItem('theme', 'light');
                 }
             }
 
@@ -804,9 +798,23 @@
         }
 
         window.addEventListener('resize', draw);
-        window.onload = () => { updateUI(); switchTable(1); };
+        window.onload = () => {
+            // 頁面載入時讀取先前的主題設定
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme) {
+                currentTheme = savedTheme;
+                if (currentTheme === 'light') {
+                    document.body.classList.add('theme-light');
+                } else {
+                    document.body.classList.remove('theme-light');
+                }
+            }
+            updateUI(); 
+            switchTable(1); 
+        };
     </script>
-        <!-- PWA Service Worker Registration -->
+
+    <!-- PWA Service Worker Registration -->
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
@@ -816,6 +824,5 @@
             });
         }
     </script>
-
 </body>
 </html>
