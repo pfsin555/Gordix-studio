@@ -150,10 +150,12 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" href="icon-192.png">
+
+
 </head>
 <body class="pb-4">
 
-<!-- 頂部導航：導入 1.html 精緻綠色漸層風格 -->
+<!-- 頂部導航：導入精緻綠色漸層風格 -->
 <div class="bg-gradient-to-r from-emerald-600 to-teal-950 p-5 text-white flex justify-between items-center border-b border-emerald-500/30 shadow-lg mb-4">
     <div>
         <h1 id="txt-header-title" class="text-2xl font-black tracking-tight">
@@ -171,7 +173,7 @@
         <button id="langBtn" onclick="toggleLanguage()" class="px-3 py-1.5 rounded-lg text-[11px] font-bold bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-all flex items-center gap-2">
             EN
         </button>
-        <span class="text-[10px] bg-white/10 px-3 py-1 rounded-full border border-white/20 font-mono">V0.8</span>
+        <span class="text-[10px] bg-white/10 px-3 py-1 rounded-full border border-white/20 font-mono">V1.3</span>
     </div>
 </div>
 
@@ -192,8 +194,16 @@
                         <span id="txt-btn-upload">選擇 G-code 檔案</span>
                     </button>
                     <input type="file" id="fileInput" accept=".gcode,.nc,.txt" class="hidden" />
+                    
+                    <!-- 檔案載入成功提示 -->
                     <div id="fileInfo" class="p-2 alert-success rounded text-[10px] font-bold hidden truncate">
                         <span id="txt-file-name">檔名</span>: <span id="fileNameDisplay" class="opacity-90">-</span>
+                    </div>
+
+                    <!-- G20 英制轉公制提示區 -->
+                    <div id="metricAlert" class="p-2 rounded text-[10px] font-bold hidden flex items-center gap-2" style="background-color: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.3); color: #f59e0b;">
+                        <svg class="w-4 h-4 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        <span id="txt-metric-alert">Gcode已轉換為公制(G21)</span>
                     </div>
                 </div>
             </div>
@@ -325,7 +335,8 @@
             mouseR: "右鍵: 平移",
             mouseW: "滾輪: 縮放",
             unitMin: "分",
-            unitSec: "秒"
+            unitSec: "秒",
+            metricAlert: "Gcode已轉換為公制(G21)"
         },
         en: {
             headerTitle: "Gcode Adjuster",
@@ -352,7 +363,8 @@
             mouseR: "R-Click: Pan",
             mouseW: "Wheel: Zoom",
             unitMin: "min",
-            unitSec: "sec"
+            unitSec: "sec",
+            metricAlert: "G-code converted to metric (G21)"
         }
     };
 
@@ -394,6 +406,7 @@
         document.getElementById('txt-info-time').innerText = lang.infoTime;
         document.getElementById('txt-info-dist').innerText = lang.infoDist;
         document.getElementById('downloadBtn').innerText = lang.btnDownload;
+        document.getElementById('txt-metric-alert').innerText = lang.metricAlert;
         document.getElementById('txt-mouse-l').innerHTML = `<span class="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-1.5"></span>${lang.mouseL}`;
         document.getElementById('txt-mouse-r').innerHTML = `<span class="w-1.5 h-1.5 bg-blue-500 rounded-full mr-1.5"></span>${lang.mouseR}`;
         document.getElementById('txt-mouse-w').innerHTML = `<span class="w-1.5 h-1.5 bg-white rounded-full mr-1.5"></span>${lang.mouseW}`;
@@ -508,26 +521,230 @@
 
     function animate() { requestAnimationFrame(animate); renderer.render(scene, camera); }
 
+    // --- 英制(G20) 轉換為 公制(G21) 處理函數 ---
+    function convertInchToMetric(text) {
+        const lines = text.split('\n');
+        let isInchMode = false;
+        
+        const converted = lines.map(line => {
+            let cmd = line.trim();
+            if (!cmd) return line;
+
+            // 分離註解
+            let cleanCmd = cmd;
+            let comment = "";
+            const semiIdx = cmd.indexOf(';');
+            if (semiIdx !== -1) {
+                cleanCmd = cmd.substring(0, semiIdx).trim();
+                comment = cmd.substring(semiIdx);
+            }
+
+            // 暫時抽離括號註解以免誤轉換
+            let parenComments = [];
+            cleanCmd = cleanCmd.replace(/\([^)]*\)/g, (match) => {
+                parenComments.push(match);
+                return `__COMMENT_PLACEHOLDER_${parenComments.length - 1}__`;
+            });
+
+            // 偵測並置換宣告
+            if (/\bG0*20\b/i.test(cleanCmd)) {
+                isInchMode = true;
+                cleanCmd = cleanCmd.replace(/\bG0*20\b/gi, 'G21');
+            } else if (/\bG0*21\b/i.test(cleanCmd)) {
+                isInchMode = false;
+            }
+
+            if (isInchMode) {
+                // 將所有 X, Y, Z, I, J, K, R, F 乘上 25.4
+                cleanCmd = cleanCmd.replace(/([XYZIJKRF])\s*([-+]?[0-9]*\.?[0-9]+)/gi, (match, letter, valStr) => {
+                    const val = parseFloat(valStr);
+                    const convertedVal = val * 25.4;
+                    return letter.toUpperCase() + convertedVal.toFixed(4);
+                });
+            }
+
+            // 還原括號註解
+            parenComments.forEach((pc, idx) => {
+                cleanCmd = cleanCmd.replace(`__COMMENT_PLACEHOLDER_${idx}__`, pc);
+            });
+
+            return cleanCmd + comment;
+        });
+
+        return converted.join('\n');
+    }
+
+    // 安全偵測是否有寫在非註解區的 G20 指令
+    function hasG20Active(text) {
+        const lines = text.split('\n');
+        for (let line of lines) {
+            let clean = line.split(';')[0].replace(/\([^)]*\)/g, '').trim();
+            if (/\bG0*20\b/i.test(clean)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // 尋找雕刻/加工的界線區塊 (第一個與最後一個 G1/G2/G3 加工作業)
+    // 採用與繪圖引擎完全一致的 Word Tokenizer，精準支援緊湊型 G-code (例如 G0X0Y0)
+    function findMachiningBounds(text) {
+        const lines = text.split('\n');
+        let firstMachiningIdx = -1;
+        let lastMachiningIdx = -1;
+        let currentMotionMode = null;
+        
+        lines.forEach((line, i) => {
+            const cmd = line.trim().toUpperCase();
+            if (!cmd || cmd.startsWith('(') || cmd.startsWith(';')) return;
+            
+            let cleanCmd = cmd.split(';')[0].trim();
+            
+            const words = {};
+            const matches = cleanCmd.matchAll(/([A-Z])\s*([-+]?[0-9]*\.?[0-9]+)/gi);
+            for (const match of matches) {
+                words[match[1]] = parseFloat(match[2]);
+            }
+            
+            if (words['G'] !== undefined) {
+                const gVal = Math.round(words['G']);
+                if (gVal === 0) currentMotionMode = 'G0';
+                else if (gVal === 1) currentMotionMode = 'G1';
+                else if (gVal === 2) currentMotionMode = 'G2';
+                else if (gVal === 3) currentMotionMode = 'G3';
+            }
+            
+            const hasX = words['X'] !== undefined;
+            const hasY = words['Y'] !== undefined;
+            
+            // 如果在雕刻加工狀態下 (非 G0) 有坐標移動，視為實際加工作業
+            if ((hasX || hasY) && currentMotionMode && currentMotionMode !== 'G0') {
+                if (firstMachiningIdx === -1) firstMachiningIdx = i;
+                lastMachiningIdx = i;
+            }
+        });
+        
+        return { firstMachiningIdx, lastMachiningIdx };
+    }
+
+    // 三維圓弧分割生成點
+    function generateArcPoints(p1, p2, I, J, R, isCW) {
+        const points = [];
+        let cx, cy, r;
+
+        if (R !== null) {
+            const dx = p2.x - p1.x;
+            const dy = p2.y - p1.y;
+            const d = Math.sqrt(dx * dx + dy * dy);
+            if (d === 0 || Math.abs(R) < d / 2) {
+                return [new THREE.Vector3(p1.x, p1.y, p1.z), new THREE.Vector3(p2.x, p2.y, p2.z)];
+            }
+            r = Math.abs(R);
+            const h = Math.sqrt(r * r - (d / 2) * (d / 2));
+            const mx = (p1.x + p2.x) / 2;
+            const my = (p1.y + p2.y) / 2;
+            const nx = -dy / d;
+            const ny = dx / d;
+
+            let factor = (isCW ? 1 : -1) * (R < 0 ? -1 : 1);
+            cx = mx + factor * h * nx;
+            cy = my + factor * h * ny;
+        } else {
+            cx = p1.x + (I || 0);
+            cy = p1.y + (J || 0);
+            r = Math.sqrt((p1.x - cx)**2 + (p1.y - cy)**2);
+        }
+
+        let startAngle = Math.atan2(p1.y - cy, p1.x - cx);
+        let endAngle = Math.atan2(p2.y - cy, p2.x - cx);
+
+        let diff = endAngle - startAngle;
+        if (isCW) {
+            if (diff >= 0) diff -= 2 * Math.PI;
+        } else {
+            if (diff <= 0) diff += 2 * Math.PI;
+        }
+
+        const numSegments = Math.max(8, Math.min(64, Math.ceil(Math.abs(diff) / (Math.PI / 16))));
+        for (let s = 0; s <= numSegments; s++) {
+            const t = s / numSegments;
+            const angle = startAngle + diff * t;
+            const z = p1.z + (p2.z - p1.z) * t; 
+            points.push(new THREE.Vector3(cx + r * Math.cos(angle), cy + r * Math.sin(angle), z));
+        }
+
+        return points;
+    }
+
+    // 模態記憶與起終點保護 Gcode 解析器
     function parseGcode(text) {
+        const bounds = findMachiningBounds(text);
+        const firstMachiningIdx = bounds.firstMachiningIdx;
+        const lastMachiningIdx = bounds.lastMachiningIdx;
+
         const lines = text.split('\n');
         let currentPos = { x: 0, y: 0, z: 0, f: 1000 };
+        let activeMotion = null; 
         const pathData = [];
+
         lines.forEach((line, index) => {
             const cmd = line.trim().toUpperCase();
             if (!cmd || cmd.startsWith('(') || cmd.startsWith(';')) return;
-            if (cmd.startsWith('G0') || cmd.startsWith('G1')) {
-                let nX = currentPos.x, nY = currentPos.y, nZ = currentPos.z, hM = false;
-                const parts = cmd.split(/[\s;]/);
-                parts.forEach(p => {
-                    if (p.startsWith('X')) { nX = parseFloat(p.substring(1)); hM = true; }
-                    if (p.startsWith('Y')) { nY = parseFloat(p.substring(1)); hM = true; }
-                    if (p.startsWith('Z')) { nZ = parseFloat(p.substring(1)); hM = true; }
-                    if (p.startsWith('F')) { currentPos.f = parseFloat(p.substring(1)); }
-                });
-                if (hM) {
-                    pathData.push({ from: {...currentPos}, to: {x: nX, y: nY, z: nZ}, f: currentPos.f, type: cmd.substring(0, 2), lineIdx: index });
-                    currentPos.x = nX; currentPos.y = nY; currentPos.z = nZ;
+
+            let cleanCmd = cmd;
+            const semiIdx = cmd.indexOf(';');
+            if (semiIdx !== -1) {
+                cleanCmd = cmd.substring(0, semiIdx).trim();
+            }
+
+            const words = {};
+            const matches = cleanCmd.matchAll(/([A-Z])\s*([-+]?[0-9]*\.?[0-9]+)/gi);
+            for (const match of matches) {
+                words[match[1]] = parseFloat(match[2]);
+            }
+
+            if (words['G'] !== undefined) {
+                const gVal = Math.round(words['G']);
+                if (gVal === 0) activeMotion = 'G0';
+                else if (gVal === 1) activeMotion = 'G1';
+                else if (gVal === 2) activeMotion = 'G2';
+                else if (gVal === 3) activeMotion = 'G3';
+            }
+
+            const hasCoords = (words['X'] !== undefined || words['Y'] !== undefined || words['Z'] !== undefined || words['I'] !== undefined || words['J'] !== undefined || words['R'] !== undefined);
+
+            if (hasCoords && activeMotion) {
+                let newX = words['X'] !== undefined ? words['X'] : currentPos.x;
+                let newY = words['Y'] !== undefined ? words['Y'] : currentPos.y;
+                let newZ = words['Z'] !== undefined ? words['Z'] : currentPos.z;
+                
+                if (newZ > 3) {
+                    newZ = 3;
                 }
+
+                if (words['F'] !== undefined) currentPos.f = words['F'];
+
+                // 核心保護邏輯：確認該行指令是否屬於「開頭」或「結尾」的 X0 Y0 原點定位指令
+                const isStartOrEndHome = (firstMachiningIdx !== -1 && (index < firstMachiningIdx || index > lastMachiningIdx)) && 
+                                         (Math.abs(newX) < 1e-4 && Math.abs(newY) < 1e-4);
+
+                pathData.push({
+                    from: { ...currentPos },
+                    to: { x: newX, y: newY, z: newZ },
+                    f: currentPos.f,
+                    type: activeMotion,
+                    I: words['I'] !== undefined ? words['I'] : null,
+                    J: words['J'] !== undefined ? words['J'] : null,
+                    R: words['R'] !== undefined ? words['R'] : null,
+                    isStartOrEndHome: isStartOrEndHome, // 傳遞給渲染引擎
+                    lineIdx: index
+                });
+
+                currentPos.x = newX;
+                currentPos.y = newY;
+                currentPos.z = newZ;
+            } else if (words['F'] !== undefined) {
+                currentPos.f = words['F'];
             }
         });
         return pathData;
@@ -544,31 +761,65 @@
         const pathData = parseGcode(originalGcode);
         if (gcodeGroup) scene.remove(gcodeGroup);
         gcodeGroup = new THREE.Group();
-        const mat = new THREE.LineBasicMaterial({ color: 0x10b981 });
 
         let totalDist = 0, totalTime = 0, lastP = { x: 0, y: 0, z: 0 }, isF = true;
 
         pathData.forEach((seg, idx) => {
-            const trans = (p) => ({
-                x: (p.x * Math.cos(rotRad) - p.y * Math.sin(rotRad)) * scale + offX,
-                y: (p.x * Math.sin(rotRad) + p.y * Math.cos(rotRad)) * scale + offY,
-                z: p.z
-            });
+            // 套用座標旋轉、縮放與偏移，但如果是起終點 Home 移動，則強制保留在 (0,0) 座標中心
+            const trans = (p, isHome) => {
+                if (isHome) {
+                    return { x: 0, y: 0, z: p.z };
+                }
+                return {
+                    x: (p.x * Math.cos(rotRad) - p.y * Math.sin(rotRad)) * scale + offX,
+                    y: (p.x * Math.sin(rotRad) + p.y * Math.cos(rotRad)) * scale + offY,
+                    z: p.z
+                };
+            };
 
-            const p2 = trans(seg.to);
+            const p2 = trans(seg.to, seg.isStartOrEndHome);
             const dXY = Math.sqrt((p2.x - lastP.x)**2 + (p2.y - lastP.y)**2);
             const zM = Math.abs(seg.to.z - lastP.z) > 0.0001;
             const isLast = (idx === pathData.length - 1);
 
             if (!isF && seg.type === 'G1' && dXY < res && !zM && !isLast) return;
 
-            const p1 = isF ? trans(seg.from) : { ...lastP };
-            const segD = Math.sqrt((p2.x - p1.x)**2 + (p2.y - p1.y)**2 + (p2.z - p1.z)**2);
+            // 第一段路徑的起點若是 X0 Y0，同樣進行智慧保護保留在 (0,0)
+            const isFirstSegmentHome = idx === 0 && (Math.abs(seg.from.x) < 1e-4 && Math.abs(seg.from.y) < 1e-4);
+            const p1 = isF ? trans(seg.from, isFirstSegmentHome) : { ...lastP };
+            
+            let segD = 0;
+            let points = [];
+
+            if (seg.type === 'G2' || seg.type === 'G3') {
+                let transI = null;
+                let transJ = null;
+                if (seg.I !== null || seg.J !== null) {
+                    const rawI = seg.I || 0;
+                    const rawJ = seg.J || 0;
+                    transI = (rawI * Math.cos(rotRad) - rawJ * Math.sin(rotRad)) * scale;
+                    transJ = (rawI * Math.sin(rotRad) + rawJ * Math.cos(rotRad)) * scale;
+                }
+                const transR = seg.R !== null ? seg.R * scale : null;
+
+                points = generateArcPoints(p1, p2, transI, transJ, transR, seg.type === 'G2');
+                for (let i = 1; i < points.length; i++) {
+                    segD += points[i].distanceTo(points[i-1]);
+                }
+            } else {
+                points = [new THREE.Vector3(p1.x, p1.y, p1.z), new THREE.Vector3(p2.x, p2.y, p2.z)];
+                segD = Math.sqrt((p2.x - p1.x)**2 + (p2.y - p1.y)**2 + (p2.z - p1.z)**2);
+            }
+
             totalDist += segD;
             if (seg.f > 0) totalTime += segD / (seg.f / 60);
 
-            const geo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(p1.x, p1.y, p1.z), new THREE.Vector3(p2.x, p2.y, p2.z)]);
-            gcodeGroup.add(new THREE.Line(geo, mat));
+            let color = (seg.type === 'G0') ? 0x3b82f6 : 0x10b981;
+
+            const geo = new THREE.BufferGeometry().setFromPoints(points);
+            const lineMat = new THREE.LineBasicMaterial({ color: color });
+            gcodeGroup.add(new THREE.Line(geo, lineMat));
+
             lastP = { ...p2 }; isF = false;
         });
 
@@ -577,63 +828,157 @@
         document.getElementById('downloadBtn').disabled = false;
     }
 
+    // 重新組裝 Gcode 並套用智慧中心保護與加工過濾
+    // 【重大修正】：同時儲存 Raw（原始）與 Transformed（調整後）座標，解決重複疊加計算導致狂奔至左下角的 Bug
     function generateGcode() {
+        const bounds = findMachiningBounds(originalGcode);
+        const firstMachiningIdx = bounds.firstMachiningIdx;
+        const lastMachiningIdx = bounds.lastMachiningIdx;
+
         const scale = parseFloat(document.getElementById('scaleInput').value) || 1;
         const offX = parseFloat(document.getElementById('offsetX').value) || 0;
         const offY = parseFloat(document.getElementById('offsetY').value) || 0;
         const rotRad = (parseFloat(document.getElementById('rotationInput').value) || 0) * Math.PI / 180;
         const res = parseFloat(document.getElementById('resInput').value) || 0.1;
 
-        let lastX = 0, lastY = 0, lastZ = 0, isF = true;
+        // 獨立軌跡狀態追蹤
+        let lastRawX = 0, lastRawY = 0, lastRawZ = 0;
+        let lastTransX = 0, lastTransY = 0, lastTransZ = 0;
+        
+        let activeMotion = null;
+        let isFirstMove = true;
+
         const lines = originalGcode.split('\n');
         
         let lastMoveIdx = -1;
         lines.forEach((l, i) => {
-            const up = l.trim().toUpperCase();
-            if (up.startsWith('G0') || up.startsWith('G1')) {
-                const xM = l.match(/X/i), yM = l.match(/Y/i), zM = l.match(/Z/i);
-                if (xM || yM || zM) lastMoveIdx = i;
+            const cmd = l.trim().toUpperCase();
+            if (!cmd || cmd.startsWith('(') || cmd.startsWith(';')) return;
+            
+            const words = {};
+            const matches = cmd.matchAll(/([A-Z])\s*([-+]?[0-9]*\.?[0-9]+)/gi);
+            for (const match of matches) {
+                words[match[1]] = parseFloat(match[2]);
+            }
+            
+            if (words['G'] !== undefined) {
+                const gVal = Math.round(words['G']);
+                if ([0, 1, 2, 3].includes(gVal)) lastMoveIdx = i;
+            } else if (words['X'] !== undefined || words['Y'] !== undefined || words['Z'] !== undefined) {
+                lastMoveIdx = i;
             }
         });
 
         const output = [];
         lines.forEach((line, i) => {
             let cmd = line.trim();
-            if (!cmd || cmd.startsWith('(') || cmd.startsWith(';')) { output.push(line); return; }
+            if (!cmd || cmd.startsWith('(') || cmd.startsWith(';')) { 
+                output.push(line); 
+                return; 
+            }
 
-            const up = cmd.toUpperCase();
-            if (up.startsWith('G0') || up.startsWith('G1')) {
-                const isG1 = up.startsWith('G1');
-                const xM = cmd.match(/X([-+]?[0-9]*\.?[0-9]+)/i);
-                const yM = cmd.match(/Y([-+]?[0-9]*\.?[0-9]+)/i);
-                const zM = cmd.match(/Z([-+]?[0-9]*\.?[0-9]+)/i);
-                const fM = cmd.match(/F([-+]?[0-9]*\.?[0-9]+)/i);
+            let cleanCmd = cmd;
+            let commentSuffix = "";
+            const semiIdx = cmd.indexOf(';');
+            if (semiIdx !== -1) {
+                cleanCmd = cmd.substring(0, semiIdx).trim();
+                commentSuffix = cmd.substring(semiIdx);
+            }
 
-                if (!xM && !yM && !zM && !fM) { output.push(line); return; }
+            const words = {};
+            const matches = cleanCmd.matchAll(/([A-Z])\s*([-+]?[0-9]*\.?[0-9]+)/gi);
+            for (const match of matches) {
+                words[match[1]] = parseFloat(match[2]);
+            }
 
-                let rX = xM ? parseFloat(xM[1]) : lastX;
-                let rY = yM ? parseFloat(yM[1]) : lastY;
-                let rZ = zM ? parseFloat(zM[1]) : lastZ;
+            if (words['G'] !== undefined) {
+                const gVal = Math.round(words['G']);
+                if (gVal === 0) activeMotion = 'G0';
+                else if (gVal === 1) activeMotion = 'G1';
+                else if (gVal === 2) activeMotion = 'G2';
+                else if (gVal === 3) activeMotion = 'G3';
+            }
 
-                let fX = (rX * Math.cos(rotRad) - rY * Math.sin(rotRad)) * scale + offX;
-                let fY = (rX * Math.sin(rotRad) + rY * Math.cos(rotRad)) * scale + offY;
-                let fZ = rZ;
+            const hasMoveCoords = (words['X'] !== undefined || words['Y'] !== undefined || words['Z'] !== undefined || words['I'] !== undefined || words['J'] !== undefined || words['R'] !== undefined);
 
-                const dXY = Math.sqrt((fX - lastX)**2 + (fY - lastY)**2);
-                const zChanged = zM !== null && Math.abs(rZ - lastZ) > 0.0001;
-                const fChanged = fM !== null;
+            if (hasMoveCoords && activeMotion) {
+                // 安全讀取：省略座標時拿取【上一個原始(Raw)狀態座標】而不是已位移過的座標
+                let rawX = words['X'] !== undefined ? words['X'] : lastRawX;
+                let rawY = words['Y'] !== undefined ? words['Y'] : lastRawY;
+                let rawZ = words['Z'] !== undefined ? words['Z'] : lastRawZ;
+
+                if (rawZ > 3) {
+                    rawZ = 3.0;
+                }
+
+                // 智慧起終點原點保護判斷
+                const isStartOrEndHome = (firstMachiningIdx !== -1 && (i < firstMachiningIdx || i > lastMachiningIdx)) && 
+                                         (Math.abs(rawX) < 1e-4 && Math.abs(rawY) < 1e-4);
+
+                let fX = 0;
+                let fY = 0;
+                if (!isStartOrEndHome) {
+                    // 正常移動軌跡套用公式
+                    fX = (rawX * Math.cos(rotRad) - rawY * Math.sin(rotRad)) * scale + offX;
+                    fY = (rawX * Math.sin(rotRad) + rawY * Math.cos(rotRad)) * scale + offY;
+                }
+                let fZ = rawZ;
+
+                const dXY = Math.sqrt((fX - lastTransX)**2 + (fY - lastTransY)**2);
+                const zChanged = words['Z'] !== undefined && Math.abs(rawZ - lastRawZ) > 0.0001;
+                const fChanged = words['F'] !== undefined;
                 const isLastMove = (i === lastMoveIdx);
 
-                if (!isF && isG1 && dXY < res && !zChanged && !fChanged && !isLastMove) return;
+                if (!isFirstMove && activeMotion === 'G1' && dXY < res && !zChanged && !fChanged && !isLastMove) {
+                    return; 
+                }
 
-                let nL = cmd;
-                if (xM) nL = nL.replace(/X([-+]?[0-9]*\.?[0-9]+)/i, `X${fX.toFixed(4)}`);
-                if (yM) nL = nL.replace(/Y([-+]?[0-9]*\.?[0-9]+)/i, `Y${fY.toFixed(4)}`);
-                if (zM) nL = nL.replace(/Z([-+]?[0-9]*\.?[0-9]+)/i, `Z${fZ.toFixed(4)}`);
-                if (fM) nL = nL.replace(/F([-+]?[0-9]*\.?[0-9]+)/i, `F${fM[1]}`);
+                let newlineParts = [];
                 
-                lastX = fX; lastY = fY; lastZ = fZ; isF = false;
-                output.push(nL);
+                if (words['G'] !== undefined) {
+                    newlineParts.push('G' + Math.round(words['G']));
+                }
+                
+                if (words['X'] !== undefined) newlineParts.push('X' + fX.toFixed(4));
+                if (words['Y'] !== undefined) newlineParts.push('Y' + fY.toFixed(4));
+                if (words['Z'] !== undefined) {
+                    let zStr = fZ >= 3.0 ? "3" : fZ.toFixed(4);
+                    newlineParts.push('Z' + zStr);
+                }
+
+                if (words['I'] !== undefined || words['J'] !== undefined) {
+                    const rawI = words['I'] || 0;
+                    const rawJ = words['J'] || 0;
+                    let fI = (rawI * Math.cos(rotRad) - rawJ * Math.sin(rotRad)) * scale;
+                    let fJ = (rawI * Math.sin(rotRad) + rawJ * Math.cos(rotRad)) * scale;
+                    if (words['I'] !== undefined) newlineParts.push('I' + fI.toFixed(4));
+                    if (words['J'] !== undefined) newlineParts.push('J' + fJ.toFixed(4));
+                }
+                if (words['K'] !== undefined) {
+                    newlineParts.push('K' + words['K'].toFixed(4));
+                }
+                if (words['R'] !== undefined) {
+                    let fR = words['R'] * scale;
+                    newlineParts.push('R' + fR.toFixed(4));
+                }
+                if (words['F'] !== undefined) {
+                    newlineParts.push('F' + words['F'].toFixed(2));
+                }
+
+                for (const key in words) {
+                    if (!['G', 'X', 'Y', 'Z', 'I', 'J', 'K', 'R', 'F'].includes(key)) {
+                        newlineParts.push(key + words[key]);
+                    }
+                }
+
+                let newline = newlineParts.join(' ');
+                if (commentSuffix) newline += ' ' + commentSuffix;
+                
+                // 儲存狀態，完美拆分原始座標與轉換後座標
+                lastRawX = rawX; lastRawY = rawY; lastRawZ = rawZ;
+                lastTransX = fX; lastTransY = fY; lastTransZ = fZ;
+                isFirstMove = false;
+                output.push(newline);
             } else {
                 output.push(line);
             }
@@ -685,13 +1030,28 @@
         refMesh.scale.set(width, width * refAspect, 1);
     }
 
-    // --- 初始化綁定與系統偏好載入 ---
+    // --- 初始化與檔案讀取事件 ---
     document.getElementById('fileInput').addEventListener('change', e => {
         const file = e.target.files[0]; if (!file) return;
         originalFileName = file.name.split('.').slice(0, -1).join('.');
         document.getElementById('fileNameDisplay').innerText = file.name;
         document.getElementById('fileInfo').classList.remove('hidden');
-        const r = new FileReader(); r.onload = ev => { originalGcode = ev.target.result; processAndPreview(); }; r.readAsText(file);
+        
+        const r = new FileReader(); 
+        r.onload = ev => { 
+            let rawText = ev.target.result;
+            
+            if (hasG20Active(rawText)) {
+                rawText = convertInchToMetric(rawText);
+                document.getElementById('metricAlert').classList.remove('hidden');
+            } else {
+                document.getElementById('metricAlert').classList.add('hidden');
+            }
+
+            originalGcode = rawText; 
+            processAndPreview(); 
+        }; 
+        r.readAsText(file);
     });
 
     document.getElementById('imageInput').addEventListener('change', handleImageLoad);
@@ -706,17 +1066,32 @@
     });
 
     document.getElementById('applyBtn').addEventListener('click', processAndPreview);
+    
+    // 智慧過濾置中：排除 G0 移動範圍計算，若加工為空則自動防呆回退
     document.getElementById('centerBtn').addEventListener('click', () => {
         if (!originalGcode) return;
         const p = parseGcode(originalGcode), s = parseFloat(document.getElementById('scaleInput').value) || 1;
         let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        
         p.forEach(seg => {
-            minX = Math.min(minX, seg.to.x, seg.from.x); maxX = Math.max(maxX, seg.to.x, seg.from.x);
-            minY = Math.min(minY, seg.to.y, seg.from.y); maxY = Math.max(maxY, seg.to.y, seg.from.y);
+            if (seg.type !== 'G0') {
+                minX = Math.min(minX, seg.to.x, seg.from.x); maxX = Math.max(maxX, seg.to.x, seg.from.x);
+                minY = Math.min(minY, seg.to.y, seg.from.y); maxY = Math.max(maxY, seg.to.y, seg.from.y);
+            }
         });
-        document.getElementById('offsetX').value = (-( (minX+maxX)/2 * s)).toFixed(2);
-        document.getElementById('offsetY').value = (-( (minY+maxY)/2 * s)).toFixed(2);
-        processAndPreview();
+        
+        if (minX === Infinity) {
+            p.forEach(seg => {
+                minX = Math.min(minX, seg.to.x, seg.from.x); maxX = Math.max(maxX, seg.to.x, seg.from.x);
+                minY = Math.min(minY, seg.to.y, seg.from.y); maxY = Math.max(maxY, seg.to.y, seg.from.y);
+            });
+        }
+
+        if (minX !== Infinity) {
+            document.getElementById('offsetX').value = (-( (minX+maxX)/2 * s)).toFixed(2);
+            document.getElementById('offsetY').value = (-( (minY+maxY)/2 * s)).toFixed(2);
+            processAndPreview();
+        }
     });
 
     document.getElementById('downloadBtn').addEventListener('click', () => {
@@ -744,7 +1119,7 @@
         
         updateThemeIcon(savedTheme);
         updateThreeGrid();
-        updateLanguage(); // 根據 currentLang ('zh') 進行初始文字渲染
+        updateLanguage(); 
     };
 </script>
 
@@ -757,6 +1132,5 @@
                     .catch((err) => console.error('Service Worker registration failed: ', err));
             });
         }
-    </script>
 </body>
 </html>
