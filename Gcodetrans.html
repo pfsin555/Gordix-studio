@@ -143,6 +143,7 @@
         ::-webkit-scrollbar-track { background: var(--bg-color); }
         ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 10px; }
     </style>
+
         <!-- PWA Meta Tags -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0f172a">
@@ -1782,6 +1783,7 @@
         updateThreeGrid();
         updateLanguage(); 
     };
+</script>
         <!-- PWA Service Worker Registration -->
     <script>
         if ('serviceWorker' in navigator) {
@@ -1791,6 +1793,6 @@
                     .catch((err) => console.error('Service Worker registration failed: ', err));
             });
         }
-</script>
+    </script>
 </body>
 </html>
