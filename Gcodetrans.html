@@ -143,7 +143,6 @@
         ::-webkit-scrollbar-track { background: var(--bg-color); }
         ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 10px; }
     </style>
-
         <!-- PWA Meta Tags -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0f172a">
@@ -302,6 +301,30 @@
                         </div>
                     </div>
 
+                    <!-- 刀具直徑補償 (變換刀具) 調整區塊 -->
+                    <div class="border-b border-gray-700/50 pb-3">
+                        <div class="flex items-center gap-2 mb-2">
+                            <input type="checkbox" id="toolChangeEnable" class="w-4 h-4 rounded text-emerald-500 bg-gray-700 border-gray-600 focus:ring-emerald-500 accent-emerald-500">
+                            <label for="toolChangeEnable" class="label-text cursor-pointer" id="txt-label-toolchange-enable">啟用刀具直徑補償 (變換刀具)</label>
+                        </div>
+                        <div id="toolChangeControls" class="space-y-2.5 hidden pl-6">
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="label-text block mb-1" id="txt-label-orig-tooldia">原始刀具直徑 (mm)</label>
+                                    <input type="number" id="origToolDiaInput" value="6.35" min="0.1" step="0.1" class="w-full">
+                                </div>
+                                <div>
+                                    <label class="label-text block mb-1" id="txt-label-new-tooldia">新刀具直徑 (mm)</label>
+                                    <input type="number" id="newToolDiaInput" value="3.175" min="0.1" step="0.1" class="w-full">
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2 pt-1">
+                                <input type="checkbox" id="showWorkpiece" checked class="w-3.5 h-3.5 rounded text-emerald-500 bg-gray-700 border-gray-600 focus:ring-emerald-500 accent-emerald-500">
+                                <label for="showWorkpiece" class="text-[11px] text-gray-400 cursor-pointer">顯示加工結果路徑 (白色虛線)</label>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- 橋位 TAB 調整區塊 -->
                     <div>
                         <div class="flex items-center gap-2 mb-2">
@@ -377,6 +400,7 @@
                     <p id="txt-mouse-r" class="flex items-center"><span class="w-1.5 h-1.5 bg-blue-500 rounded-full mr-1.5"></span>右鍵: 平移</p>
                     <p id="txt-mouse-w" class="flex items-center"><span class="w-1.5 h-1.5 bg-white rounded-full mr-1.5"></span>滾輪: 縮放</p>
                     <p class="flex items-center text-amber-500"><span class="w-1.5 h-1.5 bg-amber-500 rounded-full mr-1.5 animate-pulse"></span>黃色線: 橋位抬刀 (TAB)</p>
+                    <p class="flex items-center text-white"><span class="w-1.5 h-1.5 bg-white rounded-full mr-1.5"></span>白色虛線: 理論加工工件結果 (外輪廓)</p>
                 </div>
             </div>
         </div>
@@ -408,6 +432,9 @@
             labelTargetZFeedrate: "目標 Z 軸下刀速 F (mm/min)",
             retractEnable: "啟用安全抬刀高度調整 (Z > 0)",
             labelTargetRetract: "目標抬刀高度 (0.1~5 mm)",
+            toolChangeEnable: "啟用刀具直徑補償 (變換刀具)",
+            labelOrigToolDia: "原始刀具直徑 (mm)",
+            labelNewToolDia: "新刀具直徑 (mm)",
             tabEnable: "啟用自動橋位 (最後一圈抬刀)",
             labelToolDia: "刀具直徑 (mm)",
             secRefImg: "4. 參考底圖 (選填)",
@@ -448,6 +475,9 @@
             labelTargetZFeedrate: "Target Z Feedrate F (mm/min)",
             retractEnable: "Enable Safe Retract Height (Z > 0)",
             labelTargetRetract: "Target Retract Height (0.1~5 mm)",
+            toolChangeEnable: "Enable Cutter Compensation (Tool Change)",
+            labelOrigToolDia: "Original Tool Dia (mm)",
+            labelNewToolDia: "New Tool Dia (mm)",
             tabEnable: "Enable Auto Tabs (Last Pass)",
             labelToolDia: "Tool Diameter (mm)",
             secRefImg: "4. Reference Image (Optional)",
@@ -513,6 +543,11 @@
         // 抬刀高度調整多國語言更新
         document.getElementById('txt-label-retract-enable').innerText = lang.retractEnable;
         document.getElementById('txt-label-target-retract').innerText = lang.labelTargetRetract;
+
+        // 刀具補償多國語言更新
+        document.getElementById('txt-label-toolchange-enable').innerText = lang.toolChangeEnable;
+        document.getElementById('txt-label-orig-tooldia').innerText = lang.labelOrigToolDia;
+        document.getElementById('txt-label-new-tooldia').innerText = lang.labelNewToolDia;
 
         // TAB 橋位設定多國語言
         document.getElementById('txt-label-tab-enable').innerText = lang.tabEnable;
@@ -583,6 +618,36 @@
         scene.add(grid);
     }
 
+    // --- 尋找標準幾何圓弧圓心 (Concentric Finder) ---
+    function findArcCenter(p1, p2, I, J, R, isCW) {
+        if (I !== null && J !== null) {
+            return { x: p1.x + I, y: p1.y + J };
+        }
+        if (R !== null) {
+            const dx = p2.x - p1.x;
+            const dy = p2.y - p1.y;
+            const d = Math.sqrt(dx * dx + dy * dy);
+            if (d === 0) return { x: p1.x, y: p1.y };
+            
+            let r = Math.abs(R);
+            if (r < d / 2) {
+                r = d / 2 + 0.0001;
+            }
+            const h = Math.sqrt(r * r - (d / 2) * (d / 2));
+            const mx = (p1.x + p2.x) / 2;
+            const my = (p1.y + p2.y) / 2;
+            const nx = -dy / d;
+            const ny = dx / d;
+
+            let factor = (isCW ? 1 : -1) * (R < 0 ? -1 : 1);
+            return {
+                x: mx + factor * h * nx,
+                y: my + factor * h * ny
+            };
+        }
+        return null;
+    }
+
     function initThree() {
         const container = document.getElementById('preview-container');
         scene = new THREE.Scene();
@@ -638,7 +703,7 @@
             else camera.position.divideScalar(1.1);
             camera.lookAt(0,0,0);
         });
-        container.oncontextmenu = e => e.preventDefault();
+        container.oncontextmenu = e => { e.preventDefault(); };
 
         animate();
     }
@@ -797,10 +862,9 @@
         if (retractEnable) {
             let val = parseFloat(document.getElementById('retractHeightInput').value);
             if (isNaN(val)) return 3.0;
-            // 防呆限幅限制 0.1mm 至 5.0mm
             return Math.max(0.1, Math.min(5.0, val));
         }
-        return 3.0; // 預設安全抬刀高度
+        return 3.0;
     }
 
     // 模態記憶與起終點保護 Gcode 解析器
@@ -845,7 +909,6 @@
                 let newY = words['Y'] !== undefined ? words['Y'] : currentPos.y;
                 let newZ = words['Z'] !== undefined ? words['Z'] : currentPos.z;
                 
-                // 統一調整安全抬刀高度 (Z為正值時套用自訂高度)
                 const rHeight = getRetractHeight();
                 if (newZ > 0.0001) {
                     newZ = rHeight;
@@ -902,7 +965,7 @@
                 }
             }
         }
-        return 1200; // 預設走速
+        return 1200;
     }
 
     // --- 偵測第一個垂直下刀切削動作的走速 F (Z 軸獨立走速) ---
@@ -918,7 +981,7 @@
                 }
             }
         }
-        return 400; // 預設 Z 軸下刀速
+        return 400;
     }
 
     // --- 自動偵測原始 G-code 的單次下刀 Stepdown 深度 ---
@@ -929,16 +992,581 @@
                 zs.push(parseFloat(seg.to.z.toFixed(4)));
             }
         });
-        const uniqueZs = [...new Set(zs)].sort((a, b) => b - a); // 由淺到深
+        const uniqueZs = [...new Set(zs)].sort((a, b) => b - a);
         if (uniqueZs.length >= 2) {
             return Math.abs(uniqueZs[1] - uniqueZs[0]);
         } else if (uniqueZs.length === 1) {
             return Math.abs(uniqueZs[0]);
         }
-        return 1.5; // 預設下刀
+        return 1.5;
     }
 
-    // --- 實作自訂層數與總厚度調整 (分層重置與重建演算法) ---
+    // --- 幾何多邊形面積與嵌套判定 ---
+    function getPolygonSignedArea(poly) {
+        let area = 0;
+        const n = poly.length;
+        for (let i = 0; i < n; i++) {
+            const j = (i + 1) % n;
+            area += poly[i].x * poly[j].y - poly[j].x * poly[i].y;
+        }
+        return area / 2;
+    }
+
+    function isPointInPolygon(pt, poly) {
+        let inside = false;
+        const n = poly.length;
+        for (let i = 0, j = n - 1; i < n; j = i++) {
+            const xi = poly[i].x, yi = poly[i].y;
+            const xj = poly[j].x, yj = poly[j].y;
+            const intersect = ((yi > pt.y) !== (yj > pt.y))
+                && (pt.x < (xj - xi) * (pt.y - yi) / (yj - yi) + xi);
+            if (intersect) inside = !inside;
+        }
+        return inside;
+    }
+
+    // --- 核心幾何運算：點對直線投影器 (Point-to-Line Projection) ---
+    function getPointLineProjection(pt, p1, p2) {
+        const dx = p2.x - p1.x;
+        const dy = p2.y - p1.y;
+        const lenSq = dx * dx + dy * dy;
+        if (lenSq < 1e-8) return { x: p1.x, y: p1.y };
+        const t = ((pt.x - p1.x) * dx + (pt.y - p1.y) * dy) / lenSq;
+        return {
+            x: p1.x + t * dx,
+            y: p1.y + t * dy
+        };
+    }
+
+    // --- 核心：高精度二維幾何求交點 (Analytical Edge-Intersection Solver) ---
+    function getLineLineIntersection(L1_p1, L1_p2, L2_p1, L2_p2, P) {
+        const A1 = L1_p2.y - L1_p1.y;
+        const B1 = L1_p1.x - L1_p2.x;
+        const C1 = A1 * L1_p1.x + B1 * L1_p1.y;
+        
+        const A2 = L2_p2.y - L2_p1.y;
+        const B2 = L2_p1.x - L2_p2.x;
+        const C2 = A2 * L2_p1.x + B2 * L2_p1.y;
+        
+        const det = A1 * B2 - A2 * B1;
+        if (Math.abs(det) > 1e-5) {
+            return {
+                x: (B2 * C1 - B1 * C2) / det,
+                y: (A1 * C2 - A2 * C1) / det
+            };
+        }
+        return { x: (L1_p2.x + L2_p1.x) / 2, y: (L1_p2.y + L2_p1.y) / 2 };
+    }
+
+    function getLineCircleIntersection(K1, K2, O, R, P) {
+        const x1 = K1.x - O.x;
+        const y1 = K1.y - O.y;
+        const x2 = K2.x - O.x;
+        const y2 = K2.y - O.y;
+        
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        const drSq = dx * dx + dy * dy;
+        const dr = Math.sqrt(drSq);
+        
+        if (dr < 1e-6) {
+            return { x: K1.x, y: K1.y };
+        }
+        
+        const D = x1 * y2 - x2 * y1;
+        const delta = R * R * drSq - D * D;
+        
+        if (delta < 0) {
+            const t = ((O.x - K1.x) * dx + (O.y - K1.y) * dy) / drSq;
+            const projX = K1.x + t * dx;
+            const projY = K1.y + t * dy;
+            
+            const vx = projX - O.x;
+            const vy = projY - O.y;
+            const len = Math.sqrt(vx * vx + vy * vy);
+            if (len > 1e-5) {
+                return { x: O.x + (vx / len) * R, y: O.y + (vy / len) * R };
+            }
+            return { x: projX, y: projY };
+        }
+        
+        const dy_sgn = dy < 0 ? -1 : 1;
+        const sqrtDelta = Math.sqrt(delta);
+        
+        const p1 = {
+            x: (D * dy + dy_sgn * dx * sqrtDelta) / drSq + O.x,
+            y: (-D * dx + Math.abs(dy) * sqrtDelta) / drSq + O.y
+        };
+        const p2 = {
+            x: (D * dy - dy_sgn * dx * sqrtDelta) / drSq + O.x,
+            y: (-D * dx - Math.abs(dy) * sqrtDelta) / drSq + O.y
+        };
+        
+        const d1 = (p1.x - P.x)**2 + (p1.y - P.y)**2;
+        const d2 = (p2.x - P.x)**2 + (p2.y - P.y)**2;
+        return d1 < d2 ? p1 : p2;
+    }
+
+    function getCircleCircleIntersection(O1, R1, O2, R2, P) {
+        const dx = O2.x - O1.x;
+        const dy = O2.y - O1.y;
+        const d = Math.sqrt(dx * dx + dy * dy);
+        
+        if (d < 1e-5) {
+            const ux = P.x - O1.x;
+            const uy = P.y - O1.y;
+            const len = Math.sqrt(ux*ux + uy*uy);
+            if (len > 1e-5) {
+                return { x: O1.x + (ux / len) * R1, y: O1.y + (uy / len) * R1 };
+            }
+            return { x: O1.x + R1, y: O1.y };
+        }
+        
+        if (d > R1 + R2 || d < Math.abs(R1 - R2)) {
+            const ux = P.x - O1.x;
+            const uy = P.y - O1.y;
+            const len1 = Math.sqrt(ux*ux + uy*uy);
+            const p1 = len1 > 1e-5 ? { x: O1.x + (ux / len1) * R1, y: O1.y + (uy / len1) * R1 } : { x: O1.x + R1, y: O1.y };
+            
+            const vx = P.x - O2.x;
+            const vy = P.y - O2.y;
+            const len2 = Math.sqrt(vx*vx + vy*vy);
+            const p2 = len2 > 1e-5 ? { x: O2.x + (vx / len2) * R2, y: O2.y + (vy / len2) * R2 } : { x: O2.x + R2, y: O2.y };
+            
+            return { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
+        }
+        
+        const a = (R1 * R1 - R2 * R2 + d * d) / (2 * d);
+        const h = Math.sqrt(Math.max(0, R1 * R1 - a * a));
+        
+        const p0x = O1.x + (a * dx) / d;
+        const p0y = O1.y + (a * dy) / d;
+        
+        const rx = -dy / d;
+        const ry = dx / d;
+        
+        const p1 = { x: p0x + h * rx, y: p0y + h * ry };
+        const p2 = { x: p0x - h * rx, y: p0y - h * ry };
+        
+        const d1 = (p1.x - P.x)**2 + (p1.y - P.y)**2;
+        const d2 = (p2.x - P.x)**2 + (p2.y - P.y)**2;
+        return d1 < d2 ? p1 : p2;
+    }
+
+    function getIntersection(geo1, geo2, P) {
+        if (geo1.type === "LINE" && geo2.type === "LINE") {
+            const isPoint1 = Math.sqrt((geo1.p2.x - geo1.p1.x)**2 + (geo1.p2.y - geo1.p1.y)**2) < 1e-4;
+            const isPoint2 = Math.sqrt((geo2.p2.x - geo2.p1.x)**2 + (geo2.p2.y - geo2.p1.y)**2) < 1e-4;
+            
+            if (isPoint1 && isPoint2) {
+                return { x: geo1.p1.x, y: geo1.p1.y };
+            }
+            if (isPoint1) {
+                return getPointLineProjection(geo1.p1, geo2.p1, geo2.p2);
+            }
+            if (isPoint2) {
+                return getPointLineProjection(geo2.p1, geo1.p1, geo1.p2);
+            }
+            return getLineLineIntersection(geo1.p1, geo1.p2, geo2.p1, geo2.p2, P);
+        }
+        if (geo1.type === "LINE" && geo2.type === "ARC") {
+            return getLineCircleIntersection(geo1.p1, geo1.p2, geo2.center, geo2.radius, P);
+        }
+        if (geo1.type === "ARC" && geo2.type === "LINE") {
+            return getLineCircleIntersection(geo2.p1, geo2.p2, geo1.center, geo1.radius, P);
+        }
+        if (geo1.type === "ARC" && geo2.type === "ARC") {
+            return getCircleCircleIntersection(geo1.center, geo1.radius, geo2.center, geo2.radius, P);
+        }
+        return { x: P.x, y: P.y };
+    }
+
+    // --- 核心：單一鏈單次等距偏置函數 ---
+    function applySingleOffsetChain(chain, loop, dist) {
+        const n = chain.length;
+        if (n === 0) return;
+
+        const offset_geometries = [];
+        for (let i = 0; i < n; i++) {
+            const seg = chain[i];
+            if (seg.type === 'G1' || seg.type === 'G0') {
+                const dx = seg.to.x - seg.from.x;
+                const dy = seg.to.y - seg.from.y;
+                const len = Math.sqrt(dx * dx + dy * dy);
+                if (len > 1e-6) {
+                    const ux = dx / len;
+                    const uy = dy / len;
+                    // 計算基於多邊形旋轉方向的外向法向量
+                    const nx = loop.isCCW ? uy : -uy;
+                    const ny = loop.isCCW ? -ux : ux;
+                    
+                    offset_geometries.push({
+                        type: "LINE",
+                        p1: { x: seg.from.x + nx * dist, y: seg.from.y + ny * dist },
+                        p2: { x: seg.to.x + nx * dist, y: seg.to.y + ny * dist }
+                    });
+                } else {
+                    offset_geometries.push({
+                        type: "LINE",
+                        p1: { ...seg.from },
+                        p2: { ...seg.to }
+                    });
+                }
+            } else if (seg.type === 'G2' || seg.type === 'G3') {
+                const center = findArcCenter(seg.from, seg.to, seg.I, seg.J, seg.R, seg.type === 'G2');
+                if (center) {
+                    const R_orig = Math.sqrt((seg.from.x - center.x)**2 + (seg.from.y - center.y)**2);
+                    // 根據局部法向調整半徑增加/減少：G3在CCW中半徑向外增加，G2在CCW中半徑向外減少
+                    const rSign = (loop.isCCW === (seg.type === 'G3')) ? 1 : -1;
+                    const R_new = R_orig + rSign * dist;
+                    
+                    // 🚨【退化圓弧保護】若新半徑小於等於 0.1mm，直接將其降維退化為 G1 直線，收縮在圓心點上
+                    if (R_new <= 0.1) {
+                        offset_geometries.push({
+                            type: "LINE",
+                            p1: { x: center.x, y: center.y },
+                            p2: { x: center.x, y: center.y }
+                        });
+                        seg.type = 'G1';
+                        seg.I = null;
+                        seg.J = null;
+                        seg.R = null;
+                    } else {
+                        offset_geometries.push({
+                            type: "ARC",
+                            center: center,
+                            radius: R_new,
+                            orig_R: R_orig,
+                            orig_I: seg.I,
+                            orig_J: seg.J,
+                            orig_R_val: seg.R,
+                            typeG: seg.type
+                        });
+                    }
+                } else {
+                    offset_geometries.push({
+                        type: "LINE",
+                        p1: { ...seg.from },
+                        p2: { ...seg.to }
+                    });
+                    seg.type = 'G1';
+                    seg.I = null;
+                    seg.J = null;
+                    seg.R = null;
+                }
+            }
+        }
+
+        const new_vertices = [];
+        if (loop.isClosed) {
+            for (let i = 0; i < n; i++) {
+                const prev_idx = (i - 1 + n) % n;
+                const curr_idx = i;
+                const orig_pt = chain[curr_idx].from;
+
+                const P_int = getIntersection(offset_geometries[prev_idx], offset_geometries[curr_idx], orig_pt);
+                new_vertices.push(P_int);
+            }
+
+            for (let i = 0; i < n; i++) {
+                const prev_idx = (i - 1 + n) % n;
+                const curr_idx = i;
+                const joint = new_vertices[curr_idx];
+
+                chain[prev_idx].to.x = joint.x;
+                chain[prev_idx].to.y = joint.y;
+                chain[curr_idx].from.x = joint.x;
+                chain[curr_idx].from.y = joint.y;
+            }
+        } else {
+            // 開放路徑
+            for (let i = 1; i < n; i++) {
+                const orig_pt = chain[i].from;
+                const P_int = getIntersection(offset_geometries[i-1], offset_geometries[i], orig_pt);
+                
+                chain[i-1].to.x = P_int.x;
+                chain[i-1].to.y = P_int.y;
+                chain[i].from.x = P_int.x;
+                chain[i].from.y = P_int.y;
+            }
+            if (offset_geometries[0].type === "LINE") {
+                chain[0].from.x = offset_geometries[0].p1.x;
+                chain[0].from.y = offset_geometries[0].p1.y;
+            }
+            if (offset_geometries[n-1].type === "LINE") {
+                chain[n-1].to.x = offset_geometries[n-1].p2.x;
+                chain[n-1].to.y = offset_geometries[n-1].p2.y;
+            }
+        }
+
+        // 重新更新非退化圓弧幾何參數
+        for (let i = 0; i < n; i++) {
+            const seg = chain[i];
+            const geom = offset_geometries[i];
+            if (seg.type === 'G2' || seg.type === 'G3') {
+                if (geom && geom.type === 'ARC') {
+                    const center = geom.center;
+                    const R_new = geom.radius;
+
+                    let newI = center.x - seg.from.x;
+                    let newJ = center.y - seg.from.y;
+
+                    const origI = geom.orig_I !== null ? geom.orig_I : 0;
+                    const origJ = geom.orig_J !== null ? geom.orig_J : 0;
+
+                    // 4. 原軸向值為 0 保持 0 規則
+                    if (Math.abs(origI) < 1e-4) newI = 0;
+                    if (Math.abs(origJ) < 1e-4) newJ = 0;
+
+                    if (R_new <= 0.1) {
+                        seg.type = 'G1';
+                        seg.I = null;
+                        seg.J = null;
+                        seg.R = null;
+                    } else {
+                        seg.I = newI;
+                        seg.J = newJ;
+                        if (geom.orig_R_val !== null) {
+                            seg.R = Math.sign(geom.orig_R_val) * R_new;
+                        }
+
+                        // 強制終點等半徑正交投影 (保證 100% 同心)
+                        const new_center = { x: seg.from.x + newI, y: seg.from.y + newJ };
+                        const R_actual = Math.sqrt(newI * newI + newJ * newJ);
+                        const end_vector = { x: seg.to.x - new_center.x, y: seg.to.y - new_center.y };
+                        const end_dist = Math.sqrt(end_vector.x**2 + end_vector.y**2);
+                        if (end_dist > 1e-5) {
+                            seg.to.x = new_center.x + (end_vector.x / end_dist) * R_actual;
+                            seg.to.y = new_center.y + (end_vector.y / end_dist) * R_actual;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // --- 核心：Z 軸斜下刀傳播修正 ---
+    function propagateOffsets(origPath, modifiedPath) {
+        for (let i = 0; i < modifiedPath.length; i++) {
+            const hasFromOffset = Math.abs(modifiedPath[i].from.x - origPath[i].from.x) > 1e-6 || 
+                                  Math.abs(modifiedPath[i].from.y - origPath[i].from.y) > 1e-6;
+            if (hasFromOffset) {
+                const offX = modifiedPath[i].from.x - origPath[i].from.x;
+                const offY = modifiedPath[i].from.y - origPath[i].from.y;
+                let prevIdx = i - 1;
+                let currentTargetXY = { ...origPath[i].from };
+                
+                while (prevIdx >= 0) {
+                    const distTo = Math.sqrt(
+                        (origPath[prevIdx].to.x - currentTargetXY.x)**2 + 
+                        (origPath[prevIdx].to.y - currentTargetXY.y)**2
+                    );
+                    if (distTo < 1e-4) {
+                        modifiedPath[prevIdx].to.x = origPath[prevIdx].to.x + offX;
+                        modifiedPath[prevIdx].to.y = origPath[prevIdx].to.y + offY;
+                        
+                        const distFrom = Math.sqrt(
+                            (origPath[prevIdx].from.x - currentTargetXY.x)**2 + 
+                            (origPath[prevIdx].from.y - currentTargetXY.y)**2
+                        );
+                        if (distFrom < 1e-4) {
+                            modifiedPath[prevIdx].from.x = origPath[prevIdx].from.x + offX;
+                            modifiedPath[prevIdx].from.y = origPath[prevIdx].from.y + offY;
+                            prevIdx--;
+                        } else {
+                            break;
+                        }
+                    } else {
+                        break;
+                    }
+                }
+            }
+        }
+
+        for (let i = modifiedPath.length - 1; i >= 0; i--) {
+            const hasToOffset = Math.abs(modifiedPath[i].to.x - origPath[i].to.x) > 1e-6 || 
+                                Math.abs(modifiedPath[i].to.y - origPath[i].to.y) > 1e-6;
+            if (hasToOffset) {
+                const offX = modifiedPath[i].to.x - origPath[i].to.x;
+                const offY = modifiedPath[i].to.y - origPath[i].to.y;
+                let nextIdx = i + 1;
+                let currentTargetXY = { ...origPath[i].to };
+                
+                while (nextIdx < modifiedPath.length) {
+                    const distFrom = Math.sqrt(
+                        (origPath[nextIdx].from.x - currentTargetXY.x)**2 + 
+                        (origPath[nextIdx].from.y - currentTargetXY.y)**2
+                    );
+                    if (distFrom < 1e-4) {
+                        modifiedPath[nextIdx].from.x = origPath[nextIdx].from.x + offX;
+                        modifiedPath[nextIdx].from.y = origPath[nextIdx].from.y + offY;
+                        
+                        const distTo = Math.sqrt(
+                            (origPath[nextIdx].to.x - currentTargetXY.x)**2 + 
+                            (origPath[nextIdx].to.y - currentTargetXY.y)**2
+                        );
+                        if (distTo < 1e-4) {
+                            modifiedPath[nextIdx].to.x = origPath[nextIdx].to.x + offX;
+                            modifiedPath[nextIdx].to.y = origPath[nextIdx].to.y + offY;
+                            nextIdx++;
+                        } else {
+                            break;
+                        }
+                    } else {
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    // --- 核心：升級雙步驟刀徑偏置補償演算法 ---
+    function applyTwoStepCutterCompensation(pathData) {
+        const toolChangeEnable = document.getElementById('toolChangeEnable') && document.getElementById('toolChangeEnable').checked;
+        if (!toolChangeEnable) return { workpiecePath: null, newToolPath: pathData };
+
+        const origToolDia = parseFloat(document.getElementById('origToolDiaInput').value) || 6.35;
+        let newToolDia = parseFloat(document.getElementById('newToolDiaInput').value) || 3.175;
+        newToolDia = Math.max(0.1, newToolDia);
+
+        const R_orig = origToolDia / 2;
+        const R_new = newToolDia / 2;
+
+        // 1. 切割加工鏈
+        const chains = [];
+        let currentChain = null;
+
+        pathData.forEach((seg, idx) => {
+            const isCut = (seg.from.z < -0.001 || seg.to.z < -0.001) && seg.type !== 'G0' && !seg.isStartOrEndHome;
+            if (isCut) {
+                if (!currentChain) {
+                    currentChain = [];
+                    chains.push(currentChain);
+                }
+                currentChain.push(seg);
+            } else {
+                currentChain = null;
+            }
+        });
+
+        // 2. 判斷多邊形特徵與嵌套
+        const closedLoops = [];
+        chains.forEach(chain => {
+            if (chain.length < 3) return;
+            const first = chain[0].from;
+            const last = chain[chain.length - 1].to;
+            const dist = Math.sqrt((first.x - last.x)**2 + (first.y - last.y)**2);
+            const isClosed = dist < 0.5;
+
+            const poly = chain.map(seg => ({ x: seg.from.x, y: seg.from.y }));
+            const cleanPoly = [];
+            poly.forEach(pt => {
+                if (cleanPoly.length === 0 || Math.sqrt((pt.x - cleanPoly[cleanPoly.length-1].x)**2 + (pt.y - cleanPoly[cleanPoly.length-1].y)**2) > 1e-4) {
+                    cleanPoly.push(pt);
+                }
+            });
+
+            if (cleanPoly.length >= 3) {
+                const area = getPolygonSignedArea(cleanPoly);
+                if (Math.abs(area) > 1e-4) {
+                    closedLoops.push({
+                        chain: chain,
+                        poly: cleanPoly,
+                        area: area,
+                        isCCW: area > 0,
+                        isInner: false,
+                        isClosed: isClosed
+                    });
+                }
+            }
+        });
+
+        closedLoops.forEach((loop, idx) => {
+            if (!loop.isClosed) return;
+            const poly = loop.poly;
+            const V0 = poly[0];
+            const V1 = poly[1];
+            let dx = V1.x - V0.x;
+            let dy = V1.y - V0.y;
+            let len = Math.sqrt(dx*dx + dy*dy);
+            let nx = 0, ny = 0;
+            if (len > 1e-6) {
+                if (loop.isCCW) {
+                    nx = dy / len; ny = -dx / len;
+                } else {
+                    nx = -dy / len; ny = dx / len;
+                }
+            }
+            const testPt = { x: V0.x - nx * 0.1, y: V0.y - ny * 0.1 };
+
+            let containmentCount = 0;
+            closedLoops.forEach((otherLoop, otherIdx) => {
+                if (!otherLoop.isClosed || idx === otherIdx) return;
+                if (isPointInPolygon(testPt, otherLoop.poly)) {
+                    containmentCount++;
+                }
+            });
+
+            loop.isInner = (containmentCount % 2 === 1);
+        });
+
+        // 3. 克隆出獨立的加工結果路徑 (Workpiece) 與新刀具中心路徑 (NewTool)
+        const cloneSegments = (segs) => segs.map(s => ({
+            from: { ...s.from },
+            to: { ...s.to },
+            f: s.f,
+            type: s.type,
+            I: s.I,
+            J: s.J,
+            R: s.R,
+            isStartOrEndHome: s.isStartOrEndHome,
+            lineIdx: s.lineIdx
+        }));
+
+        const workpiecePath = cloneSegments(pathData);
+        const newToolPath = cloneSegments(pathData);
+
+        const mapChainToClone = (origChain, cloneList) => {
+            return origChain.map(origSeg => {
+                const origIdx = pathData.indexOf(origSeg);
+                return cloneList[origIdx];
+            });
+        };
+
+        closedLoops.forEach(loop => {
+            const workpieceChain = mapChainToClone(loop.chain, workpiecePath);
+            const toolChain = mapChainToClone(loop.chain, newToolPath);
+
+            // 決定偏置距離 (d1: 還原加工結果，d2: 依加工結果推導新路徑)
+            // 規則：封閉外輪廓內縮 (-R)，內部孔洞零件外擴 (+R)
+            const d1 = loop.isInner ? R_orig : -R_orig;
+            const d2 = loop.isInner ? -R_new : R_new;
+
+            // Step 1: 從原始刀路 Offset 到「加工結果理論工件輪廓」
+            applySingleOffsetChain(workpieceChain, loop, d1);
+
+            // 將 toolChain 更新為剛算好的工件成品輪廓，以便下一步在此基礎上做偏置
+            workpieceChain.forEach((wpSeg, sIdx) => {
+                toolChain[sIdx].from = { ...wpSeg.from };
+                toolChain[sIdx].to = { ...wpSeg.to };
+                toolChain[sIdx].I = wpSeg.I;
+                toolChain[sIdx].J = wpSeg.J;
+                toolChain[sIdx].R = wpSeg.R;
+                toolChain[sIdx].type = wpSeg.type;
+            });
+
+            // Step 2: 從工件輪廓 Offset 回「新刀具直徑的新中心路徑」
+            applySingleOffsetChain(toolChain, loop, d2);
+        });
+
+        // 4. 傳播偏置 (補正 Z Plunge 行程)
+        propagateOffsets(pathData, workpiecePath);
+        propagateOffsets(pathData, newToolPath);
+
+        return { workpiecePath, newToolPath };
+    }
+
+    // --- 實作自訂層數與總厚度調整 ---
     function applyThicknessAdjustment(pathData) {
         const thickEnable = document.getElementById('thickEnable') && document.getElementById('thickEnable').checked;
         if (!thickEnable) return pathData;
@@ -947,13 +1575,10 @@
         const targetDepth = parseFloat(document.getElementById('targetThickInput').value) || 0;
         const layers = parseInt(document.getElementById('targetLayersInput').value) || 12;
 
-        // 防呆保護：若數值不合規，跳過調整
         if (detectedDepth <= 0.0001 || targetDepth <= 0.0001 || layers < 1) return pathData;
 
-        // 層數均分計算等比例 Stepdown
         const stepdown = targetDepth / layers;
 
-        // 1. 將路徑分割為 rapid (快速定位、抬刀) 與 contour (切削工件) 區塊
         const blocks = [];
         let currentBlock = { type: 'rapid', segments: [] };
         blocks.push(currentBlock);
@@ -979,19 +1604,17 @@
 
         blocks.forEach(block => {
             if (block.type === 'contour' && block.segments.length > 0) {
-                // A. 找出此 contour 中的所有目標負 Z 座標
                 const zs = [];
                 block.segments.forEach(seg => {
                     if (seg.to.z < -0.001) {
                         zs.push(parseFloat(seg.to.z.toFixed(4)));
                     }
                 });
-                const uniqueZs = [...new Set(zs)].sort((a, b) => b - a); // 從高到低排序，如 [-7, -14, -21]
+                const uniqueZs = [...new Set(zs)].sort((a, b) => b - a);
 
                 if (uniqueZs.length > 0) {
-                    const firstZ = uniqueZs[0]; // 第一個下刀深度
+                    const firstZ = uniqueZs[0];
 
-                    // B. 提取出第一圈加工的 2D 軌跡 (Profile)
                     const profile = [];
                     for (let seg of block.segments) {
                         if (seg.to.z < firstZ - 0.01 || seg.to.z > -0.001) {
@@ -1001,28 +1624,24 @@
                     }
 
                     if (profile.length > 0) {
-                        // C. 計算全新分層 Z 軸座標列表 (走 M 圈)
                         const newZs = [];
                         let current = stepdown;
                         while (current < targetDepth - 1e-4) {
                             newZs.push(-current);
                             current += stepdown;
                         }
-                        newZs.push(-targetDepth); // 最底下一圈
+                        newZs.push(-targetDepth);
 
-                        // D. 重建所有分層 passes
                         const contourRebuilt = [];
-                        let prevZ = block.segments[0].from.z; // 第一個 plunge 的起始高度
+                        let prevZ = block.segments[0].from.z;
 
                         newZs.forEach((targetZ) => {
                             profile.forEach((origSeg, segIdx) => {
                                 const newSeg = { ...origSeg };
                                 if (segIdx === 0) {
-                                    // 垂直下刀/斜進刀段
                                     newSeg.from = { ...origSeg.from, z: prevZ };
                                     newSeg.to = { ...origSeg.to, z: targetZ };
                                 } else {
-                                    // 平面切削段
                                     newSeg.from = { ...origSeg.from, z: targetZ };
                                     newSeg.to = { ...origSeg.to, z: targetZ };
                                 }
@@ -1031,7 +1650,6 @@
                             prevZ = targetZ;
                         });
 
-                        // E. 接回原始 contour 的最後抬刀 retract 移動段
                         const lastOrigSeg = block.segments[block.segments.length - 1];
                         if (lastOrigSeg && lastOrigSeg.to.z > -0.001) {
                             const finalLift = { ...lastOrigSeg };
@@ -1041,12 +1659,10 @@
                         }
 
                         rebuiltSegments.push(...contourRebuilt);
-                        return; // 已重建，不推入原始 contour
+                        return;
                     }
                 }
             }
-
-            // 若不符合重建條件或為 rapid 區塊，推入原始段落
             rebuiltSegments.push(...block.segments);
         });
 
@@ -1083,7 +1699,7 @@
         return path;
     }
 
-    // --- 計算任意 2D 點到圓弧段（G2/G3）的最短歐幾里得距離 ---
+    // --- 計算任意 2D 點到圓弧段的最短歐幾里得距離 ---
     function getDistanceToArc(pt, arcSeg) {
         const p1 = arcSeg.from;
         const p2 = arcSeg.to;
@@ -1220,7 +1836,6 @@
             }
 
             if (inTab) {
-                // 1. 獨立垂直抬刀段 (保持XY不動，單獨向上抬升 Z 軸)
                 subSegs.push({
                     from: { x: fromPt.x, y: fromPt.y, z: fromPt.z },
                     to: { x: fromPt.x, y: fromPt.y, z: fromPt.z + tabHeight },
@@ -1231,7 +1846,6 @@
                     lineIdx: seg.lineIdx
                 });
 
-                // 2. 抬升高度後的空中水平移動跨越段
                 subSegs.push({
                     from: { x: fromPt.x, y: fromPt.y, z: fromPt.z + tabHeight },
                     to: { x: toPt.x, y: toPt.y, z: toPt.z + tabHeight },
@@ -1242,7 +1856,6 @@
                     lineIdx: seg.lineIdx
                 });
 
-                // 3. 獨立垂直下刀段 (保持XY不動，單獨向下扎刀切削)
                 subSegs.push({
                     from: { x: toPt.x, y: toPt.y, z: toPt.z + tabHeight },
                     to: { x: toPt.x, y: toPt.y, z: toPt.z },
@@ -1472,7 +2085,6 @@
             let fZ = seg.to.z;
             const rHeight = getRetractHeight();
             
-            // 統一 Z 為正值時套用自訂抬刀高度
             if (fZ > 0.0001) {
                 fZ = rHeight;
             }
@@ -1497,7 +2109,6 @@
                 hasOutputXYFInCurrentCut = false;
             }
 
-            // --- 修正 Z 軸純移動偵測邏輯 ---
             let fFromX = 0, fFromY = 0;
             if (seg.isStartOrEndHome) {
                 fFromX = 0; fFromY = 0;
@@ -1536,7 +2147,6 @@
                 }
             }
 
-            // 走速智慧分流邏輯 (XY軸與Z軸分流處理)
             let segF = seg.f;
             if (seg.type !== 'G0') {
                 const isXYMove = !isZOnlyMove && (seg.type === 'G1' || seg.type === 'G2' || seg.type === 'G3');
@@ -1561,7 +2171,6 @@
                         }
                     }
                 } else {
-                    // 單純垂直 Z 軸位移，施加目標 Z 軸走速
                     if (feedrateEnable) {
                         segF = targetZFeedrate;
                     }
@@ -1583,6 +2192,7 @@
         return gcodeLines;
     }
 
+    // --- 計算並顯示 3D 渲染與虛線預覽 ---
     function processAndPreview() {
         if (!originalGcode) return;
         const scale = parseFloat(document.getElementById('scaleInput').value) || 1;
@@ -1593,13 +2203,18 @@
 
         let pathData = parseGcode(originalGcode);
         
-        // 1. 厚度縮放與分層重建
+        // 1. 執行高精度刀具直徑幾何雙步驟補償 (等距偏移)
+        const compResults = applyTwoStepCutterCompensation(pathData);
+        const workpiecePath = compResults.workpiecePath;
+        pathData = compResults.newToolPath; // 接下來的切削、下刀與分層皆套用補償後的新刀路
+
+        // 2. 厚度縮放與分層重建
         pathData = applyThicknessAdjustment(pathData);
 
-        // 2. 走速 F 調整
+        // 3. 走速 F 調整
         pathData = applyFeedrateAdjustment(pathData);
 
-        // 3. 自動配置與偏移 TAB 橋位 (最深層 pass)
+        // 4. 自動配置與偏移 TAB 橋位
         pathData = applyTabsToPaths(pathData);
 
         if (gcodeGroup) scene.remove(gcodeGroup);
@@ -1607,18 +2222,56 @@
 
         let totalDist = 0, totalTime = 0, lastP = { x: 0, y: 0, z: 0 }, isF = true;
 
-        pathData.forEach((seg, idx) => {
-            const trans = (p, isHome) => {
-                if (isHome) {
-                    return { x: 0, y: 0, z: p.z };
-                }
-                return {
-                    x: (p.x * Math.cos(rotRad) - p.y * Math.sin(rotRad)) * scale + offX,
-                    y: (p.x * Math.sin(rotRad) + p.y * Math.cos(rotRad)) * scale + offY,
-                    z: p.z
-                };
+        const trans = (p, isHome) => {
+            if (isHome) {
+                return { x: 0, y: 0, z: p.z };
+            }
+            return {
+                x: (p.x * Math.cos(rotRad) - p.y * Math.sin(rotRad)) * scale + offX,
+                y: (p.x * Math.sin(rotRad) + p.y * Math.cos(rotRad)) * scale + offY,
+                z: p.z
             };
+        };
 
+        // A. 繪製第一步：加工工件結果 (白色虛線預覽)
+        const showWorkpiece = document.getElementById('showWorkpiece') && document.getElementById('showWorkpiece').checked;
+        if (workpiecePath && showWorkpiece) {
+            let lastWpP = { x: 0, y: 0, z: 0 }, isWpF = true;
+            workpiecePath.forEach((seg, idx) => {
+                const p2 = trans(seg.to, seg.isStartOrEndHome);
+                const isFirstSegmentHome = idx === 0 && (Math.abs(seg.from.x) < 1e-4 && Math.abs(seg.from.y) < 1e-4);
+                const p1 = isWpF ? trans(seg.from, isFirstSegmentHome) : { ...lastWpP };
+
+                let points = [];
+                if (seg.type === 'G2' || seg.type === 'G3') {
+                    let transI = null, transJ = null;
+                    if (seg.I !== null || seg.J !== null) {
+                        const rawI = seg.I || 0, rawJ = seg.J || 0;
+                        transI = (rawI * Math.cos(rotRad) - rawJ * Math.sin(rotRad)) * scale;
+                        transJ = (rawI * Math.sin(rotRad) + rawJ * Math.cos(rotRad)) * scale;
+                    }
+                    const transR = seg.R !== null ? seg.R * scale : null;
+                    points = generateArcPoints(p1, p2, transI, transJ, transR, seg.type === 'G2');
+                } else {
+                    points = [new THREE.Vector3(p1.x, p1.y, p1.z), new THREE.Vector3(p2.x, p2.y, p2.z)];
+                }
+
+                const geo = new THREE.BufferGeometry().setFromPoints(points);
+                const lineMat = new THREE.LineDashedMaterial({
+                    color: 0xffffff,
+                    dashSize: 3,
+                    gapSize: 3
+                });
+                const meshLine = new THREE.Line(geo, lineMat);
+                meshLine.computeLineDistances(); // 啟用虛線圖樣計算
+                gcodeGroup.add(meshLine);
+
+                lastWpP = { ...p2 }; isWpF = false;
+            });
+        }
+
+        // B. 繪製第二步：新刀具路徑 (實線綠色路徑)
+        pathData.forEach((seg, idx) => {
             const p2 = trans(seg.to, seg.isStartOrEndHome);
             const dXY = Math.sqrt((p2.x - lastP.x)**2 + (p2.y - lastP.y)**2);
             const zM = Math.abs(seg.to.z - lastP.z) > 0.0001;
@@ -1633,11 +2286,9 @@
             let points = [];
 
             if (seg.type === 'G2' || seg.type === 'G3') {
-                let transI = null;
-                let transJ = null;
+                let transI = null, transJ = null;
                 if (seg.I !== null || seg.J !== null) {
-                    const rawI = seg.I || 0;
-                    const rawJ = seg.J || 0;
+                    const rawI = seg.I || 0, rawJ = seg.J || 0;
                     transI = (rawI * Math.cos(rotRad) - rawJ * Math.sin(rotRad)) * scale;
                     transJ = (rawI * Math.sin(rotRad) + rawJ * Math.cos(rotRad)) * scale;
                 }
@@ -1669,12 +2320,12 @@
         document.getElementById('downloadBtn').disabled = false;
     }
 
-    // --- 產生調整後並優化的 G-code 檔案 (確保標頭包含 G21 G90，且區塊按正確順序編譯) ---
+    // --- 產生調整後並優化的 G-code 檔案 ---
     function generateGcode() {
         const lines = originalGcode.split('\n');
         let pathData = parseGcode(originalGcode);
         
-        // 1. 偵測原始 contour 切削動作在 G-code 原檔中的 LineIdx 區間
+        // 1. 偵測原始切削動作範圍
         const contourRanges = [];
         let currentRange = null;
 
@@ -1693,12 +2344,15 @@
             }
         });
 
-        // 2. 進行厚度、分層、走速與 TAB 調整
+        // 2. 套用高精度雙步驟刀具補償
+        const compResults = applyTwoStepCutterCompensation(pathData);
+        pathData = compResults.newToolPath;
+
+        // 3. 厚度分層、走速、自動橋位
         pathData = applyThicknessAdjustment(pathData);
         pathData = applyFeedrateAdjustment(pathData);
         pathData = applyTabsToPaths(pathData);
 
-        // 3. 將處理後的路徑，依照原始 lineIdx 區間分類
         const processedContours = contourRanges.map(range => ({
             range: range,
             segments: []
@@ -1721,7 +2375,6 @@
             }
         });
 
-        // 4. 輸出最終重組的 G-code 檔案
         const output = [];
         let insertedHeader = false;
 
@@ -1736,7 +2389,6 @@
                 }
             }
 
-            // 判斷當前行數是否屬於任一個 contour 區間
             let activeContour = null;
             for (let pc of processedContours) {
                 if (i >= pc.range.start && i <= pc.range.end) {
@@ -1763,7 +2415,6 @@
                     output.push(line);
                 }
             } else {
-                // 清理可能衝突的初始設定代碼
                 let cleanLine = line;
                 if (!cmd.startsWith('(') && !cmd.startsWith(';')) {
                     let commentSuffix = "";
@@ -1794,25 +2445,21 @@
             output.push("G21", "G90");
         }
 
-        // --- 核心優化：G-code 最終連續相同行過濾檢查 ---
         const cleanOutput = [];
         for (let i = 0; i < output.length; i++) {
             const currentLine = output[i].trim();
             
-            // 跳過空行
             if (currentLine === "") {
                 if (cleanOutput.length > 0 && cleanOutput[cleanOutput.length - 1].trim() === "") {
-                    continue; // 避免連續空行
+                    continue; 
                 }
                 cleanOutput.push(output[i]);
                 continue;
             }
             
-            // 標準化比較（轉大寫並去除多餘空格）
             const normCurrent = currentLine.replace(/\s+/g, ' ').toUpperCase();
             const normLast = cleanOutput.length > 0 ? cleanOutput[cleanOutput.length - 1].trim().replace(/\s+/g, ' ').toUpperCase() : null;
             
-            // 若與上一行完全相同則過濾
             if (normCurrent === normLast) {
                 continue; 
             }
@@ -1887,7 +2534,6 @@
 
             originalGcode = rawText; 
 
-            // 自動偵測原始 G-code 加工總深度與單次下刀 Stepdown 深度，並同步填入層數與對應欄位
             const initialPathData = parseGcode(originalGcode);
             const detectedDepth = detectOriginalDepth(initialPathData);
             const origThickInput = document.getElementById('origThickInput');
@@ -1896,9 +2542,8 @@
 
             if (detectedDepth > 0) {
                 origThickInput.value = detectedDepth.toFixed(4);
-                targetThickInput.value = detectedDepth.toFixed(4); // 預設目標深度等於原始深度
+                targetThickInput.value = detectedDepth.toFixed(4);
                 
-                // 自動偵測單次下刀深度並將其轉化為層數寫入
                 const detectedStepdown = detectOriginalStepdown(initialPathData);
                 const calculatedLayers = Math.max(1, Math.round(detectedDepth / detectedStepdown));
                 targetLayersInput.value = calculatedLayers;
@@ -1908,11 +2553,9 @@
                 targetLayersInput.value = "12";
             }
 
-            // 自動偵測並填入原始 F XY 走速
             const detectedF = detectFirstFeedrate(initialPathData);
             document.getElementById('targetFeedrateInput').value = detectedF.toFixed(0);
 
-            // 自動偵測並填入原始 Z 軸下刀速
             const detectedZF = detectFirstZFeedrate(initialPathData);
             document.getElementById('targetZFeedrateInput').value = detectedZF.toFixed(0);
 
@@ -1983,6 +2626,38 @@
 
     document.getElementById('retractHeightInput').addEventListener('input', () => {
         processAndPreview(); 
+    });
+
+    // 監聽進階選項：刀具直徑補償啟用與變更
+    document.getElementById('toolChangeEnable').addEventListener('change', e => {
+        const toolChangeControls = document.getElementById('toolChangeControls');
+        if (e.target.checked) {
+            toolChangeControls.classList.remove('hidden');
+        } else {
+            toolChangeControls.classList.add('hidden');
+        }
+        processAndPreview(); 
+    });
+
+    document.getElementById('origToolDiaInput').addEventListener('input', () => {
+        processAndPreview(); 
+    });
+
+    document.getElementById('newToolDiaInput').addEventListener('input', () => {
+        processAndPreview(); 
+    });
+
+    document.getElementById('showWorkpiece').addEventListener('change', () => {
+        processAndPreview(); 
+    });
+
+    // 針對新刀具直徑輸入框強制失焦防呆 (限制最小 0.1 mm)
+    document.getElementById('newToolDiaInput').addEventListener('blur', e => {
+        let val = parseFloat(e.target.value);
+        if (isNaN(val) || val < 0.1) {
+            e.target.value = 0.1;
+            processAndPreview();
+        }
     });
 
     // 監聽進階選項：TAB 啟用與數值變更
