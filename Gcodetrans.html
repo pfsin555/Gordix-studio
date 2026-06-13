@@ -150,7 +150,6 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" href="icon-192.png">
-
 </head>
 <body class="pb-4">
 
@@ -172,7 +171,7 @@
         <button id="langBtn" onclick="toggleLanguage()" class="px-3 py-1.5 rounded-lg text-[11px] font-bold bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-all flex items-center gap-2">
             EN
         </button>
-        <span class="text-[10px] bg-white/10 px-3 py-1 rounded-full border border-white/20 font-mono">V1.9</span>
+        <span class="text-[10px] bg-white/10 px-3 py-1 rounded-full border border-white/20 font-mono">V2.5</span>
     </div>
 </div>
 
@@ -242,74 +241,87 @@
                 </div>
             </div>
 
-            <!-- 3. 厚度調整 -->
+            <!-- 3. 進階選項 -->
             <div class="controls-card">
-                <h2 class="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-2 flex items-center">
-                    <span id="txt-sec-thickness">3. 厚度調整 (僅限負Z切削)</span>
+                <h2 class="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-3 flex items-center">
+                    <span id="txt-sec-advanced">3. 進階選項</span>
                 </h2>
-                <div class="space-y-3">
-                    <div class="flex items-center gap-2">
-                        <input type="checkbox" id="thickEnable" class="w-4 h-4 rounded text-emerald-500 bg-gray-700 border-gray-600 focus:ring-emerald-500 accent-emerald-500">
-                        <label for="thickEnable" class="label-text cursor-pointer" id="txt-label-thick-enable">啟用厚度調整</label>
-                    </div>
-                    <div id="thickControls" class="space-y-3 hidden">
-                        <div>
-                            <label class="label-text block mb-1" id="txt-label-orig-thick">原始加工深度 (自動偵測 mm)</label>
-                            <input type="number" id="origThickInput" value="0" class="w-full bg-slate-800 border-slate-700 text-slate-400 cursor-not-allowed" readonly disabled>
+                
+                <div class="space-y-4">
+                    <!-- 厚度與分層設定區塊 -->
+                    <div class="border-b border-gray-700/50 pb-3">
+                        <div class="flex items-center gap-2 mb-2">
+                            <input type="checkbox" id="thickEnable" class="w-4 h-4 rounded text-emerald-500 bg-gray-700 border-gray-600 focus:ring-emerald-500 accent-emerald-500">
+                            <label for="thickEnable" class="label-text cursor-pointer" id="txt-label-thick-enable">啟用厚度與分層調整</label>
                         </div>
-                        <div>
-                            <label class="label-text block mb-1" id="txt-label-target-thick">目標加工總深度 (mm)</label>
-                            <input type="number" id="targetThickInput" value="18" min="0.1" step="0.1" class="w-full">
+                        <div id="thickControls" class="space-y-2.5 hidden pl-6">
+                            <div>
+                                <label class="label-text block mb-1" id="txt-label-orig-thick">原始加工總深度 (自動偵測 mm)</label>
+                                <input type="number" id="origThickInput" value="0" class="w-full bg-slate-800 border-slate-700 text-slate-400 cursor-not-allowed" readonly disabled>
+                            </div>
+                            <div>
+                                <label class="label-text block mb-1" id="txt-label-target-thick">目標加工總深度 (mm)</label>
+                                <input type="number" id="targetThickInput" value="18" min="0.1" step="0.1" class="w-full">
+                            </div>
+                            <div>
+                                <label class="label-text block mb-1" id="txt-label-target-layers">切削層數 (Layers)</label>
+                                <input type="number" id="targetLayersInput" value="12" min="1" step="1" class="w-full">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 走速 F 調整區塊 -->
+                    <div class="border-b border-gray-700/50 pb-3">
+                        <div class="flex items-center gap-2 mb-2">
+                            <input type="checkbox" id="feedrateEnable" class="w-4 h-4 rounded text-emerald-500 bg-gray-700 border-gray-600 focus:ring-emerald-500 accent-emerald-500">
+                            <label for="feedrateEnable" class="label-text cursor-pointer" id="txt-label-feedrate-enable">啟用走速 F 調整</label>
+                        </div>
+                        <div id="feedrateControls" class="space-y-2.5 hidden pl-6">
+                            <div>
+                                <label class="label-text block mb-1" id="txt-label-target-feedrate">目標 XY 走速 F (mm/min)</label>
+                                <input type="number" id="targetFeedrateInput" value="1200" min="1" step="50" class="w-full">
+                            </div>
+                            <div>
+                                <label class="label-text block mb-1" id="txt-label-target-zfeedrate">目標 Z 軸下刀速 F (mm/min)</label>
+                                <input type="number" id="targetZFeedrateInput" value="400" min="1" step="50" class="w-full">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 抬刀高度調整區塊 -->
+                    <div class="border-b border-gray-700/50 pb-3">
+                        <div class="flex items-center gap-2 mb-2">
+                            <input type="checkbox" id="retractEnable" class="w-4 h-4 rounded text-emerald-500 bg-gray-700 border-gray-600 focus:ring-emerald-500 accent-emerald-500">
+                            <label for="retractEnable" class="label-text cursor-pointer" id="txt-label-retract-enable">啟用安全抬刀高度調整 (Z > 0)</label>
+                        </div>
+                        <div id="retractControls" class="space-y-2.5 hidden pl-6">
+                            <div>
+                                <label class="label-text block mb-1" id="txt-label-target-retract">目標抬刀高度 (0.1~5 mm)</label>
+                                <input type="number" id="retractHeightInput" value="3.0" min="0.1" max="5.0" step="0.1" class="w-full">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 橋位 TAB 調整區塊 -->
+                    <div>
+                        <div class="flex items-center gap-2 mb-2">
+                            <input type="checkbox" id="tabEnable" class="w-4 h-4 rounded text-emerald-500 bg-gray-700 border-gray-600 focus:ring-emerald-500 accent-emerald-500">
+                            <label for="tabEnable" class="label-text cursor-pointer" id="txt-label-tab-enable">啟用自動橋位 (最後一圈抬刀)</label>
+                        </div>
+                        <div id="tabControls" class="space-y-2.5 hidden pl-6">
+                            <div>
+                                <label class="label-text block mb-1" id="txt-label-tooldia">刀具直徑 (mm)</label>
+                                <input type="number" id="toolDiaInput" value="3.175" min="0.1" step="0.1" class="w-full">
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- 4. 走速 (F) 調整 -->
+            <!-- 4. 參考底圖 -->
             <div class="controls-card">
                 <h2 class="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-2 flex items-center">
-                    <span id="txt-sec-feedrate">4. 走速 (F) 調整</span>
-                </h2>
-                <div class="space-y-3">
-                    <div class="flex items-center gap-2">
-                        <input type="checkbox" id="feedrateEnable" class="w-4 h-4 rounded text-emerald-500 bg-gray-700 border-gray-600 focus:ring-emerald-500 accent-emerald-500">
-                        <label for="feedrateEnable" class="label-text cursor-pointer" id="txt-label-feedrate-enable">啟用走速 F 調整</label>
-                    </div>
-                    <div id="feedrateControls" class="space-y-3 hidden">
-                        <div>
-                            <label class="label-text block mb-1" id="txt-label-target-feedrate">目標 XY 走速 F (mm/min)</label>
-                            <input type="number" id="targetFeedrateInput" value="1200" min="1" step="50" class="w-full">
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 5. 橋位 (TAB) 設定 -->
-            <div class="controls-card">
-                <h2 class="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-2 flex items-center">
-                    <span id="txt-sec-tab">5. 橋位 (TAB) 設定</span>
-                </h2>
-                <div class="space-y-3">
-                    <div class="flex items-center gap-2">
-                        <input type="checkbox" id="tabEnable" class="w-4 h-4 rounded text-emerald-500 bg-gray-700 border-gray-600 focus:ring-emerald-500 accent-emerald-500">
-                        <label for="tabEnable" class="label-text cursor-pointer" id="txt-label-tab-enable">啟用自動橋位 (最後一圈抬刀)</label>
-                    </div>
-                    <div id="tabControls" class="space-y-3 hidden">
-                        <div class="p-2.5 bg-emerald-500/10 border border-emerald-500/20 rounded text-[11px] text-emerald-400/90 leading-relaxed">
-                            <p id="txt-tab-hint">自動配置 2 或 4 個安全橋位</p>
-                        </div>
-                        <div>
-                            <label class="label-text block mb-1" id="txt-label-tooldia">刀具直徑 (mm)</label>
-                            <input type="number" id="toolDiaInput" value="3.175" min="0.1" step="0.1" class="w-full">
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 6. 參考底圖 -->
-            <div class="controls-card">
-                <h2 class="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-2 flex items-center">
-                    <span id="txt-sec-refimg">6. 參考底圖 (選填)</span>
+                    <span id="txt-sec-refimg">4. 參考底圖 (選填)</span>
                 </h2>
                 <div class="space-y-3">
                     <button onclick="document.getElementById('imageInput').click()" class="btn-secondary w-full font-bold py-2 px-4 rounded transition text-xs flex items-center justify-center shadow-inner">
@@ -334,7 +346,7 @@
                 </div>
             </div>
 
-            <!-- 7. 加工預估 & 下載 -->
+            <!-- 加工預估 & 下載 -->
             <div class="info-card rounded-lg p-4 shadow-xl space-y-3 border-t-4 border-emerald-500">
                 <div class="flex justify-between items-end">
                     <div>
@@ -372,7 +384,7 @@
 </div>
 
 <script>
-    // --- 語言配置 ---
+    // --- 多國語言配置 ---
     const i18n = {
         zh: {
             headerTitle: "Gcode 即時調整",
@@ -386,18 +398,19 @@
             labelOY: "Y 偏移 (mm)",
             labelRot: "旋轉角度 (Z軸中心)",
             labelRes: "解析度 (最小 XY 位移 mm)",
-            secThickness: "3. 厚度調整 (僅限負Z切削)",
-            thickEnable: "啟用厚度調整",
-            labelOrigThickness: "原始加工深度 (自動偵測 mm)",
+            secAdvanced: "3. 進階選項",
+            thickEnable: "啟用厚度與分層調整",
+            labelOrigThickness: "原始加工總深度 (自動偵測 mm)",
             labelTargetThickness: "目標加工總深度 (mm)",
-            secFeedrate: "4. 走速 (F) 調整",
+            labelTargetLayers: "切削層數 (層數)",
             feedrateEnable: "啟用走速 F 調整",
             labelTargetFeedrate: "目標 XY 走速 F (mm/min)",
-            secTab: "5. 橋位 (TAB) 設定",
+            labelTargetZFeedrate: "目標 Z 軸下刀速 F (mm/min)",
+            retractEnable: "啟用安全抬刀高度調整 (Z > 0)",
+            labelTargetRetract: "目標抬刀高度 (0.1~5 mm)",
             tabEnable: "啟用自動橋位 (最後一圈抬刀)",
-            tabHint: "自動配置 2 或 4 個安全橋位。",
             labelToolDia: "刀具直徑 (mm)",
-            secRefImg: "6. 參考底圖 (選填)",
+            secRefImg: "4. 參考底圖 (選填)",
             btnUploadImg: "選擇參考圖片",
             labelImgWidth: "圖片實際寬度 (mm)",
             labelImgOpacity: "不透明度",
@@ -425,18 +438,19 @@
             labelOY: "Y Offset",
             labelRot: "Rotation (Z-Axis)",
             labelRes: "Resolution (Min XY mm)",
-            secThickness: "3. Thickness Adjustment (Negative Z)",
-            thickEnable: "Enable Thickness Adjustment",
+            secAdvanced: "3. Advanced Options",
+            thickEnable: "Enable Thickness & Layers",
             labelOrigThickness: "Detected Original Depth (mm)",
             labelTargetThickness: "Target Cutting Depth (mm)",
-            secFeedrate: "4. Feedrate (F) Adjustment",
+            labelTargetLayers: "Layers Count",
             feedrateEnable: "Enable Feedrate F Adjustment",
             labelTargetFeedrate: "Target XY Feedrate F (mm/min)",
-            secTab: "5. Tab (Bridge) Settings",
+            labelTargetZFeedrate: "Target Z Feedrate F (mm/min)",
+            retractEnable: "Enable Safe Retract Height (Z > 0)",
+            labelTargetRetract: "Target Retract Height (0.1~5 mm)",
             tabEnable: "Enable Auto Tabs (Last Pass)",
-            tabHint: "2 or 4 square safety tabs will be placed",
             labelToolDia: "Tool Diameter (mm)",
-            secRefImg: "6. Reference Image (Optional)",
+            secRefImg: "4. Reference Image (Optional)",
             btnUploadImg: "Choose Reference Image",
             labelImgWidth: "Image Width (mm)",
             labelImgOpacity: "Opacity",
@@ -484,31 +498,41 @@
         document.getElementById('txt-label-rot').innerText = lang.labelRot;
         document.getElementById('txt-label-res').innerText = lang.labelRes;
         
-        // 厚度調整多國語言更新
-        document.getElementById('txt-sec-thickness').innerText = lang.secThickness;
+        // 厚度與分層與進階面板多國語言更新
+        document.getElementById('txt-sec-advanced').innerText = lang.secAdvanced;
         document.getElementById('txt-label-thick-enable').innerText = lang.thickEnable;
         document.getElementById('txt-label-orig-thick').innerText = lang.labelOrigThickness;
         document.getElementById('txt-label-target-thick').innerText = lang.labelTargetThickness;
+        document.getElementById('txt-label-target-layers').innerText = lang.labelTargetLayers;
 
-        // 走速調整多國語言更新
-        document.getElementById('txt-sec-feedrate').innerText = lang.secFeedrate;
+        // 走速與 Z 軸走速多國語言更新
         document.getElementById('txt-label-feedrate-enable').innerText = lang.feedrateEnable;
         document.getElementById('txt-label-target-feedrate').innerText = lang.labelTargetFeedrate;
+        document.getElementById('txt-label-target-zfeedrate').innerText = lang.labelTargetZFeedrate;
 
-        document.getElementById('txt-sec-tab').innerText = lang.secTab;
+        // 抬刀高度調整多國語言更新
+        document.getElementById('txt-label-retract-enable').innerText = lang.retractEnable;
+        document.getElementById('txt-label-target-retract').innerText = lang.labelTargetRetract;
+
+        // TAB 橋位設定多國語言
         document.getElementById('txt-label-tab-enable').innerText = lang.tabEnable;
-        document.getElementById('txt-tab-hint').innerText = lang.tabHint;
         document.getElementById('txt-label-tooldia').innerText = lang.labelToolDia;
+        
+        // 參考底圖多國語言
         document.getElementById('txt-sec-refimg').innerText = lang.secRefImg;
         document.getElementById('txt-btn-upload-img').innerText = lang.btnUploadImg;
         document.getElementById('txt-label-imgwidth').innerText = lang.labelImgWidth;
         document.getElementById('txt-label-imgopacity').innerText = lang.labelImgOpacity;
+        
+        // 按鈕與資訊
         document.getElementById('centerBtn').innerText = lang.btnCenter;
         document.getElementById('applyBtn').innerText = lang.btnUpdate;
         document.getElementById('txt-info-time').innerText = lang.infoTime;
         document.getElementById('txt-info-dist').innerText = lang.infoDist;
         document.getElementById('downloadBtn').innerText = lang.btnDownload;
         document.getElementById('txt-metric-alert').innerText = lang.metricAlert;
+        
+        // 滑鼠操作導引
         document.getElementById('txt-mouse-l').innerHTML = `<span class="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-1.5"></span>${lang.mouseL}`;
         document.getElementById('txt-mouse-r').innerHTML = `<span class="w-1.5 h-1.5 bg-blue-500 rounded-full mr-1.5"></span>${lang.mouseR}`;
         document.getElementById('txt-mouse-w').innerHTML = `<span class="w-1.5 h-1.5 bg-white rounded-full mr-1.5"></span>${lang.mouseW}`;
@@ -539,10 +563,8 @@
         const themeIcon = document.getElementById('theme-icon');
         if (themeIcon) {
             if (currentTheme === 'dark') {
-                // Sun 圖示 (點擊變亮)
                 themeIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m0-12.728l.707.707m12.728 12.728l.707.707M12 8a4 4 0 100 8 4 4 0 000-8z" />`;
             } else {
-                // Moon 圖示 (點擊變暗)
                 themeIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />`;
             }
         }
@@ -769,6 +791,18 @@
         return points;
     }
 
+    // --- 取得當前設定的安全抬刀高度 ---
+    function getRetractHeight() {
+        const retractEnable = document.getElementById('retractEnable') && document.getElementById('retractEnable').checked;
+        if (retractEnable) {
+            let val = parseFloat(document.getElementById('retractHeightInput').value);
+            if (isNaN(val)) return 3.0;
+            // 防呆限幅限制 0.1mm 至 5.0mm
+            return Math.max(0.1, Math.min(5.0, val));
+        }
+        return 3.0; // 預設安全抬刀高度
+    }
+
     // 模態記憶與起終點保護 Gcode 解析器
     function parseGcode(text) {
         const bounds = findMachiningBounds(text);
@@ -811,8 +845,10 @@
                 let newY = words['Y'] !== undefined ? words['Y'] : currentPos.y;
                 let newZ = words['Z'] !== undefined ? words['Z'] : currentPos.z;
                 
-                if (newZ > 3) {
-                    newZ = 3;
+                // 統一調整安全抬刀高度 (Z為正值時套用自訂高度)
+                const rHeight = getRetractHeight();
+                if (newZ > 0.0001) {
+                    newZ = rHeight;
                 }
 
                 if (words['F'] !== undefined) currentPos.f = words['F'];
@@ -869,39 +905,161 @@
         return 1200; // 預設走速
     }
 
-    // --- 實作等比例厚度變更 (Z軸比例調整) ---
-    function applyThicknessAdjustment(path) {
+    // --- 偵測第一個垂直下刀切削動作的走速 F (Z 軸獨立走速) ---
+    function detectFirstZFeedrate(path) {
+        for (let seg of path) {
+            if (seg.type === 'G1' && !seg.isStartOrEndHome) {
+                const dx = seg.to.x - seg.from.x;
+                const dy = seg.to.y - seg.from.y;
+                const dXY = Math.sqrt(dx * dx + dy * dy);
+                const dZ = Math.abs(seg.to.z - seg.from.z);
+                if (dXY < 1e-4 && dZ > 1e-4 && seg.f > 0) {
+                    return seg.f;
+                }
+            }
+        }
+        return 400; // 預設 Z 軸下刀速
+    }
+
+    // --- 自動偵測原始 G-code 的單次下刀 Stepdown 深度 ---
+    function detectOriginalStepdown(path) {
+        const zs = [];
+        path.forEach(seg => {
+            if (seg.to.z < -0.001) {
+                zs.push(parseFloat(seg.to.z.toFixed(4)));
+            }
+        });
+        const uniqueZs = [...new Set(zs)].sort((a, b) => b - a); // 由淺到深
+        if (uniqueZs.length >= 2) {
+            return Math.abs(uniqueZs[1] - uniqueZs[0]);
+        } else if (uniqueZs.length === 1) {
+            return Math.abs(uniqueZs[0]);
+        }
+        return 1.5; // 預設下刀
+    }
+
+    // --- 實作自訂層數與總厚度調整 (分層重置與重建演算法) ---
+    function applyThicknessAdjustment(pathData) {
         const thickEnable = document.getElementById('thickEnable') && document.getElementById('thickEnable').checked;
-        if (!thickEnable) return path;
+        if (!thickEnable) return pathData;
 
         const detectedDepth = parseFloat(document.getElementById('origThickInput').value) || 0;
         const targetDepth = parseFloat(document.getElementById('targetThickInput').value) || 0;
+        const layers = parseInt(document.getElementById('targetLayersInput').value) || 12;
 
-        // 防呆保護：若偵測值或目標值為 0，跳過調整
-        if (detectedDepth <= 0.0001 || targetDepth <= 0.0001) return path;
+        // 防呆保護：若數值不合規，跳過調整
+        if (detectedDepth <= 0.0001 || targetDepth <= 0.0001 || layers < 1) return pathData;
 
-        // 計算 Z 軸縮放比例
-        const scaleZ = targetDepth / detectedDepth;
+        // 層數均分計算等比例 Stepdown
+        const stepdown = targetDepth / layers;
 
-        path.forEach(seg => {
-            // 僅對雕刻刀深（Z 軸小於等於 0.0001 的下刀部分）進行比例調整，大於 0.0001 為安全 retract 高度保持不動
-            if (seg.from.z <= 0.0001) {
-                seg.from.z = parseFloat((seg.from.z * scaleZ).toFixed(4));
-            }
-            if (seg.to.z <= 0.0001) {
-                seg.to.z = parseFloat((seg.to.z * scaleZ).toFixed(4));
+        // 1. 將路徑分割為 rapid (快速定位、抬刀) 與 contour (切削工件) 區塊
+        const blocks = [];
+        let currentBlock = { type: 'rapid', segments: [] };
+        blocks.push(currentBlock);
+
+        pathData.forEach(seg => {
+            const isCut = (seg.from.z < -0.001 || seg.to.z < -0.001) && seg.type !== 'G0';
+            if (isCut) {
+                if (currentBlock.type === 'rapid') {
+                    currentBlock = { type: 'contour', segments: [] };
+                    blocks.push(currentBlock);
+                }
+                currentBlock.segments.push(seg);
+            } else {
+                if (currentBlock.type === 'contour') {
+                    currentBlock = { type: 'rapid', segments: [] };
+                    blocks.push(currentBlock);
+                }
+                currentBlock.segments.push(seg);
             }
         });
 
-        return path;
+        const rebuiltSegments = [];
+
+        blocks.forEach(block => {
+            if (block.type === 'contour' && block.segments.length > 0) {
+                // A. 找出此 contour 中的所有目標負 Z 座標
+                const zs = [];
+                block.segments.forEach(seg => {
+                    if (seg.to.z < -0.001) {
+                        zs.push(parseFloat(seg.to.z.toFixed(4)));
+                    }
+                });
+                const uniqueZs = [...new Set(zs)].sort((a, b) => b - a); // 從高到低排序，如 [-7, -14, -21]
+
+                if (uniqueZs.length > 0) {
+                    const firstZ = uniqueZs[0]; // 第一個下刀深度
+
+                    // B. 提取出第一圈加工的 2D 軌跡 (Profile)
+                    const profile = [];
+                    for (let seg of block.segments) {
+                        if (seg.to.z < firstZ - 0.01 || seg.to.z > -0.001) {
+                            break;
+                        }
+                        profile.push(seg);
+                    }
+
+                    if (profile.length > 0) {
+                        // C. 計算全新分層 Z 軸座標列表 (走 M 圈)
+                        const newZs = [];
+                        let current = stepdown;
+                        while (current < targetDepth - 1e-4) {
+                            newZs.push(-current);
+                            current += stepdown;
+                        }
+                        newZs.push(-targetDepth); // 最底下一圈
+
+                        // D. 重建所有分層 passes
+                        const contourRebuilt = [];
+                        let prevZ = block.segments[0].from.z; // 第一個 plunge 的起始高度
+
+                        newZs.forEach((targetZ) => {
+                            profile.forEach((origSeg, segIdx) => {
+                                const newSeg = { ...origSeg };
+                                if (segIdx === 0) {
+                                    // 垂直下刀/斜進刀段
+                                    newSeg.from = { ...origSeg.from, z: prevZ };
+                                    newSeg.to = { ...origSeg.to, z: targetZ };
+                                } else {
+                                    // 平面切削段
+                                    newSeg.from = { ...origSeg.from, z: targetZ };
+                                    newSeg.to = { ...origSeg.to, z: targetZ };
+                                }
+                                contourRebuilt.push(newSeg);
+                            });
+                            prevZ = targetZ;
+                        });
+
+                        // E. 接回原始 contour 的最後抬刀 retract 移動段
+                        const lastOrigSeg = block.segments[block.segments.length - 1];
+                        if (lastOrigSeg && lastOrigSeg.to.z > -0.001) {
+                            const finalLift = { ...lastOrigSeg };
+                            finalLift.from = { ...lastOrigSeg.from, z: prevZ };
+                            finalLift.to = { ...lastOrigSeg.to };
+                            contourRebuilt.push(finalLift);
+                        }
+
+                        rebuiltSegments.push(...contourRebuilt);
+                        return; // 已重建，不推入原始 contour
+                    }
+                }
+            }
+
+            // 若不符合重建條件或為 rapid 區塊，推入原始段落
+            rebuiltSegments.push(...block.segments);
+        });
+
+        return rebuiltSegments;
     }
 
-    // --- 實作切削走速 F 調整 (對所有 XY 切削路徑更新 F，以供估時與預覽) ---
+    // --- 實作切削走速 F 調整 ---
     function applyFeedrateAdjustment(path) {
         const feedrateEnable = document.getElementById('feedrateEnable') && document.getElementById('feedrateEnable').checked;
         if (!feedrateEnable) return path;
 
         const targetFeedrate = parseFloat(document.getElementById('targetFeedrateInput').value) || 1200;
+        const targetZFeedrate = parseFloat(document.getElementById('targetZFeedrateInput').value) || 400;
 
         path.forEach(seg => {
             if (seg.isStartOrEndHome || seg.type === 'G0') {
@@ -910,10 +1068,15 @@
             const dx = seg.to.x - seg.from.x;
             const dy = seg.to.y - seg.from.y;
             const dXY = Math.sqrt(dx * dx + dy * dy);
+            const dZ = Math.abs(seg.to.z - seg.from.z);
+
             const isXYMove = dXY > 1e-4 && (seg.type === 'G1' || seg.type === 'G2' || seg.type === 'G3');
+            const isPureZMove = dXY < 1e-4 && dZ > 1e-4 && seg.type === 'G1';
 
             if (isXYMove) {
                 seg.f = targetFeedrate;
+            } else if (isPureZMove) {
+                seg.f = targetZFeedrate;
             }
         });
 
@@ -957,7 +1120,6 @@
         
         if (r === 0) return d_endpoints;
         
-        // 角度檢測與投影
         const pAngle = Math.atan2(pt.y - cy, pt.x - cx);
         const startAngle = Math.atan2(p1.y - cy, p1.x - cx);
         const endAngle = Math.atan2(p2.y - cy, p2.x - cx);
@@ -972,10 +1134,10 @@
         let inside = false;
         if (Math.sqrt(distSq(p1.x, p1.y, p2.x, p2.y)) < 1e-4) {
             inside = true;
-        } else if (!isCW) { // CCW: s -> t -> e
+        } else if (!isCW) { 
             if (s <= e) inside = (t >= s && t <= e);
             else inside = (t >= s || t <= e);
-        } else { // CW: s -> t -> e
+        } else { 
             if (e <= s) inside = (t >= e && t <= s);
             else inside = (t >= e || t <= s);
         }
@@ -1110,10 +1272,7 @@
         const tabEnable = document.getElementById('tabEnable') && document.getElementById('tabEnable').checked;
         if (!tabEnable) return pathData;
 
-        // 提取所有圓弧段（G2/G3）用於距離檢測
         const arcSegs = pathData.filter(seg => seg.type === 'G2' || seg.type === 'G3');
-
-        // 讀取動態配置的刀具直徑，計算 TAB 平移檢測範圍 (R = (刀徑 + 6mm) / 2)
         const toolDia = parseFloat(document.getElementById('toolDiaInput')?.value) || 3.175;
         const tabWidth = toolDia + 6;
         const R = tabWidth / 2;
@@ -1138,14 +1297,12 @@
             const finalPassSegs = currentRun.filter(s => Math.abs(s.to.z - Z_deepest) < 0.01);
 
             if (finalPassSegs.length > 0) {
-                // 1. 尋找所有合規且長度足夠的 G1 直線段
                 const candidateSegs = [];
                 finalPassSegs.forEach(seg => {
                     if (seg.type === 'G1') {
                         const dx = seg.to.x - seg.from.x;
                         const dy = seg.to.y - seg.from.y;
                         const len = Math.sqrt(dx * dx + dy * dy);
-                        // 必須長於 tabWidth + 1mm 的安全裕度，否則橋位放不下
                         if (len > tabWidth + 1.0) {
                             candidateSegs.push({
                                 seg: seg,
@@ -1160,11 +1317,10 @@
                     }
                 });
 
-                // 將直線段依長度從長到短排序，優先在長直線上放置橋位
                 candidateSegs.sort((a, b) => b.len - a.len);
 
                 const tabs = [];
-                const minDistanceBetweenTabs = 20.0; // 橋位之間最小相隔 20mm，避免過度密集
+                const minDistanceBetweenTabs = 20.0;
 
                 for (const cand of candidateSegs) {
                     const ptMid = { ...cand.midpoint };
@@ -1172,7 +1328,6 @@
                     const u1 = 0.5 - R / L;
                     const u2 = 0.5 + R / L;
 
-                    // 取得初始中點橋位的左右起終點
                     const pt1 = {
                         x: cand.seg.from.x + u1 * (cand.seg.to.x - cand.seg.from.x),
                         y: cand.seg.from.y + u1 * (cand.seg.to.y - cand.seg.from.y)
@@ -1182,7 +1337,6 @@
                         y: cand.seg.from.y + u2 * (cand.seg.to.y - cand.seg.from.y)
                     };
 
-                    // 檢查是否離圓弧 (G2/G3) 大於 0.5mm
                     let nearArc = false;
                     if (arcSegs && arcSegs.length > 0) {
                         for (const arc of arcSegs) {
@@ -1195,12 +1349,10 @@
 
                     let foundSafeOffset = !nearArc;
                     if (!foundSafeOffset) {
-                        // 若不安全（離弧線過近），沿著直線滑動（Offset）尋找安全區間
                         const minT = R / L;
                         const maxT = 1 - R / L;
                         const span = maxT - minT;
                         
-                        // 細切 15 個位置進行嘗試
                         for (let step = 0; step <= 15; step++) {
                             const tCenter = minT + (step / 15) * span;
                             const testU1 = tCenter - R / L;
@@ -1234,10 +1386,8 @@
                         }
                     }
 
-                    // 如果在此直線段怎麼位移都無法避開 0.5mm 的圓弧安全邊界，則直接捨棄該段
                     if (!foundSafeOffset) continue;
 
-                    // 檢查是否與已選定的其它 TAB 距離過近
                     let tooClose = false;
                     for (const existing of tabs) {
                         const dist = Math.sqrt((ptMid.x - existing.x)**2 + (ptMid.y - existing.y)**2);
@@ -1251,7 +1401,6 @@
                         tabs.push(ptMid);
                     }
 
-                    // 限制全工件最多生成 4 個主要橋位（通常 2~4 個即能穩固固定工件）
                     if (tabs.length >= 4) break;
                 }
 
@@ -1281,7 +1430,6 @@
         });
         flushRun();
 
-        // 連續段落抵消優化
         const cleanResult = [];
         for (let i = 0; i < result.length; i++) {
             const cur = result[i];
@@ -1302,6 +1450,139 @@
         return cleanResult;
     }
 
+    // --- 將處理後的 3D 線段編譯成 G-code 指令字串 ---
+    function compileSegmentsToGcode(segments) {
+        const scale = parseFloat(document.getElementById('scaleInput').value) || 1;
+        const offX = parseFloat(document.getElementById('offsetX').value) || 0;
+        const offY = parseFloat(document.getElementById('offsetY').value) || 0;
+        const rotRad = (parseFloat(document.getElementById('rotationInput').value) || 0) * Math.PI / 180;
+        const res = parseFloat(document.getElementById('resInput').value) || 0.1;
+
+        const feedrateEnable = document.getElementById('feedrateEnable') && document.getElementById('feedrateEnable').checked;
+        const targetFeedrate = parseFloat(document.getElementById('targetFeedrateInput').value) || 1200;
+        const targetZFeedrate = parseFloat(document.getElementById('targetZFeedrateInput').value) || 400;
+
+        const gcodeLines = [];
+        let lastX = 0, lastY = 0, lastZ = null; 
+        let isFirstMove = true;
+        let activeFeedrate = null; 
+        let hasOutputXYFInCurrentCut = false; 
+
+        segments.forEach((seg, idx) => {
+            let fZ = seg.to.z;
+            const rHeight = getRetractHeight();
+            
+            // 統一 Z 為正值時套用自訂抬刀高度
+            if (fZ > 0.0001) {
+                fZ = rHeight;
+            }
+
+            let fX = 0, fY = 0;
+            if (seg.isStartOrEndHome) {
+                fX = 0; fY = 0;
+            } else {
+                fX = (seg.to.x * Math.cos(rotRad) - seg.to.y * Math.sin(rotRad)) * scale + offX;
+                fY = (seg.to.x * Math.sin(rotRad) + seg.to.y * Math.cos(rotRad)) * scale + offY;
+            }
+
+            const dXY = Math.sqrt((fX - lastX)**2 + (fY - lastY)**2);
+            const zChanged = lastZ === null || Math.abs(fZ - lastZ) > 0.0001;
+            const isLastMove = (idx === segments.length - 1);
+
+            if (!isFirstMove && seg.type === 'G1' && !seg.isTab && dXY < res && !zChanged && !isLastMove) {
+                return; 
+            }
+
+            if (seg.type === 'G0') {
+                hasOutputXYFInCurrentCut = false;
+            }
+
+            // --- 修正 Z 軸純移動偵測邏輯 ---
+            let fFromX = 0, fFromY = 0;
+            if (seg.isStartOrEndHome) {
+                fFromX = 0; fFromY = 0;
+            } else {
+                fFromX = (seg.from.x * Math.cos(rotRad) - seg.from.y * Math.sin(rotRad)) * scale + offX;
+                fFromY = (seg.from.x * Math.sin(rotRad) + seg.from.y * Math.cos(rotRad)) * scale + offY;
+            }
+
+            const segmentPhysicalXYChanged = Math.sqrt((fX - fFromX)**2 + (fY - fFromY)**2) > 0.0001;
+            const isZOnlyMove = !segmentPhysicalXYChanged && zChanged;
+
+            let newlineParts = [];
+            newlineParts.push(seg.type);
+            
+            if (!isZOnlyMove) {
+                newlineParts.push('X' + fX.toFixed(4));
+                newlineParts.push('Y' + fY.toFixed(4));
+            }
+            
+            if (zChanged) {
+                newlineParts.push('Z' + fZ.toFixed(4));
+            }
+
+            if (seg.type === 'G2' || seg.type === 'G3') {
+                if (seg.I !== null || seg.J !== null) {
+                    const rawI = seg.I || 0;
+                    const rawJ = seg.J || 0;
+                    let fI = (rawI * Math.cos(rotRad) - rawJ * Math.sin(rotRad)) * scale;
+                    let fJ = (rawI * Math.sin(rotRad) + rawJ * Math.cos(rotRad)) * scale;
+                    newlineParts.push('I' + fI.toFixed(4));
+                    newlineParts.push('J' + fJ.toFixed(4));
+                }
+                if (seg.R !== null) {
+                    let fR = seg.R * scale;
+                    newlineParts.push('R' + fR.toFixed(4));
+                }
+            }
+
+            // 走速智慧分流邏輯 (XY軸與Z軸分流處理)
+            let segF = seg.f;
+            if (seg.type !== 'G0') {
+                const isXYMove = !isZOnlyMove && (seg.type === 'G1' || seg.type === 'G2' || seg.type === 'G3');
+                
+                if (isXYMove) {
+                    if (!hasOutputXYFInCurrentCut) {
+                        if (feedrateEnable) {
+                            segF = targetFeedrate;
+                        }
+                        hasOutputXYFInCurrentCut = true;
+                        if (activeFeedrate === null || Math.abs(segF - activeFeedrate) > 0.01) {
+                            newlineParts.push('F' + segF.toFixed(2));
+                            activeFeedrate = segF;
+                        }
+                    } else {
+                        if (feedrateEnable) {
+                            segF = targetFeedrate;
+                        }
+                        if (activeFeedrate === null || Math.abs(segF - activeFeedrate) > 0.01) {
+                            newlineParts.push('F' + segF.toFixed(2));
+                            activeFeedrate = segF;
+                        }
+                    }
+                } else {
+                    // 單純垂直 Z 軸位移，施加目標 Z 軸走速
+                    if (feedrateEnable) {
+                        segF = targetZFeedrate;
+                    }
+                    if (segF) {
+                        if (activeFeedrate === null || Math.abs(segF - activeFeedrate) > 0.01) {
+                            newlineParts.push('F' + segF.toFixed(2));
+                            activeFeedrate = segF;
+                        }
+                    }
+                }
+            }
+
+            gcodeLines.push(newlineParts.join(' '));
+            
+            lastX = fX; lastY = fY; lastZ = fZ;
+            isFirstMove = false;
+        });
+
+        return gcodeLines;
+    }
+
     function processAndPreview() {
         if (!originalGcode) return;
         const scale = parseFloat(document.getElementById('scaleInput').value) || 1;
@@ -1312,13 +1593,13 @@
 
         let pathData = parseGcode(originalGcode);
         
-        // 1. 厚度縮放：必須先於 TAB 拱橋計算前進行，以便自動按新厚度深度配置拱橋高度
+        // 1. 厚度縮放與分層重建
         pathData = applyThicknessAdjustment(pathData);
 
-        // 2. 走速 F 調整 (對預覽計算同步生效)
+        // 2. 走速 F 調整
         pathData = applyFeedrateAdjustment(pathData);
 
-        // 3. 自動配置與偏移 TAB 橋位
+        // 3. 自動配置與偏移 TAB 橋位 (最深層 pass)
         pathData = applyTabsToPaths(pathData);
 
         if (gcodeGroup) scene.remove(gcodeGroup);
@@ -1388,183 +1669,109 @@
         document.getElementById('downloadBtn').disabled = false;
     }
 
-    // --- 產生調整後並優化的 G-code 檔案 (確保標頭包含 G21 G90) ---
+    // --- 產生調整後並優化的 G-code 檔案 (確保標頭包含 G21 G90，且區塊按正確順序編譯) ---
     function generateGcode() {
-        const scale = parseFloat(document.getElementById('scaleInput').value) || 1;
-        const offX = parseFloat(document.getElementById('offsetX').value) || 0;
-        const offY = parseFloat(document.getElementById('offsetY').value) || 0;
-        const rotRad = (parseFloat(document.getElementById('rotationInput').value) || 0) * Math.PI / 180;
-        const res = parseFloat(document.getElementById('resInput').value) || 0.1;
-
-        let lastX = 0, lastY = 0, lastZ = null; 
-        let isFirstMove = true;
-        let activeFeedrate = null; 
-        let hasOutputXYFInCurrentCut = false; 
-
         const lines = originalGcode.split('\n');
-        
         let pathData = parseGcode(originalGcode);
-        // 先等比例縮放 Z 軸加工厚度深度
+        
+        // 1. 偵測原始 contour 切削動作在 G-code 原檔中的 LineIdx 區間
+        const contourRanges = [];
+        let currentRange = null;
+
+        pathData.forEach(seg => {
+            const isCut = (seg.from.z < -0.001 || seg.to.z < -0.001) && seg.type !== 'G0';
+            if (isCut) {
+                if (!currentRange) {
+                    currentRange = { start: seg.lineIdx, end: seg.lineIdx };
+                    contourRanges.push(currentRange);
+                } else {
+                    currentRange.end = Math.max(currentRange.end, seg.lineIdx);
+                    currentRange.start = Math.min(currentRange.start, seg.lineIdx);
+                }
+            } else {
+                currentRange = null;
+            }
+        });
+
+        // 2. 進行厚度、分層、走速與 TAB 調整
         pathData = applyThicknessAdjustment(pathData);
-        // 接著進行 TAB 的折線切割
+        pathData = applyFeedrateAdjustment(pathData);
         pathData = applyTabsToPaths(pathData);
 
-        const segsByLine = {};
+        // 3. 將處理後的路徑，依照原始 lineIdx 區間分類
+        const processedContours = contourRanges.map(range => ({
+            range: range,
+            segments: []
+        }));
+        const nonContourSegments = [];
+
         pathData.forEach(seg => {
+            let mapped = false;
             if (seg.lineIdx !== undefined) {
-                if (!segsByLine[seg.lineIdx]) segsByLine[seg.lineIdx] = [];
-                segsByLine[seg.lineIdx].push(seg);
+                for (let pc of processedContours) {
+                    if (seg.lineIdx >= pc.range.start && seg.lineIdx <= pc.range.end) {
+                        pc.segments.push(seg);
+                        mapped = true;
+                        break;
+                    }
+                }
+            }
+            if (!mapped) {
+                nonContourSegments.push(seg);
             }
         });
 
-        let lastMoveIdx = -1;
-        lines.forEach((l, i) => {
-            const cmd = l.trim().toUpperCase();
-            if (!cmd || cmd.startsWith('(') || cmd.startsWith(';')) return;
-            if (segsByLine[i] && segsByLine[i].length > 0) {
-                lastMoveIdx = i;
-            }
-        });
-
+        // 4. 輸出最終重組的 G-code 檔案
         const output = [];
-        let insertedHeader = false; // 是否已寫入安全標頭
+        let insertedHeader = false;
 
-        lines.forEach((line, i) => {
+        for (let i = 0; i < lines.length; i++) {
+            let line = lines[i];
             let cmd = line.trim();
-            if (!cmd || cmd.startsWith('(') || cmd.startsWith(';')) { 
-                output.push(line); 
-                return; 
+
+            if (cmd && !cmd.startsWith('(') && !cmd.startsWith(';')) {
+                if (!insertedHeader) {
+                    output.push("G21", "G90");
+                    insertedHeader = true;
+                }
             }
 
-            // 在讀取到第一個非註解、非空的代碼行時，自動優先寫入 G21 G90 安全標頭
-            if (!insertedHeader) {
-                output.push("G21", "G90");
-                insertedHeader = true;
+            // 判斷當前行數是否屬於任一個 contour 區間
+            let activeContour = null;
+            for (let pc of processedContours) {
+                if (i >= pc.range.start && i <= pc.range.end) {
+                    activeContour = pc;
+                    break;
+                }
             }
 
-            let commentSuffix = "";
-            const semiIdx = cmd.indexOf(';');
-            if (semiIdx !== -1) {
-                commentSuffix = cmd.substring(semiIdx);
+            if (activeContour) {
+                if (i === activeContour.range.start) {
+                    const compiledLines = compileSegmentsToGcode(activeContour.segments);
+                    output.push(...compiledLines);
+                }
+                continue;
             }
 
-            const matchedSegs = segsByLine[i];
-            if (matchedSegs && matchedSegs.length > 0) {
-                matchedSegs.forEach(seg => {
-                    let fZ = seg.to.z;
-                    if (fZ > 3) fZ = 3.0;
-
-                    let fX = 0, fY = 0;
-                    if (seg.isStartOrEndHome) {
-                        fX = 0; fY = 0;
-                    } else {
-                        fX = (seg.to.x * Math.cos(rotRad) - seg.to.y * Math.sin(rotRad)) * scale + offX;
-                        fY = (seg.to.x * Math.sin(rotRad) + seg.to.y * Math.cos(rotRad)) * scale + offY;
-                    }
-
-                    const dXY = Math.sqrt((fX - lastX)**2 + (fY - lastY)**2);
-                    const zChanged = lastZ === null || Math.abs(fZ - lastZ) > 0.0001;
-                    const isLastMove = (i === lastMoveIdx);
-
-                    if (!isFirstMove && seg.type === 'G1' && !seg.isTab && dXY < res && !zChanged && !isLastMove) {
-                        return; 
-                    }
-
-                    if (seg.type === 'G0') {
-                        hasOutputXYFInCurrentCut = false;
-                    }
-
-                    // 當只有 Z 軸位移，而 XY 軸保持不動時 (位移差 < 0.0001)
-                    const isZOnlyMove = !isFirstMove && (dXY < 1e-4) && zChanged;
-
-                    let newlineParts = [];
-                    newlineParts.push(seg.type);
-                    
-                    // 若非單純的 Z 軸移動，才寫入 X 座標與 Y 座標
-                    if (!isZOnlyMove) {
-                        newlineParts.push('X' + fX.toFixed(4));
-                        newlineParts.push('Y' + fY.toFixed(4));
-                    }
-                    
-                    if (zChanged) {
-                        let zStr = fZ >= 3.0 ? "3" : fZ.toFixed(4);
-                        newlineParts.push('Z' + zStr);
-                    }
-
-                    if (seg.type === 'G2' || seg.type === 'G3') {
-                        if (seg.I !== null || seg.J !== null) {
-                            const rawI = seg.I || 0;
-                            const rawJ = seg.J || 0;
-                            let fI = (rawI * Math.cos(rotRad) - rawJ * Math.sin(rotRad)) * scale;
-                            let fJ = (rawI * Math.sin(rotRad) + rawJ * Math.cos(rotRad)) * scale;
-                            newlineParts.push('I' + fI.toFixed(4));
-                            newlineParts.push('J' + fJ.toFixed(4));
-                        }
-                        if (seg.R !== null) {
-                            let fR = seg.R * scale;
-                            newlineParts.push('R' + fR.toFixed(4));
-                        }
-                    }
-
-                    // --- 智慧走速 F 修改施予邏輯 ---
-                    const feedrateEnable = document.getElementById('feedrateEnable') && document.getElementById('feedrateEnable').checked;
-                    const targetFeedrate = parseFloat(document.getElementById('targetFeedrateInput').value) || 1200;
-
-                    let segF = seg.f;
-
-                    if (seg.type !== 'G0') {
-                        const isXYMove = !isZOnlyMove && (seg.type === 'G1' || seg.type === 'G2' || seg.type === 'G3');
-                        
-                        if (isXYMove) {
-                            if (!hasOutputXYFInCurrentCut) {
-                                // 僅施予、調整該切削路徑第一行（第一個 XY G1 或 G2/G3）的 F 值
-                                if (feedrateEnable) {
-                                    segF = targetFeedrate;
-                                }
-                                hasOutputXYFInCurrentCut = true;
-                                
-                                // 強制在該行寫入並更新當前活動的 F 走速
-                                if (activeFeedrate === null || Math.abs(segF - activeFeedrate) > 0.01) {
-                                    newlineParts.push('F' + segF.toFixed(2));
-                                    activeFeedrate = segF;
-                                }
-                            } else {
-                                // 後續切削行保持模態速度。若啟用設定，虛擬跟隨目標速度以防後續不一致
-                                if (feedrateEnable) {
-                                    segF = targetFeedrate;
-                                }
-                                if (activeFeedrate === null || Math.abs(segF - activeFeedrate) > 0.01) {
-                                    newlineParts.push('F' + segF.toFixed(2));
-                                    activeFeedrate = segF;
-                                }
-                            }
-                        } else {
-                            // Z 軸垂直運動 (扎刀/提刀) 維持原始進刀速
-                            if (segF) {
-                                if (activeFeedrate === null || Math.abs(segF - activeFeedrate) > 0.01) {
-                                    newlineParts.push('F' + segF.toFixed(2));
-                                    activeFeedrate = segF;
-                                }
-                            }
-                        }
-                    }
-
-                    let newline = newlineParts.join(' ');
-                    if (commentSuffix) newline += ' ' + commentSuffix;
-                    
-                    lastX = fX; lastY = fY; lastZ = fZ;
-                    isFirstMove = false;
-                    output.push(newline);
-                });
+            const isMovementCmd = /G0|G1|G2|G3|X|Y|Z/i.test(cmd);
+            if (isMovementCmd) {
+                const matches = nonContourSegments.filter(s => s.lineIdx === i);
+                if (matches.length > 0) {
+                    const compiled = compileSegmentsToGcode(matches);
+                    output.push(...compiled);
+                } else {
+                    output.push(line);
+                }
             } else {
-                const isMovementCmd = /G0|G1|G2|G3|X|Y|Z/i.test(cmd);
-                if (!isMovementCmd) {
-                    // 針對非移動的設定行（例如 G17 G40 G80），將原始的 G20/G21 或 G90/G91 去除以防衝突
-                    let cleanCmd = cmd;
+                // 清理可能衝突的初始設定代碼
+                let cleanLine = line;
+                if (!cmd.startsWith('(') && !cmd.startsWith(';')) {
+                    let commentSuffix = "";
                     const semiIdx = cmd.indexOf(';');
                     if (semiIdx !== -1) {
-                        cleanCmd = cmd.substring(0, semiIdx).trim();
+                        commentSuffix = cmd.substring(semiIdx);
                     }
+                    let cleanCmd = cmd.split(';')[0].trim();
                     let strippedCmd = cleanCmd.replace(/\bG0*20\b/gi, '')
                                               .replace(/\bG0*21\b/gi, '')
                                               .replace(/\bG0*90\b/gi, '')
@@ -1572,18 +1779,48 @@
                                               .replace(/\s+/g, ' ')
                                               .trim();
                     if (strippedCmd) {
-                        output.push(strippedCmd + (commentSuffix ? ' ' + commentSuffix : ''));
+                        cleanLine = strippedCmd + (commentSuffix ? ' ' + commentSuffix : '');
+                    } else if (commentSuffix) {
+                        cleanLine = commentSuffix;
+                    } else {
+                        continue;
                     }
                 }
+                output.push(cleanLine);
             }
-        });
+        }
 
-        // 確保在完全無指令的極端檔案下依然能補上 G21 G90
         if (!insertedHeader) {
             output.push("G21", "G90");
         }
 
-        return output.join('\n');
+        // --- 核心優化：G-code 最終連續相同行過濾檢查 ---
+        const cleanOutput = [];
+        for (let i = 0; i < output.length; i++) {
+            const currentLine = output[i].trim();
+            
+            // 跳過空行
+            if (currentLine === "") {
+                if (cleanOutput.length > 0 && cleanOutput[cleanOutput.length - 1].trim() === "") {
+                    continue; // 避免連續空行
+                }
+                cleanOutput.push(output[i]);
+                continue;
+            }
+            
+            // 標準化比較（轉大寫並去除多餘空格）
+            const normCurrent = currentLine.replace(/\s+/g, ' ').toUpperCase();
+            const normLast = cleanOutput.length > 0 ? cleanOutput[cleanOutput.length - 1].trim().replace(/\s+/g, ' ').toUpperCase() : null;
+            
+            // 若與上一行完全相同則過濾
+            if (normCurrent === normLast) {
+                continue; 
+            }
+            
+            cleanOutput.push(output[i]);
+        }
+
+        return cleanOutput.join('\n');
     }
 
     // --- 參考背景圖加載與處理 ---
@@ -1650,23 +1887,34 @@
 
             originalGcode = rawText; 
 
-            // 自動偵測原始 G-code 加工深度與第一行切削走速，並同步填入欄位
+            // 自動偵測原始 G-code 加工總深度與單次下刀 Stepdown 深度，並同步填入層數與對應欄位
             const initialPathData = parseGcode(originalGcode);
             const detectedDepth = detectOriginalDepth(initialPathData);
             const origThickInput = document.getElementById('origThickInput');
             const targetThickInput = document.getElementById('targetThickInput');
+            const targetLayersInput = document.getElementById('targetLayersInput');
 
             if (detectedDepth > 0) {
                 origThickInput.value = detectedDepth.toFixed(4);
                 targetThickInput.value = detectedDepth.toFixed(4); // 預設目標深度等於原始深度
+                
+                // 自動偵測單次下刀深度並將其轉化為層數寫入
+                const detectedStepdown = detectOriginalStepdown(initialPathData);
+                const calculatedLayers = Math.max(1, Math.round(detectedDepth / detectedStepdown));
+                targetLayersInput.value = calculatedLayers;
             } else {
                 origThickInput.value = "0";
                 targetThickInput.value = "0";
+                targetLayersInput.value = "12";
             }
 
-            // 自動偵測並填入原始 F 走速
+            // 自動偵測並填入原始 F XY 走速
             const detectedF = detectFirstFeedrate(initialPathData);
             document.getElementById('targetFeedrateInput').value = detectedF.toFixed(0);
+
+            // 自動偵測並填入原始 Z 軸下刀速
+            const detectedZF = detectFirstZFeedrate(initialPathData);
+            document.getElementById('targetZFeedrateInput').value = detectedZF.toFixed(0);
 
             processAndPreview(); 
         }; 
@@ -1684,7 +1932,7 @@
         }
     });
 
-    // 監聽厚度啟用與目標數值變更，即時重繪 3D 線架構
+    // 監聽進階選項：厚度啟用與層數/深度變更
     document.getElementById('thickEnable').addEventListener('change', e => {
         const thickControls = document.getElementById('thickControls');
         if (e.target.checked) {
@@ -1699,7 +1947,11 @@
         processAndPreview(); 
     });
 
-    // 監聽走速啟用與數值變更
+    document.getElementById('targetLayersInput').addEventListener('input', () => {
+        processAndPreview(); 
+    });
+
+    // 監聽進階選項：走速啟用與數值變更
     document.getElementById('feedrateEnable').addEventListener('change', e => {
         const feedrateControls = document.getElementById('feedrateControls');
         if (e.target.checked) {
@@ -1714,7 +1966,26 @@
         processAndPreview(); 
     });
 
-    // 監聽 TAB 啟用開關與刀具直徑變更，即時同步 3D 拱橋預覽
+    document.getElementById('targetZFeedrateInput').addEventListener('input', () => {
+        processAndPreview(); 
+    });
+
+    // 監聽進階選項：安全抬刀高度啟用與數值變更
+    document.getElementById('retractEnable').addEventListener('change', e => {
+        const retractControls = document.getElementById('retractControls');
+        if (e.target.checked) {
+            retractControls.classList.remove('hidden');
+        } else {
+            retractControls.classList.add('hidden');
+        }
+        processAndPreview(); 
+    });
+
+    document.getElementById('retractHeightInput').addEventListener('input', () => {
+        processAndPreview(); 
+    });
+
+    // 監聽進階選項：TAB 啟用與數值變更
     document.getElementById('tabEnable').addEventListener('change', e => {
         const tabControls = document.getElementById('tabControls');
         if (e.target.checked) {
