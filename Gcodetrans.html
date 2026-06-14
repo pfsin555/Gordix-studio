@@ -143,13 +143,12 @@
         ::-webkit-scrollbar-track { background: var(--bg-color); }
         ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 10px; }
     </style>
-    <!-- PWA Meta Tags -->
+        <!-- PWA Meta Tags -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0f172a">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" href="icon-192.png">
-    
 </head>
 <body class="pb-4">
 
@@ -171,7 +170,7 @@
         <button id="langBtn" onclick="toggleLanguage()" class="px-3 py-1.5 rounded-lg text-[11px] font-bold bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-all flex items-center gap-2">
             EN
         </button>
-        <span class="text-[10px] bg-white/10 px-3 py-1 rounded-full border border-white/20 font-mono">V2.6</span>
+        <span class="text-[10px] bg-white/10 px-3 py-1 rounded-full border border-white/20 font-mono">V2.7</span>
     </div>
 </div>
 
@@ -253,20 +252,25 @@
                     </div>
                 </div>
                 
-                <!-- 【簡化設計】：左上角精簡圖例 (移除 Title) -->
+                <!-- 【簡化設計】：左上角精簡圖例 (灰色虛線) -->
                 <div class="absolute top-3 left-3 z-10 text-gray-300 text-[10px] space-y-1 bg-black/75 p-2.5 rounded-lg backdrop-blur-sm border border-white/10 shadow-lg max-w-[190px]">
                     <p class="flex items-center">
                         <span class="w-3 h-3 bg-emerald-500 rounded-sm mr-2 flex-shrink-0"></span>
-                        <span id="txt-legend-path">加工路徑 (實線)</span>
+                        <span id="txt-legend-path">加工路徑</span>
                     </p>
                     <p class="flex items-center">
-                        <span class="w-3 h-3 bg-none border-2 border-dashed border-white rounded-sm mr-2 flex-shrink-0"></span>
-                        <span id="txt-legend-result">理論加工結果 (虛線)</span>
+                        <span class="w-3 h-3 bg-emerald-500/30 rounded-sm mr-2 flex-shrink-0 border border-emerald-500/50"></span>
+                        <span id="txt-legend-sweep">刀具經過範圍</span>
+                    </p>
+                    <p class="flex items-center">
+                        <span class="w-3 h-3 bg-none border-2 border-dashed border-gray-400 rounded-sm mr-2 flex-shrink-0"></span>
+                        <span id="txt-legend-result">理論加工結果</span>
                     </p>
                     <p class="flex items-center">
                         <span class="w-3 h-3 bg-amber-500 rounded-sm mr-2 flex-shrink-0"></span>
-                        <span id="txt-legend-tab">加工橋位 (黃色)</span>
+                        <span id="txt-legend-tab">加工橋位</span>
                     </p>
+
                 </div>
             </div>
         </div>
@@ -274,10 +278,10 @@
         <!-- 【右側控制面板】：3. 進階選項、4. 參考底圖 與 下載按鈕 (佔 3/12 寬度) -->
         <div class="lg:col-span-3 space-y-4 order-3 lg:order-3">
             
-            <!-- 3. 進階選項 (已整合不支援 Pocket 提示) -->
+            <!-- 3. 進階選項 -->
             <div class="controls-card">
                 <h2 class="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-3 flex items-center">
-                    <span id="txt-sec-advanced">3. 進階選項 ⚠️不支援 Pocket</span>
+                    <span id="txt-sec-advanced">3. 進階選項 (僅切割路徑)</span>
                 </h2>
                 
                 <div class="space-y-4">
@@ -285,11 +289,11 @@
                     <div class="border-b border-gray-700/50 pb-3">
                         <div class="flex items-center gap-2 mb-2">
                             <input type="checkbox" id="thickEnable" class="w-4 h-4 rounded text-emerald-500 bg-gray-700 border-gray-600 focus:ring-emerald-500 accent-emerald-500">
-                            <label for="thickEnable" class="label-text cursor-pointer" id="txt-label-thick-enable">啟用厚度與分層調整</label>
+                            <label for="thickEnable" class="label-text cursor-pointer" id="txt-label-thick-enable">深度調整</label>
                         </div>
                         <div id="thickControls" class="space-y-2.5 hidden pl-6">
                             <div>
-                                <label class="label-text block mb-1" id="txt-label-orig-thick">原始加工總深度 (自動偵測 mm)</label>
+                                <label class="label-text block mb-1" id="txt-label-orig-thick">原加工總深度 (自動偵測 mm)</label>
                                 <input type="number" id="origThickInput" value="0" class="w-full bg-slate-800 border-slate-700 text-slate-400 cursor-not-allowed" readonly disabled>
                             </div>
                             <div>
@@ -307,15 +311,15 @@
                     <div class="border-b border-gray-700/50 pb-3">
                         <div class="flex items-center gap-2 mb-2">
                             <input type="checkbox" id="feedrateEnable" class="w-4 h-4 rounded text-emerald-500 bg-gray-700 border-gray-600 focus:ring-emerald-500 accent-emerald-500">
-                            <label for="feedrateEnable" class="label-text cursor-pointer" id="txt-label-feedrate-enable">啟用走速 F 調整</label>
+                            <label for="feedrateEnable" class="label-text cursor-pointer" id="txt-label-feedrate-enable">走速調整(F)</label>
                         </div>
                         <div id="feedrateControls" class="space-y-2.5 hidden pl-6">
                             <div>
-                                <label class="label-text block mb-1" id="txt-label-target-feedrate">目標 XY 走速 F (mm/min)</label>
+                                <label class="label-text block mb-1" id="txt-label-target-feedrate">XY 走速(mm/min)</label>
                                 <input type="number" id="targetFeedrateInput" value="1200" min="1" step="50" class="w-full">
                             </div>
                             <div>
-                                <label class="label-text block mb-1" id="txt-label-target-zfeedrate">目標 Z 軸下刀速 F (mm/min)</label>
+                                <label class="label-text block mb-1" id="txt-label-target-zfeedrate">Z 軸下刀速(mm/min)</label>
                                 <input type="number" id="targetZFeedrateInput" value="400" min="1" step="50" class="w-full">
                             </div>
                         </div>
@@ -325,11 +329,11 @@
                     <div class="border-b border-gray-700/50 pb-3">
                         <div class="flex items-center gap-2 mb-2">
                             <input type="checkbox" id="retractEnable" class="w-4 h-4 rounded text-emerald-500 bg-gray-700 border-gray-600 focus:ring-emerald-500 accent-emerald-500">
-                            <label for="retractEnable" class="label-text cursor-pointer" id="txt-label-retract-enable">啟用安全抬刀高度調整 (Z > 0)</label>
+                            <label for="retractEnable" class="label-text cursor-pointer" id="txt-label-retract-enable">抬刀高度調整 (Z > 0)</label>
                         </div>
                         <div id="retractControls" class="space-y-2.5 hidden pl-6">
                             <div>
-                                <label class="label-text block mb-1" id="txt-label-target-retract">目標抬刀高度 (0.1~5 mm)</label>
+                                <label class="label-text block mb-1" id="txt-label-target-retract">新抬刀高度 (0.1~5 mm)</label>
                                 <input type="number" id="retractHeightInput" value="3.0" min="0.1" max="5.0" step="0.1" class="w-full">
                             </div>
                         </div>
@@ -338,13 +342,13 @@
                     <!-- 刀具直徑補償 (變換刀具) 調整區塊 -->
                     <div class="border-b border-gray-700/50 pb-3">
                         <div class="flex items-center gap-2 mb-2">
-                            <input type="checkbox" id="toolChangeEnable" class="w-4 h-4 rounded text-emerald-500 bg-gray-700 border-gray-600 focus:ring-emerald-500 accent-emerald-500">
-                            <label for="toolChangeEnable" class="label-text cursor-pointer" id="txt-label-toolchange-enable">啟用刀具直徑補償 (變換刀具)</label>
+                            <input type="checkbox" id="toolChangeEnable" class="w-4 h-4 rounded text-emerald-500 bg-gray-700 border-gray-600 focus:ring-emerald-500 accent-emerald-500" checked>
+                            <label for="toolChangeEnable" class="label-text cursor-pointer" id="txt-label-toolchange-enable">變換刀具(不建議)</label>
                         </div>
-                        <div id="toolChangeControls" class="space-y-2.5 hidden pl-6">
+                        <div id="toolChangeControls" class="space-y-2.5 pl-6">
                             <div class="grid grid-cols-2 gap-2">
                                 <div>
-                                    <label class="label-text block mb-1" id="txt-label-orig-tooldia">原始刀具直徑 (mm)</label>
+                                    <label class="label-text block mb-1" id="txt-label-orig-tooldia">原刀具直徑 (mm)</label>
                                     <input type="number" id="origToolDiaInput" value="6.35" min="0.1" step="0.1" class="w-full">
                                 </div>
                                 <div>
@@ -352,9 +356,9 @@
                                     <input type="number" id="newToolDiaInput" value="3.175" min="0.1" step="0.1" class="w-full">
                                 </div>
                             </div>
-                            <!-- 【新放置點】：顯示加工結果 -->
+                            <!-- 顯示加工結果 -->
                             <div class="flex items-center gap-2 pt-1.5">
-                                <input type="checkbox" id="showWorkpiece" class="w-4 h-4 rounded text-emerald-500 bg-gray-700 border-gray-600 focus:ring-emerald-500 accent-emerald-500">
+                                <input type="checkbox" id="showWorkpiece" class="w-4 h-4 rounded text-emerald-500 bg-gray-700 border-gray-600 focus:ring-emerald-500 accent-emerald-500" checked>
                                 <label for="showWorkpiece" class="text-[11px] text-gray-300 font-semibold cursor-pointer select-none" id="txt-label-showwp">顯示加工結果</label>
                             </div>
                         </div>
@@ -364,7 +368,7 @@
                     <div>
                         <div class="flex items-center gap-2 mb-2">
                             <input type="checkbox" id="tabEnable" class="w-4 h-4 rounded text-emerald-500 bg-gray-700 border-gray-600 focus:ring-emerald-500 accent-emerald-500">
-                            <label for="tabEnable" class="label-text cursor-pointer" id="txt-label-tab-enable">啟用自動橋位 (最後一圈抬刀)</label>
+                            <label for="tabEnable" class="label-text cursor-pointer" id="txt-label-tab-enable">自動橋位</label>
                         </div>
                         <div id="tabControls" class="space-y-2.5 hidden pl-6">
                             <div>
@@ -468,9 +472,10 @@
             unitMin: "分",
             unitSec: "秒",
             metricAlert: "Gcode已轉換為公制(G21)",
-            legendPath: "加工路徑 (實線)",
-            legendResult: "理論加工結果 (虛線)",
-            legendTab: "加工橋位 (黃色)"
+            legendPath: "加工路徑",
+            legendResult: "理論加工結果",
+            legendTab: "加工橋位",
+            legendSweep: "刀具經過範圍"
         },
         en: {
             headerTitle: "Gcode Adjuster",
@@ -512,15 +517,16 @@
             unitMin: "min",
             unitSec: "sec",
             metricAlert: "G-code converted to metric (G21)",
-            legendPath: "Tool Path (Solid Line)",
-            legendResult: "Workpiece Result (Dashed)",
-            legendTab: "Bridge Tabs (Yellow)"
+            legendPath: "Tool Path",
+            legendResult: "Workpiece Result",
+            legendTab: "Bridge Tabs",
+            legendSweep: "Tool Swept Area"
         }
     };
 
     let currentLang = 'zh';
     let lastTimeSec = 0, lastDistance = 0;
-    let scene, camera, renderer, gcodeGroup, grid;
+    let scene, camera, renderer, gcodeGroup, grid, cameraTarget;
     let originalGcode = "";
     let originalFileName = "output";
 
@@ -592,6 +598,8 @@
         document.getElementById('txt-legend-path').innerText = lang.legendPath;
         document.getElementById('txt-legend-result').innerText = lang.legendResult;
         document.getElementById('txt-legend-tab').innerText = lang.legendTab;
+        document.getElementById('txt-legend-sweep').innerText = lang.legendSweep;
+
         
         displayStats(lastTimeSec, lastDistance);
     }
@@ -672,6 +680,7 @@
     function initThree() {
         const container = document.getElementById('preview-container');
         scene = new THREE.Scene();
+        cameraTarget = new THREE.Vector3(0, 0, 0); // ★ 新增：初始化相機看焦點 (Target)
         camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 10000);
         
         renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -690,31 +699,42 @@
 
         camera.position.set(200, -200, 200);
         camera.up.set(0, 0, 1);
-        camera.lookAt(0, 0, 0);
+        camera.lookAt(cameraTarget);
 
         let isDragging = false;
         let previousMouse = { x: 0, y: 0 };
 
-        // 核心交互平移旋轉邏輯 (桌機滑鼠與手機觸控共用)
+        // ★ 重構：核心交互平移旋轉邏輯 (相機位置與 Target 同步平移，不被 origin (0,0,0) 鎖死)
         const handleMove = (x, y, buttons) => {
             if (!isDragging) return;
             const deltaX = x - previousMouse.x;
             const deltaY = y - previousMouse.y;
             
-            if (buttons === 1) { // 旋轉
-                const offset = new THREE.Vector3().subVectors(camera.position, new THREE.Vector3(0,0,0));
+            if (buttons === 1) { // 1. 旋轉 (繞著 cameraTarget 旋轉)
+                const offset = new THREE.Vector3().subVectors(camera.position, cameraTarget);
                 const radius = offset.length();
                 let phi = Math.atan2(offset.y, offset.x) - deltaX * 0.005;
                 let theta = Math.acos(offset.z / radius) - deltaY * 0.005;
                 theta = Math.max(0.01, Math.min(Math.PI - 0.01, theta));
-                camera.position.x = radius * Math.sin(theta) * Math.cos(phi);
-                camera.position.y = radius * Math.sin(theta) * Math.sin(phi);
-                camera.position.z = radius * Math.cos(theta);
-            } else if (buttons === 2) { // 右鍵平移
-                camera.position.x -= deltaX * 0.1;
-                camera.position.y += deltaY * 0.1;
+                
+                camera.position.x = cameraTarget.x + radius * Math.sin(theta) * Math.cos(phi);
+                camera.position.y = cameraTarget.y + radius * Math.sin(theta) * Math.sin(phi);
+                camera.position.z = cameraTarget.z + radius * Math.cos(theta);
+            } else if (buttons === 2) { // 2. 右鍵平移 (基於當前相機姿態 local X 與 local Y，實現任意位置無縫平移)
+                const factor = 0.0015 * camera.position.distanceTo(cameraTarget);
+                
+                // 投影計算相機的局部坐標方向向量
+                const localRight = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
+                const localUp = new THREE.Vector3(0, 1, 0).applyQuaternion(camera.quaternion);
+                
+                const panOffset = new THREE.Vector3()
+                    .addScaledVector(localRight, -deltaX * factor)
+                    .addScaledVector(localUp, deltaY * factor);
+                
+                camera.position.add(panOffset);
+                cameraTarget.add(panOffset);
             }
-            camera.lookAt(0,0,0);
+            camera.lookAt(cameraTarget);
             previousMouse = { x, y };
         };
 
@@ -728,9 +748,11 @@
             handleMove(e.clientX, e.clientY, e.buttons);
         });
         container.addEventListener('wheel', e => {
-            if (e.deltaY > 0) camera.position.multiplyScalar(1.1);
-            else camera.position.divideScalar(1.1);
-            camera.lookAt(0,0,0);
+            const dir = new THREE.Vector3().subVectors(camera.position, cameraTarget).normalize();
+            const dist = camera.position.distanceTo(cameraTarget);
+            const newDist = e.deltaY > 0 ? dist * 1.1 : dist / 1.1;
+            camera.position.copy(cameraTarget).addScaledVector(dir, newDist);
+            camera.lookAt(cameraTarget);
         });
         container.oncontextmenu = e => { e.preventDefault(); };
 
@@ -748,7 +770,7 @@
                 const dy = e.touches[0].clientY - e.touches[1].clientY;
                 initialPinchDist = Math.sqrt(dx * dx + dy * dy);
                 
-                const offset = new THREE.Vector3().subVectors(camera.position, new THREE.Vector3(0,0,0));
+                const offset = new THREE.Vector3().subVectors(camera.position, cameraTarget);
                 initialCamRadius = offset.length();
 
                 previousMouse = {
@@ -772,8 +794,8 @@
                 if (initialPinchDist > 0 && dist > 10) {
                     const factor = initialPinchDist / dist;
                     const newRadius = Math.max(10, Math.min(1500, initialCamRadius * factor));
-                    const dir = new THREE.Vector3().subVectors(camera.position, new THREE.Vector3(0,0,0)).normalize();
-                    camera.position.copy(dir.multiplyScalar(newRadius));
+                    const dir = new THREE.Vector3().subVectors(camera.position, cameraTarget).normalize();
+                    camera.position.copy(cameraTarget).addScaledVector(dir, newRadius);
                 }
 
                 // 2. 雙指拖曳平移 (Pan)
@@ -782,10 +804,18 @@
                 const deltaX = midX - previousMouse.x;
                 const deltaY = midY - previousMouse.y;
                 
-                camera.position.x -= deltaX * 0.15;
-                camera.position.y += deltaY * 0.15;
+                const factor = 0.0015 * camera.position.distanceTo(cameraTarget);
+                const localRight = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
+                const localUp = new THREE.Vector3(0, 1, 0).applyQuaternion(camera.quaternion);
                 
-                camera.lookAt(0,0,0);
+                const panOffset = new THREE.Vector3()
+                    .addScaledVector(localRight, -deltaX * factor)
+                    .addScaledVector(localUp, deltaY * factor);
+                
+                camera.position.add(panOffset);
+                cameraTarget.add(panOffset);
+                
+                camera.lookAt(cameraTarget);
                 previousMouse = { x: midX, y: midY };
             }
         }, { passive: true });
@@ -1136,7 +1166,7 @@
         
         const A2 = L2_p2.y - L2_p1.y;
         const B2 = L2_p1.x - L2_p2.x;
-        const C2 = A2 * L2_p2.x + B2 * L2_p1.y;
+        const C2 = A2 * L2_p1.x + B2 * L2_p1.y; 
         
         const det = A1 * B2 - A2 * B1;
         if (Math.abs(det) > 1e-5) {
@@ -1207,7 +1237,7 @@
             const uy = P.y - O1.y;
             const len = Math.sqrt(ux*ux + uy*uy);
             if (len > 1e-5) {
-                return { x: O1.x + (ux / len) * R1, y: O1.y + (uy / len) * R1 };
+                return { x: O1.x + (ux / len) * R1, y: O1.y + (ux / len) * R1 };
             }
             return { x: O1.x + R1, y: O1.y };
         }
@@ -1216,7 +1246,7 @@
             const ux = P.x - O1.x;
             const uy = P.y - O1.y;
             const len1 = Math.sqrt(ux*ux + uy*uy);
-            const p1 = len1 > 1e-5 ? { x: O1.x + (ux / len1) * R1, y: O1.y + (uy / len1) * R1 } : { x: O1.x + R1, y: O1.y };
+            const p1 = len1 > 1e-5 ? { x: O1.x + (ux / len1) * R1, y: O1.y + (ux / len1) * R1 } : { x: O1.x + R1, y: O1.y };
             
             const vx = P.x - O2.x;
             const vy = P.y - O2.y;
@@ -1422,7 +1452,6 @@
                             seg.to.x = new_center.x + (end_vector.x / end_dist) * R_actual;
                             seg.to.y = new_center.y + (end_vector.y / end_dist) * R_actual;
 
-                            // 重要修正：圓弧終點修正後，立刻同步至下一段切削路徑的起點，保持路徑幾何的絕對連續性
                             const next_idx = i + 1;
                             if (loop.isClosed) {
                                 const cyclic_next = next_idx % n;
@@ -1532,7 +1561,6 @@
             lineIdx: s.lineIdx
         }));
 
-        // 若未啟用刀徑補償，加工結果路徑（白色虛線）直接等於原始 G-code 路徑
         if (!toolChangeEnable) {
             return { workpiecePath: cloneSegments(pathData), newToolPath: pathData };
         }
@@ -1548,7 +1576,6 @@
         let currentChain = null;
 
         pathData.forEach((seg, idx) => {
-            // 計算此線段在 XY 軸平面上的位移長度，排除純 Z 軸下刀移動 (位移量 <= 1e-4)
             const dx = seg.to.x - seg.from.x;
             const dy = seg.to.y - seg.from.y;
             const dXY = Math.sqrt(dx * dx + dy * dy);
@@ -2289,8 +2316,89 @@
         return gcodeLines;
     }
 
+    // --- 取得當前加工啟用的刀具直徑 ---
+    function getActiveToolDiameter() {
+        const toolChangeEnable = document.getElementById('toolChangeEnable') && document.getElementById('toolChangeEnable').checked;
+        const tabEnable = document.getElementById('tabEnable') && document.getElementById('tabEnable').checked;
+        
+        if (toolChangeEnable) {
+            return parseFloat(document.getElementById('newToolDiaInput').value) || 3.175;
+        } else if (tabEnable) {
+            return parseFloat(document.getElementById('toolDiaInput').value) || 3.175;
+        } else {
+            return parseFloat(document.getElementById('origToolDiaInput').value) || 6.35;
+        }
+    }
+
+    // --- 高精度 3D 工具切削投影帶生成器 ---
+    function generateSweptRibbonGeometry(points, width) {
+        const vertices = [];
+        const indices = [];
+        const halfWidth = width / 2;
+
+        if (points.length < 2) return null;
+
+        let totalXYDist = 0;
+        for (let i = 1; i < points.length; i++) {
+            totalXYDist += Math.sqrt((points[i].x - points[i-1].x)**2 + (points[i].y - points[i-1].y)**2);
+        }
+        if (totalXYDist < 1e-4) {
+            return null; 
+        }
+
+        const normals = [];
+        for (let i = 0; i < points.length; i++) {
+            let dir = new THREE.Vector3();
+            if (i === 0) {
+                dir.subVectors(points[1], points[0]);
+            } else if (i === points.length - 1) {
+                dir.subVectors(points[i], points[i-1]);
+            } else {
+                const d1 = new THREE.Vector3().subVectors(points[i], points[i-1]).normalize();
+                const d2 = new THREE.Vector3().subVectors(points[i+1], points[i]).normalize();
+                dir.addVectors(d1, d2);
+            }
+            dir.z = 0; 
+            dir.normalize();
+            
+            if (dir.lengthSq() < 1e-6) {
+                dir.set(1, 0, 0);
+            }
+            
+            const norm = new THREE.Vector3(-dir.y, dir.x, 0).normalize();
+            normals.push(norm);
+        }
+
+        for (let i = 0; i < points.length; i++) {
+            const p = points[i];
+            const norm = normals[i];
+            
+            const leftPt = new THREE.Vector3().addScaledVector(norm, halfWidth).add(p);
+            const rightPt = new THREE.Vector3().addScaledVector(norm, -halfWidth).add(p);
+            
+            vertices.push(leftPt.x, leftPt.y, leftPt.z);
+            vertices.push(rightPt.x, rightPt.y, rightPt.z);
+        }
+
+        for (let i = 0; i < points.length - 1; i++) {
+            const currLeft = i * 2;
+            const currRight = i * 2 + 1;
+            const nextLeft = (i + 1) * 2;
+            const nextRight = (i + 1) * 2 + 1;
+
+            indices.push(currLeft, currRight, nextLeft);
+            indices.push(currRight, nextRight, nextLeft);
+        }
+
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+        geometry.setIndex(indices);
+        geometry.computeVertexNormals();
+
+        return geometry;
+    }
+
     // --- 計算並顯示 3D 渲染與虛線預覽 ---
-    // （若 showWorkpiece 打勾，則無論有無開啟 toolChangeEnable 均會在此處理並畫出白色虛線）
     function processAndPreview() {
         if (!originalGcode) return;
         const scale = parseFloat(document.getElementById('scaleInput').value) || 1;
@@ -2301,18 +2409,12 @@
 
         let pathData = parseGcode(originalGcode);
         
-        // 1. 執行高精度刀具直徑幾何雙步驟補償 (等距偏移)
         const compResults = applyTwoStepCutterCompensation(pathData);
         const workpiecePath = compResults.workpiecePath;
         pathData = compResults.newToolPath; 
 
-        // 2. 厚度縮放與分層重建
         pathData = applyThicknessAdjustment(pathData);
-
-        // 3. 走速 F 調整
         pathData = applyFeedrateAdjustment(pathData);
-
-        // 4. 自動配置與偏移 TAB 橋位
         pathData = applyTabsToPaths(pathData);
 
         if (gcodeGroup) scene.remove(gcodeGroup);
@@ -2331,14 +2433,33 @@
             };
         };
 
-        // A. 繪製第一步：加工工件結果 (白色虛線預覽)
         const showWorkpiece = document.getElementById('showWorkpiece') && document.getElementById('showWorkpiece').checked;
         if (workpiecePath && showWorkpiece) {
-            let lastWpP = { x: 0, y: 0, z: 0 }, isWpF = true;
+            // ★ 新增：分析並找出最深的 Z 切削深度 (Z 最負值)
+            let deepestZ = 0;
+            workpiecePath.forEach(seg => {
+                if (seg.type !== 'G0' && !seg.isStartOrEndHome) {
+                    deepestZ = Math.min(deepestZ, seg.to.z, seg.from.z);
+                }
+            });
+
+            let lastWpP = null;
             workpiecePath.forEach((seg, idx) => {
+                // 加工結果過濾：排除快速定位 (G0) 及原點復歸移動
+                if (seg.type === 'G0' || seg.isStartOrEndHome) {
+                    lastWpP = null;
+                    return;
+                }
+
+                // ★ 新增：核心過濾演算法 —— 不論切削層數有多少，只會繪製深度為「最深」的一層
+                const isAtDeepest = (Math.abs(seg.to.z - deepestZ) < 0.01 && Math.abs(seg.from.z - deepestZ) < 0.01);
+                if (!isAtDeepest) {
+                    lastWpP = null;
+                    return;
+                }
+
                 const p2 = trans(seg.to, seg.isStartOrEndHome);
-                const isFirstSegmentHome = idx === 0 && (Math.abs(seg.from.x) < 1e-4 && Math.abs(seg.from.y) < 1e-4);
-                const p1 = isWpF ? trans(seg.from, isFirstSegmentHome) : { ...lastWpP };
+                const p1 = lastWpP ? lastWpP : trans(seg.from, false);
 
                 let points = [];
                 if (seg.type === 'G2' || seg.type === 'G3') {
@@ -2356,7 +2477,7 @@
 
                 const geo = new THREE.BufferGeometry().setFromPoints(points);
                 const lineMat = new THREE.LineDashedMaterial({
-                    color: 0xffffff,
+                    color: 0x9ca3af, // ★ 新增：加工結果虛線改為「淺灰色 (Tailwind gray-400)」
                     dashSize: 3,
                     gapSize: 3
                 });
@@ -2364,11 +2485,10 @@
                 meshLine.computeLineDistances(); 
                 gcodeGroup.add(meshLine);
 
-                lastWpP = { ...p2 }; isWpF = false;
+                lastWpP = { ...p2 };
             });
         }
 
-        // B. 繪製第二步：新刀具路徑 (實線綠色路徑)
         pathData.forEach((seg, idx) => {
             const p2 = trans(seg.to, seg.isStartOrEndHome);
             const dXY = Math.sqrt((p2.x - lastP.x)**2 + (p2.y - lastP.y)**2);
@@ -2410,6 +2530,23 @@
             const lineMat = new THREE.LineBasicMaterial({ color: color, linewidth: seg.isTab ? 3 : 1 });
             gcodeGroup.add(new THREE.Line(geo, lineMat));
 
+            if (showWorkpiece && seg.type !== 'G0' && !seg.isStartOrEndHome) {
+                const activeToolDia = getActiveToolDiameter();
+                const ribbonWidth = activeToolDia * scale;
+                const ribbonGeo = generateSweptRibbonGeometry(points, ribbonWidth);
+                if (ribbonGeo) {
+                    const ribbonMat = new THREE.MeshBasicMaterial({
+                        color: 0x10b981,     
+                        transparent: true,
+                        opacity: 0.2,        
+                        side: THREE.DoubleSide,
+                        depthWrite: false    
+                    });
+                    const ribbonMesh = new THREE.Mesh(ribbonGeo, ribbonMat);
+                    gcodeGroup.add(ribbonMesh);
+                }
+            }
+
             lastP = { ...p2 }; isF = false;
         });
 
@@ -2423,7 +2560,6 @@
         const lines = originalGcode.split('\n');
         let pathData = parseGcode(originalGcode);
         
-        // 1. 偵測原始切削動作範圍
         const contourRanges = [];
         let currentRange = null;
 
@@ -2442,11 +2578,9 @@
             }
         });
 
-        // 2. 套用高精度雙步驟刀具補償
         const compResults = applyTwoStepCutterCompensation(pathData);
         pathData = compResults.newToolPath;
 
-        // 3. 厚度分層、走速、自動橋位
         pathData = applyThicknessAdjustment(pathData);
         pathData = applyFeedrateAdjustment(pathData);
         pathData = applyTabsToPaths(pathData);
@@ -2619,6 +2753,11 @@
         document.getElementById('fileNameDisplay').innerText = file.name;
         document.getElementById('fileInfo').classList.remove('hidden');
         
+        // ★ 新增：每次加載新檔案時，自動重置 3D 視角焦點回到原點中心
+        if (cameraTarget) cameraTarget.set(0, 0, 0);
+        if (camera) camera.position.set(200, -200, 200);
+        if (camera && cameraTarget) camera.lookAt(cameraTarget);
+
         const r = new FileReader(); 
         r.onload = ev => { 
             let rawText = ev.target.result;
@@ -2673,7 +2812,6 @@
         }
     });
 
-    // 監聽進階選項：厚度啟用與層數/深度變更
     document.getElementById('thickEnable').addEventListener('change', e => {
         const thickControls = document.getElementById('thickControls');
         if (e.target.checked) {
@@ -2692,7 +2830,6 @@
         processAndPreview(); 
     });
 
-    // 監聽進階選項：走速啟用與數值變更
     document.getElementById('feedrateEnable').addEventListener('change', e => {
         const feedrateControls = document.getElementById('feedrateControls');
         if (e.target.checked) {
@@ -2711,7 +2848,6 @@
         processAndPreview(); 
     });
 
-    // 監聽進階選項：安全抬刀高度啟用與數值變更
     document.getElementById('retractEnable').addEventListener('change', e => {
         const retractControls = document.getElementById('retractControls');
         if (e.target.checked) {
@@ -2726,7 +2862,6 @@
         processAndPreview(); 
     });
 
-    // 監聽進階選項：刀具直徑補償啟用與變更
     document.getElementById('toolChangeEnable').addEventListener('change', e => {
         const toolChangeControls = document.getElementById('toolChangeControls');
         if (e.target.checked) {
@@ -2749,7 +2884,6 @@
         processAndPreview(); 
     });
 
-    // 針對新刀具直徑輸入框強制失焦防呆 (限制最小 0.1 mm)
     document.getElementById('newToolDiaInput').addEventListener('blur', e => {
         let val = parseFloat(e.target.value);
         if (isNaN(val) || val < 0.1) {
@@ -2758,7 +2892,6 @@
         }
     });
 
-    // 監聽進階選項：TAB 啟用與數值變更
     document.getElementById('tabEnable').addEventListener('change', e => {
         const tabControls = document.getElementById('tabControls');
         if (e.target.checked) {
@@ -2797,6 +2930,12 @@
         if (minX !== Infinity) {
             document.getElementById('offsetX').value = (-( (minX+maxX)/2 * s)).toFixed(2);
             document.getElementById('offsetY').value = (-( (minY+maxY)/2 * s)).toFixed(2);
+            
+            // ★ 新增：重置相機旋轉焦點回到對稱的原點中心，重新校準視角
+            if (cameraTarget) cameraTarget.set(0, 0, 0);
+            if (camera) camera.position.set(200, -200, 200);
+            if (camera && cameraTarget) camera.lookAt(cameraTarget);
+
             processAndPreview();
         }
     });
