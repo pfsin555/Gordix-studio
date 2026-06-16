@@ -160,6 +160,13 @@
         </h1>
     </div>
     <div class="flex gap-3 items-center">
+        <!-- 返回上一頁按鈕 -->
+        <button onclick="if(window.history.length > 1) { window.history.back(); } else { window.location.href='index.html'; }" class="flex items-center justify-center text-slate-300 hover:text-orange-400 transition-colors font-bold bg-white/10 hover:bg-white/20 p-1.5 rounded-lg border border-white/20 cursor-pointer" title="返回上一頁 / Go Back">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <line x1="20" y1="12" x2="4" y2="12"></line>
+                <polyline points="10 18 4 12 10 6"></polyline>
+            </svg>
+        </button>
         <!-- 明暗主題切換 -->
         <button onclick="toggleTheme()" class="p-1.5 rounded-lg text-[11px] font-bold bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-all flex items-center justify-center" aria-label="Toggle Theme">
             <svg id="theme-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -170,7 +177,13 @@
         <button id="langBtn" onclick="toggleLanguage()" class="px-3 py-1.5 rounded-lg text-[11px] font-bold bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-all flex items-center gap-2">
             EN
         </button>
-        <span class="text-[10px] bg-white/10 px-3 py-1 rounded-full border border-white/20 font-mono">V2.7</span>
+        <!-- 書頁按鈕 (指向 params.html，取代 V2.8 顯示) -->
+        <a href="params.html" class="flex items-center justify-center text-slate-300 hover:text-emerald-400 transition-colors bg-white/10 hover:bg-white/20 p-1.5 rounded-lg border border-white/20 cursor-pointer" title="工藝參數建議 / Parameters Guide">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+                <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+            </svg>
+        </a>
     </div>
 </div>
 
@@ -252,7 +265,7 @@
                     </div>
                 </div>
                 
-                <!-- 【簡化設計】：左上角精簡圖例 (灰色虛線) -->
+                <!-- 【簡化設計】：左上角精簡圖例 -->
                 <div class="absolute top-3 left-3 z-10 text-gray-300 text-[10px] space-y-1 bg-black/75 p-2.5 rounded-lg backdrop-blur-sm border border-white/10 shadow-lg max-w-[190px]">
                     <p class="flex items-center">
                         <span class="w-3 h-3 bg-emerald-500 rounded-sm mr-2 flex-shrink-0"></span>
@@ -270,7 +283,6 @@
                         <span class="w-3 h-3 bg-amber-500 rounded-sm mr-2 flex-shrink-0"></span>
                         <span id="txt-legend-tab">加工橋位</span>
                     </p>
-
                 </div>
             </div>
         </div>
@@ -345,7 +357,7 @@
                             <input type="checkbox" id="toolChangeEnable" class="w-4 h-4 rounded text-emerald-500 bg-gray-700 border-gray-600 focus:ring-emerald-500 accent-emerald-500">
                             <label for="toolChangeEnable" class="label-text cursor-pointer" id="txt-label-toolchange-enable">變換刀具(不建議)</label>
                         </div>
-                        <div id="toolChangeControls" class="space-y-2.5 pl-6">
+                        <div id="toolChangeControls" class="space-y-2.5 pl-6 hidden">
                             <div class="grid grid-cols-2 gap-2">
                                 <div>
                                     <label class="label-text block mb-1" id="txt-label-orig-tooldia">原刀具直徑 (mm)</label>
@@ -358,7 +370,7 @@
                             </div>
                             <!-- 顯示加工結果 -->
                             <div class="flex items-center gap-2 pt-1.5">
-                                <input type="checkbox" id="showWorkpiece" class="w-4 h-4 rounded text-emerald-500 bg-gray-700 border-gray-600 focus:ring-emerald-500 accent-emerald-500">
+                                <input type="checkbox" id="showWorkpiece" class="w-4 h-4 rounded text-emerald-500 bg-gray-700 border-gray-600 focus:ring-emerald-500 accent-emerald-500" checked>
                                 <label for="showWorkpiece" class="text-[11px] text-gray-300 font-semibold cursor-pointer select-none" id="txt-label-showwp">顯示加工結果</label>
                             </div>
                         </div>
@@ -600,7 +612,6 @@
         document.getElementById('txt-legend-tab').innerText = lang.legendTab;
         document.getElementById('txt-legend-sweep').innerText = lang.legendSweep;
 
-        
         displayStats(lastTimeSec, lastDistance);
     }
 
@@ -680,7 +691,7 @@
     function initThree() {
         const container = document.getElementById('preview-container');
         scene = new THREE.Scene();
-        cameraTarget = new THREE.Vector3(0, 0, 0); // ★ 新增：初始化相機看焦點 (Target)
+        cameraTarget = new THREE.Vector3(0, 0, 0); // 初始化相機焦點
         camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 10000);
         
         renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -704,13 +715,13 @@
         let isDragging = false;
         let previousMouse = { x: 0, y: 0 };
 
-        // ★ 重構：核心交互平移旋轉邏輯 (相機位置與 Target 同步平移，不被 origin (0,0,0) 鎖死)
+        // 核心交互平移旋轉邏輯
         const handleMove = (x, y, buttons) => {
             if (!isDragging) return;
             const deltaX = x - previousMouse.x;
             const deltaY = y - previousMouse.y;
             
-            if (buttons === 1) { // 1. 旋轉 (繞著 cameraTarget 旋轉)
+            if (buttons === 1) { // 1. 旋轉 (繞著 cameraTarget)
                 const offset = new THREE.Vector3().subVectors(camera.position, cameraTarget);
                 const radius = offset.length();
                 let phi = Math.atan2(offset.y, offset.x) - deltaX * 0.005;
@@ -720,10 +731,8 @@
                 camera.position.x = cameraTarget.x + radius * Math.sin(theta) * Math.cos(phi);
                 camera.position.y = cameraTarget.y + radius * Math.sin(theta) * Math.sin(phi);
                 camera.position.z = cameraTarget.z + radius * Math.cos(theta);
-            } else if (buttons === 2) { // 2. 右鍵平移 (基於當前相機姿態 local X 與 local Y，實現任意位置無縫平移)
+            } else if (buttons === 2) { // 2. 右鍵平移 (基於當前相機姿態)
                 const factor = 0.0015 * camera.position.distanceTo(cameraTarget);
-                
-                // 投影計算相機的局部坐標方向向量
                 const localRight = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
                 const localUp = new THREE.Vector3(0, 1, 0).applyQuaternion(camera.quaternion);
                 
@@ -756,7 +765,7 @@
         });
         container.oncontextmenu = e => { e.preventDefault(); };
 
-        // --- 手機/行動觸控端監聽 (Pinch Zoom & Drag Pan) ---
+        // --- 手機/行動觸控端監聽 ---
         let initialPinchDist = 0;
         let initialCamRadius = 0;
 
@@ -765,7 +774,7 @@
                 isDragging = true;
                 previousMouse = { x: e.touches[0].clientX, y: e.touches[0].clientY };
             } else if (e.touches.length === 2) {
-                isDragging = false; // 進入雙指模式，暫停單指旋轉
+                isDragging = false;
                 const dx = e.touches[0].clientX - e.touches[1].clientX;
                 const dy = e.touches[0].clientY - e.touches[1].clientY;
                 initialPinchDist = Math.sqrt(dx * dx + dy * dy);
@@ -784,9 +793,8 @@
             if (e.touches.length === 1 && isDragging) {
                 const x = e.touches[0].clientX;
                 const y = e.touches[0].clientY;
-                handleMove(x, y, 1); // 行動單指模擬滑鼠左鍵旋轉
+                handleMove(x, y, 1);
             } else if (e.touches.length === 2) {
-                // 1. 雙指捏合縮放 (Zoom)
                 const dx = e.touches[0].clientX - e.touches[1].clientX;
                 const dy = e.touches[0].clientY - e.touches[1].clientY;
                 const dist = Math.sqrt(dx * dx + dy * dy);
@@ -798,7 +806,6 @@
                     camera.position.copy(cameraTarget).addScaledVector(dir, newRadius);
                 }
 
-                // 2. 雙指拖曳平移 (Pan)
                 const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
                 const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
                 const deltaX = midX - previousMouse.x;
@@ -2435,7 +2442,7 @@
 
         const showWorkpiece = document.getElementById('showWorkpiece') && document.getElementById('showWorkpiece').checked;
         if (workpiecePath && showWorkpiece) {
-            // ★ 新增：分析並找出最深的 Z 切削深度 (Z 最負值)
+            // 分析並找出最深的 Z 切削深度 (Z 最負值)
             let deepestZ = 0;
             workpiecePath.forEach(seg => {
                 if (seg.type !== 'G0' && !seg.isStartOrEndHome) {
@@ -2445,13 +2452,12 @@
 
             let lastWpP = null;
             workpiecePath.forEach((seg, idx) => {
-                // 加工結果過濾：排除快速定位 (G0) 及原點復歸移動
                 if (seg.type === 'G0' || seg.isStartOrEndHome) {
                     lastWpP = null;
                     return;
                 }
 
-                // ★ 新增：核心過濾演算法 —— 不論切削層數有多少，只會繪製深度為「最深」的一層
+                // 核心過濾：不論分層，僅將理論加工結果繪製在最深的一層
                 const isAtDeepest = (Math.abs(seg.to.z - deepestZ) < 0.01 && Math.abs(seg.from.z - deepestZ) < 0.01);
                 if (!isAtDeepest) {
                     lastWpP = null;
@@ -2477,7 +2483,7 @@
 
                 const geo = new THREE.BufferGeometry().setFromPoints(points);
                 const lineMat = new THREE.LineDashedMaterial({
-                    color: 0x9ca3af, // ★ 新增：加工結果虛線改為「淺灰色 (Tailwind gray-400)」
+                    color: 0x9ca3af, // 淺灰色 (Tailwind gray-400)
                     dashSize: 3,
                     gapSize: 3
                 });
@@ -2753,7 +2759,7 @@
         document.getElementById('fileNameDisplay').innerText = file.name;
         document.getElementById('fileInfo').classList.remove('hidden');
         
-        // ★ 新增：每次加載新檔案時，自動重置 3D 視角焦點回到原點中心
+        // 每次加載新檔案時，自動重置 3D 視角焦點回到原點中心
         if (cameraTarget) cameraTarget.set(0, 0, 0);
         if (camera) camera.position.set(200, -200, 200);
         if (camera && cameraTarget) camera.lookAt(cameraTarget);
@@ -2931,7 +2937,7 @@
             document.getElementById('offsetX').value = (-( (minX+maxX)/2 * s)).toFixed(2);
             document.getElementById('offsetY').value = (-( (minY+maxY)/2 * s)).toFixed(2);
             
-            // ★ 新增：重置相機旋轉焦點回到對稱的原點中心，重新校準視角
+            // 重置相機旋轉焦點回到對稱的原點中心
             if (cameraTarget) cameraTarget.set(0, 0, 0);
             if (camera) camera.position.set(200, -200, 200);
             if (camera && cameraTarget) camera.lookAt(cameraTarget);
