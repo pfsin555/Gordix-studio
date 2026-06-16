@@ -21,14 +21,12 @@
             transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
         }
     </style>
-
-    <!-- PWA Meta Tags -->
+        <!-- PWA Meta Tags -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0f172a">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" href="icon-192.png">
-
 </head>
 <body class="bg-slate-50 dark:bg-slate-950 min-h-screen p-4 md:p-8 text-slate-800 dark:text-slate-200 font-sans theme-transition">
     <!-- 主卡片容器 (承襲 1.html 的外觀與風格) -->
@@ -59,9 +57,9 @@
             </div>
         </div>
 
-        <!-- 主內容區域: 5 個功能卡片佈局 -->
+        <!-- 主內容區域: 6 個功能卡片佈局 -->
         <main class="p-6 md:p-12">
-            <!-- 採用 flex-wrap 在寬螢幕下自動置中最後兩個項目，達成完美的 3x2 置中對齊 -->
+            <!-- 採用 flex-wrap 在寬螢幕下自動排成完美對稱的 3x2 格局 -->
             <div class="flex flex-wrap justify-center gap-6 w-full">
                 
                 <!-- Tool 1: 桌長配置 (灰色) -->
@@ -87,7 +85,7 @@
                 </a>
 
                 <!-- Tool 3: 轉檔工具(繪圖) (藍色) -->
-                <a href="draw.html" class="group w-full sm:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)] max-w-sm bg-slate-50 dark:bg-slate-800/40 p-8 rounded-xl border border-slate-200 dark:border-slate-800/80 flex flex-col items-center justify-center text-center transition-all duration-200 hover:-translate-y-1 hover:border-blue-500 dark:hover:border-blue-500 hover:shadow-lg">
+                <a href="Laser.html" class="group w-full sm:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)] max-w-sm bg-slate-50 dark:bg-slate-800/40 p-8 rounded-xl border border-slate-200 dark:border-slate-800/80 flex flex-col items-center justify-center text-center transition-all duration-200 hover:-translate-y-1 hover:border-blue-500 dark:hover:border-blue-500 hover:shadow-lg">
                     <div class="w-14 h-14 bg-slate-200 dark:bg-slate-800 rounded-xl mb-5 flex items-center justify-center text-slate-500 dark:text-slate-400 group-hover:bg-blue-500 group-hover:text-white group-hover:shadow-[0_0_15px_rgba(59,130,246,0.4)] transition-all duration-200">
                         <svg class="w-7 h-7" fill="currentColor" viewBox="0 0 24 24">
                             <path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm0 6c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zM11 2v4h2V2h-2zm0 16v4h2v-4h-2zm11-7h-4v2h4v-2zM6 11H2v2h4v-2z"/>
@@ -117,6 +115,18 @@
                     </div>
                     <h3 data-zh="Gcode 即時調整" data-en="Gcode Real-time Adjuster" class="text-lg font-bold text-slate-900 dark:text-white mb-2 transition-colors">Gcode 即時調整</h3>
                     <p data-zh="即時編輯與校正 Gcode 內容" data-en="Live Gcode editing and correction" class="text-sm text-slate-500 dark:text-slate-400">即時編輯與校正 Gcode 內容</p>
+                </a>
+
+                <!-- Tool 6: 參數指南 (紫色) - 新增項目 -->
+                <a href="params.html" class="group w-full sm:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)] max-w-sm bg-slate-50 dark:bg-slate-800/40 p-8 rounded-xl border border-slate-200 dark:border-slate-800/80 flex flex-col items-center justify-center text-center transition-all duration-200 hover:-translate-y-1 hover:border-purple-500 dark:hover:border-purple-500 hover:shadow-lg">
+                    <div class="w-14 h-14 bg-slate-200 dark:bg-slate-800 rounded-xl mb-5 flex items-center justify-center text-slate-500 dark:text-slate-400 group-hover:bg-purple-500 group-hover:text-white group-hover:shadow-[0_0_15px_rgba(168,85,247,0.4)] transition-all duration-200">
+                        <svg class="w-7 h-7" fill="currentColor" viewBox="0 0 24 24">
+                            <!-- 工藝開書 (Open Book) 向量圖標 -->
+                            <path d="M12 4.5C10.55 3.42 8.35 3 6 3c-2.2 0-4.3.42-6 1.5v15c1.7-1.08 3.8-1.5 6-1.5 2.35 0 4.55.42 6 1.5 1.45-1.08 3.65-1.5 6-1.5 2.2 0 4.3.42 6 1.5v-15c-1.7-1.08-3.8-1.5-6-1.5-2.35 0-4.55.42-6 1.5zM11 17.5c-1.45-1.08-3.65-1.5-6-1.5-1.5 0-2.85.2-4 .5V6c1.15-.3 2.5-.5 4-.5 2.2 0 4.3.42 6 1.5v10.5zm12-11.5v10.5c-1.15-.3-2.5-.5-4-.5-2.35 0-4.55.42-6 1.5V7.5c1.45-1.08 3.65-1.5 6-1.5 1.5 0 2.85.2 4 .5z"/>
+                        </svg>
+                    </div>
+                    <h3 data-zh="參數指南" data-en="Parameter Guide" class="text-lg font-bold text-slate-900 dark:text-white mb-2 transition-colors">參數指南</h3>
+                    <p data-zh="各類材料加工參數建議與快速查詢" data-en="Processing parameters & reference guide for materials" class="text-sm text-slate-500 dark:text-slate-400">各類材料加工參數建議與快速查詢</p>
                 </a>
 
             </div>
@@ -192,8 +202,7 @@
             applyTheme();
         };
     </script>
-
-    <!-- PWA Service Worker Registration -->
+        <!-- PWA Service Worker Registration -->
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
