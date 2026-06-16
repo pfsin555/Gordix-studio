@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gordix Studio - 工藝參數指南 / Parameters Guide</title>
+    <!-- 引入 Three.js 與 Tailwind CSS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // 啟用 Tailwind CSS 類別模式(class-based)暗色主題支援
+        tailwind.config = {
+            darkMode: 'class'
+        }
+    </script>
+    <style>
+        :root {
+            --primary-orange: #f97316;
+            --accent-orange: #ea580c;
+            --bg-color-light: #f8fafc;
+            --bg-color-dark: #090d16;
+            --panel-light: #ffffff;
+            --panel-dark: #111827;
+            --border-light: #e2e8f0;
+            --border-dark: #1f2937;
+        }
+
+        .orange-glow {
+            text-shadow: 0 0 10px rgba(249, 115, 22, 0.5);
+        }
+        
+        /* 雙主題自訂過渡 */
+        input[type="range"] {
+            transition: all 0.2s;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 min-h-screen font-sans transition-colors duration-300">
+
+    <div class="max-w-7xl mx-auto p-4 md:p-6">
+        <!-- Header (採用深灰色工業風格並完美整合上一頁功能) -->
+        <header class="mb-6 bg-slate-800 border border-slate-700 dark:bg-slate-900 dark:border-slate-800 rounded-xl p-4 md:p-6 shadow-md dark:shadow-xl transition-colors duration-300">
+            <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+                <div class="flex items-center gap-4 w-full md:w-auto">
+                    <!-- 上一頁返回按鈕 (僅保留 SVG 符號) -->
+                    <button onclick="if(window.history.length > 1) { window.history.back(); } else { window.location.href='index.html'; }" class="flex items-center justify-center text-slate-300 hover:text-orange-400 transition-colors font-bold bg-slate-700/50 hover:bg-slate-700 p-2.5 rounded-lg border border-slate-600/50 cursor-pointer" title="返回上一頁 / Go Back">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                        </svg>
+                    </button>
+                    
+                    <div class="ml-2">
+                        <h1 class="text-xl md:text-2xl font-black text-white transition-colors" data-i18n="nav-subtitle">參數指南</h1>
+                    </div>
+                </div>
+                
+                <div class="flex items-center gap-3 w-full md:w-auto justify-end">
+                    <!-- 明暗切換 (由 JS 動態填充高靈敏 SVG 圖示) -->
+                    <button id="theme-toggle" class="p-2.5 rounded-lg bg-slate-700 border border-slate-600 text-slate-200 hover:text-orange-400 hover:border-orange-400/50 transition-all shadow-md dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300" title="切換主題 / Toggle Theme">
+                        <span id="theme-icon" class="flex items-center justify-center"></span>
+                    </button>
+                    <button id="lang-toggle" class="px-4 py-2 rounded-lg bg-slate-700 border border-slate-600 text-sm font-bold text-slate-200 hover:text-orange-400 hover:border-orange-400/50 transition-all shadow-md dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300">
+                        EN
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Warning Disclaimer (內建 SVG) -->
+        <div class="mb-6 bg-orange-50 border border-orange-200 dark:bg-orange-500/10 dark:border-orange-500/30 rounded-xl p-4 flex gap-4 items-start">
+            <svg class="w-6 h-6 text-orange-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+            </svg>
+            <div>
+                <h4 class="font-bold text-orange-600 dark:text-orange-500 text-sm md:text-base" data-i18n="warning-title">安全與免責聲明</h4>
+                <p class="text-sm text-slate-600 dark:text-slate-400 mt-1 transition-colors leading-relaxed" data-i18n="warning-desc">本參數為基礎參考值。實際加工效果取決於刀具狀況、板材品質與雷射焦距。首次加工新材質時，強烈建議從保守參數（低單次深度、低進給）開始測試。</p>
+            </div>
+        </div>
+
+        <!-- Tab Controls (內建 SVG) -->
+        <div class="flex border-b border-slate-200 dark:border-slate-800 mb-6">
+            <button id="tab-cnc" class="px-6 py-3 font-bold border-b-2 border-orange-500 text-orange-500 transition-all flex items-center gap-2 text-sm md:text-base cursor-pointer" onclick="switchTab('cnc')">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                </svg>
+                <span data-i18n="tab-cnc-text">CNC 銑削與雕刻參數</span>
+            </button>
+            <button id="tab-laser" class="px-6 py-3 font-bold border-b-2 border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-all flex items-center gap-2 text-sm md:text-base cursor-pointer" onclick="switchTab('laser')">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                </svg>
+                <span data-i18n="tab-laser-text">雷射加工與切割參數</span>
+            </button>
+        </div>
+
+        <!-- Main CNC Section -->
+        <main id="content-cnc" class="space-y-6 block">
+            <!-- Interactive CNC Calculator (內建 SVG) -->
+            <section class="bg-white border border-slate-200 dark:bg-slate-900 dark:border-slate-800 rounded-xl p-4 md:p-6 transition-colors shadow-lg dark:shadow-xl">
+                <h3 class="text-lg font-bold flex items-center gap-2 mb-4 text-orange-500">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                    </svg>
+                    <span data-i18n="calc-title">互動式 CNC 銑切參數計算器</span>
+                </h3>
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    <!-- Inputs -->
+                    <div class="lg:col-span-5 space-y-4">
+                        <div>
+                            <label class="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1.5" data-i18n="calc-label-material">1. 選擇加工材質</label>
+                            <select id="calc-material" class="w-full bg-slate-100 border border-slate-300 text-slate-800 rounded-lg p-2.5 text-sm focus:border-orange-500 focus:outline-none dark:bg-slate-950 dark:border-slate-800 dark:text-slate-200" onchange="calculateParams()">
+                                <option value="softwood" data-i18n="mat-softwood-opt">軟木 / 密集板 (MDF)</option>
+                                <option value="plywood" data-i18n="mat-plywood-opt">層板 / 膠合板 (Plywood)</option>
+                                <option value="hardwood" data-i18n="mat-hardwood-opt">硬木 (櫸木 / 胡桃木)</option>
+                                <option value="toolingboard" data-i18n="mat-toolingboard-opt">代木 / 建模高密度樹脂</option>
+                                <option value="acrylic" data-i18n="mat-acrylic-opt">壓克力 / POM 塑料</option>
+                                <option value="doublecolor" data-i18n="mat-doublecolor-opt">雕刻雙色板 / ABS塑料</option>
+                                <option value="aluminum" data-i18n="mat-aluminum-opt">鋁 6061 / 軟金屬</option>
+                            </select>
+                        </div>
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <label class="text-sm font-bold text-slate-600 dark:text-slate-400" data-i18n="calc-label-diameter">2. 刀具直徑 (D)</label>
+                                <span class="text-sm font-black text-orange-500" id="calc-diameter-val">3.175 mm</span>
+                            </div>
+                            <input type="range" id="calc-diameter" min="1.0" max="7.0" step="0.05" value="3.175" class="w-full accent-orange-500 cursor-pointer h-1.5 bg-slate-300 dark:bg-slate-800 rounded-lg" oninput="calculateParams()">
+                            <div class="flex gap-2 mt-2 flex-wrap">
+                                <button class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-sm font-bold rounded border border-slate-300 cursor-pointer dark:bg-slate-950 dark:hover:bg-slate-800 dark:border-slate-800 dark:text-slate-300 text-slate-600" onclick="setPresetDiameter(3.0)">3.0mm</button>
+                                <button class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-sm font-bold rounded border border-slate-300 cursor-pointer dark:bg-slate-950 dark:hover:bg-slate-800 dark:border-slate-800 dark:text-slate-300 text-slate-600" onclick="setPresetDiameter(3.175)">1/8" (3.175mm)</button>
+                                <button class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-sm font-bold rounded border border-slate-300 cursor-pointer dark:bg-slate-950 dark:hover:bg-slate-800 dark:border-slate-800 dark:text-slate-300 text-slate-600" onclick="setPresetDiameter(6.0)">6.0mm</button>
+                                <button class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-sm font-bold rounded border border-slate-300 cursor-pointer dark:bg-slate-950 dark:hover:bg-slate-800 dark:border-slate-800 dark:text-slate-300 text-slate-600" onclick="setPresetDiameter(6.35)">1/4" (6.35mm)</button>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1.5" data-i18n="calc-label-flutes">3. 刀具刃數 (z)</label>
+                            <div class="grid grid-cols-4 gap-2">
+                                <button id="flute-1" class="py-1.5 rounded-lg border text-sm font-bold transition-all cursor-pointer border-slate-300 bg-slate-100 text-slate-600 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800" onclick="setFlutes(1)">1 刃</button>
+                                <button id="flute-2" class="py-1.5 rounded-lg border text-sm font-bold transition-all cursor-pointer border-orange-500 bg-orange-500/10 text-orange-400" onclick="setFlutes(2)">2 刃</button>
+                                <button id="flute-3" class="py-1.5 rounded-lg border text-sm font-bold transition-all cursor-pointer border-slate-300 bg-slate-100 text-slate-600 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800" onclick="setFlutes(3)">3 刃</button>
+                                <button id="flute-4" class="py-1.5 rounded-lg border text-sm font-bold transition-all cursor-pointer border-slate-300 bg-slate-100 text-slate-600 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800" onclick="setFlutes(4)">4 刃</button>
+                            </div>
+                        </div>
+                        <!-- 刃形參數選擇 -->
+                        <div>
+                            <label class="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1.5" data-i18n="calc-label-cutter-type">4. 選擇刃形種類 (Cutter Type)</label>
+                            <div class="grid grid-cols-3 gap-2">
+                                <button id="cutter-upcut" class="py-1.5 rounded-lg border text-sm font-bold transition-all cursor-pointer border-slate-300 bg-slate-100 text-slate-600 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800" onclick="setCutterType('upcut')">上旋刀</button>
+                                <button id="cutter-downcut" class="py-1.5 rounded-lg border text-sm font-bold transition-all cursor-pointer border-orange-500 bg-orange-500/10 text-orange-400" onclick="setCutterType('downcut')">下旋刀</button>
+                                <button id="cutter-straight" class="py-1.5 rounded-lg border text-sm font-bold transition-all cursor-pointer border-slate-300 bg-slate-100 text-slate-600 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800" onclick="setCutterType('straight')">直刀</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Outputs -->
+                    <div class="lg:col-span-7 bg-slate-100 border border-slate-200 dark:bg-slate-950 dark:border-slate-850 rounded-xl p-4 md:p-5 flex flex-col justify-between">
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
+                            <!-- Out 1: Dial (推薦撥盤刻度) -->
+                            <div class="p-3 bg-white border border-slate-200 rounded-lg dark:bg-slate-900 dark:border-slate-800 flex flex-col justify-between min-h-[105px]">
+                                <span class="block text-sm text-slate-550 dark:text-slate-400 font-bold leading-tight" data-i18n="out-dial-title">
+                                    推薦撥盤刻度<br>(Makita RT0700)
+                                </span>
+                                <div class="mt-1">
+                                    <span class="text-xl font-black text-orange-500 block" id="out-dial">刻度 4</span>
+                                    <span class="block text-sm text-slate-500 dark:text-slate-400 font-medium" id="out-rpm">22,000 RPM</span>
+                                </div>
+                            </div>
+                            <!-- Out 2: Feed -->
+                            <div class="p-3 bg-white border border-slate-200 rounded-lg dark:bg-slate-900 dark:border-slate-800 flex flex-col justify-between min-h-[105px]">
+                                <span class="block text-sm text-slate-550 dark:text-slate-400 font-bold leading-tight" data-i18n="out-feed-title">機台進給速率 (F)</span>
+                                <div class="mt-1">
+                                    <span class="text-xl font-black text-emerald-500 dark:text-emerald-400 block" id="out-feed">F1200</span>
+                                    <span class="block text-sm text-slate-500 dark:text-slate-400 font-medium" id="out-feed-sub">mm/min</span>
+                                </div>
+                            </div>
+                            <!-- Out 3: DOC -->
+                            <div class="p-3 bg-white border border-slate-200 rounded-lg col-span-2 md:col-span-1 dark:bg-slate-900 dark:border-slate-800 flex flex-col justify-between min-h-[105px]">
+                                <span class="block text-sm text-slate-550 dark:text-slate-400 font-bold leading-tight" data-i18n="out-doc-title">最大下刀深度 (DOC)</span>
+                                <div class="mt-1">
+                                    <span class="text-xl font-black text-blue-500 block" id="out-doc">1.0 mm</span>
+                                    <span class="block text-sm text-slate-500 dark:text-slate-400 font-medium" data-i18n="out-doc-sub">單次軸向吃刀深度</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Warnings & Dynamic Explanations -->
+                        <div class="border-t border-slate-200 dark:border-slate-800 pt-3">
+                            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-1.5 mb-2">
+                                <span class="block text-sm font-bold text-slate-700 dark:text-slate-300" data-i18n="out-tip-title">⚙️ 計算器工藝建議</span>
+                                <span id="cutter-type-badge" class="px-2.5 py-0.5 rounded text-sm font-bold bg-orange-500/20 text-orange-600 dark:text-orange-400 border border-orange-500/30">下旋螺旋銑刀 (Down-cut) 模式已啟用</span>
+                            </div>
+                            <p class="text-sm text-slate-600 leading-relaxed dark:text-slate-300 font-medium" id="out-tip-desc">
+                                針對 3.175mm 雙刃刀具切削軟木/MDF：保持中高轉速能防止刀具磨損，走速需注意排屑，確保非細粉。
+                            </p>
+                            <div id="out-limit-warning" class="hidden mt-2 px-3 py-1.5 bg-orange-500/10 border border-orange-500/30 rounded text-sm text-orange-500 dark:text-orange-400 font-bold animate-pulse">
+                                ⚠️ 已自動限制在 Gordix 最大安全走速 F2000 內！
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- CNC Feeds and Speeds Table -->
+            <section class="bg-white border border-slate-200 rounded-xl overflow-hidden transition-colors shadow-lg dark:shadow-xl dark:bg-slate-900 dark:border-slate-800">
+                <div class="p-4 md:p-6 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <h3 class="text-base md:text-lg font-bold flex items-center gap-2 text-orange-500">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
+                        </svg>
+                        <span data-i18n="cnc-matrix-title">常用材料加工對照表 (以 3mm 或 1/8" 雙刃銑刀為例)</span>
+                    </h3>
+                    <!-- 轉速與 Makita 刻度智慧切換按鈕 (內建 SVG) -->
+                    <button id="table-display-toggle" onclick="toggleTableDisplay()" class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 text-sm font-bold rounded-lg transition-all flex items-center gap-1.5 text-orange-500 dark:text-orange-400 cursor-pointer shadow-sm">
+                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 8H18"></path>
+                        </svg>
+                        <span id="display-toggle-text">切換為 Makita 刻度</span>
+                    </button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-slate-100 text-slate-600 font-bold border-b border-slate-200 dark:bg-slate-950 dark:text-slate-400 dark:border-slate-800">
+                            <tr>
+                                <th class="p-3 md:p-4" data-i18n="th-material">加工材質</th>
+                                <th class="p-3 md:p-4 text-orange-500 dark:text-orange-400" id="th-speed-header" data-i18n="th-rpm">主軸轉速 (RPM)</th>
+                                <th class="p-3 md:p-4" data-i18n="th-feed">走速 (F)</th>
+                                <th class="p-3 md:p-4" data-i18n="th-doc">單次下刀深度 (DOC, mm)</th>
+                                <th class="p-3 md:p-4" data-i18n="th-notes">工藝備註與技巧</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-200 dark:divide-slate-800">
+                            <tr class="hover:bg-slate-50 transition-colors dark:hover:bg-slate-800/50">
+                                <td class="p-3 md:p-4 font-bold text-slate-800 dark:text-slate-200" data-i18n="mat-softwood">軟木 / 密集板 (MDF)</td>
+                                <td class="p-3 md:p-4 font-semibold text-slate-700 dark:text-slate-300" id="cell-softwood-speed" data-rpm="22,000 ~ 27,000" data-dial="4 ~ 5">22,000 ~ 27,000</td>
+                                <td class="p-3 md:p-4 font-mono text-emerald-600 dark:text-emerald-400 font-bold">1500 ~ 2000</td>
+                                <td class="p-3 md:p-4 font-mono font-medium text-slate-800 dark:text-slate-200">1.5 ~ 2.0</td>
+                                <td class="p-3 md:p-4 text-slate-600 dark:text-slate-400 leading-relaxed" data-i18n="note-softwood">排屑快速、阻力低。保持高走速（不超過 F2000）可防止排屑積熱導致工件燒焦。</td>
+                            </tr>
+                            <tr class="hover:bg-slate-50 transition-colors dark:hover:bg-slate-800/50">
+                                <td class="p-3 md:p-4 font-bold text-slate-800 dark:text-slate-200" data-i18n="mat-plywood">層板 / 膠合板 (Plywood)</td>
+                                <td class="p-3 md:p-4 font-semibold text-slate-700 dark:text-slate-300" id="cell-plywood-speed" data-rpm="18,000 ~ 22,000" data-dial="4 ~ 5">18,000 ~ 22,000</td>
+                                <td class="p-3 md:p-4 font-mono text-emerald-600 dark:text-emerald-400 font-bold">1200 ~ 1500</td>
+                                <td class="p-3 md:p-4 font-mono font-medium text-slate-800 dark:text-slate-200">1.0 ~ 1.5</td>
+                                <td class="p-3 md:p-4 text-slate-600 dark:text-slate-400 leading-relaxed" data-i18n="note-plywood">⚠️ 層板內層因含膠水層容易磨損刀具，邊緣亦較易起毛邊。採用順銑加工可有效減少木層撕裂。</td>
+                            </tr>
+                            <tr class="hover:bg-slate-50 transition-colors dark:hover:bg-slate-800/50">
+                                <td class="p-3 md:p-4 font-bold text-slate-800 dark:text-slate-200" data-i18n="mat-hardwood">硬木 (櫸木 / 胡桃木)</td>
+                                <td class="p-3 md:p-4 font-semibold text-slate-700 dark:text-slate-300" id="cell-hardwood-speed" data-rpm="17,000 ~ 22,000" data-dial="3 ~ 4">17,000 ~ 22,000</td>
+                                <td class="p-3 md:p-4 font-mono text-emerald-600 dark:text-emerald-400 font-bold">1000 ~ 1200</td>
+                                <td class="p-3 md:p-4 font-mono font-medium text-slate-800 dark:text-slate-200">0.8 ~ 1.0</td>
+                                <td class="p-3 md:p-4 text-slate-600 dark:text-slate-400 leading-relaxed" data-i18n="note-hardwood">材質緊密，應適度降低走速並控制下刀深度，避免切削阻力過大導致銑刀折斷。</td>
+                            </tr>
+                            <tr class="hover:bg-slate-50 transition-colors dark:hover:bg-slate-800/50">
+                                <td class="p-3 md:p-4 font-bold text-slate-800 dark:text-slate-200" data-i18n="mat-toolingboard">代木 / 建模高密度樹脂 (Tooling Board)</td>
+                                <td class="p-3 md:p-4 font-semibold text-slate-700 dark:text-slate-300" id="cell-tooling-speed" data-rpm="17,000 ~ 22,000" data-dial="3 ~ 4">17,000 ~ 22,000</td>
+                                <td class="p-3 md:p-4 font-mono text-emerald-600 dark:text-emerald-400 font-bold">1500 ~ 2000</td>
+                                <td class="p-3 md:p-4 font-mono font-medium text-slate-800 dark:text-slate-200">1.5 ~ 2.0</td>
+                                <td class="p-3 md:p-4 text-slate-600 dark:text-slate-400 leading-relaxed" data-i18n="note-toolingboard">無方向性天然木紋，切削阻力極低，表面切口完美光滑，是最理想的打樣建模耗材。</td>
+                            </tr>
+                            <tr class="hover:bg-slate-50 transition-colors dark:hover:bg-slate-800/50">
+                                <td class="p-3 md:p-4 font-bold text-slate-800 dark:text-slate-200" data-i18n="mat-acrylic">壓克力 / 工程塑膠 (POM)</td>
+                                <td class="p-3 md:p-4 font-semibold text-slate-700 dark:text-slate-300" id="cell-acrylic-speed" data-rpm="12,000 ~ 17,000" data-dial="2 ~ 3">12,000 ~ 17,000</td>
+                                <td class="p-3 md:p-4 font-mono text-emerald-600 dark:text-emerald-400 font-bold">800 ~ 1200</td>
+                                <td class="p-3 md:p-4 font-mono font-medium text-slate-800 dark:text-slate-200">0.8 ~ 1.2</td>
+                                <td class="p-3 md:p-4 text-slate-600 dark:text-slate-400 leading-relaxed" data-i18n="note-acrylic">⚠️ 轉速切勿過高。過高的轉速搭配慢速移動，會使摩擦熱熔化壓克力，造成高溫塑料黏刀。</td>
+                            </tr>
+                            <tr class="hover:bg-slate-50 transition-colors dark:hover:bg-slate-800/50">
+                                <td class="p-3 md:p-4 font-bold text-slate-800 dark:text-slate-200" data-i18n="mat-doublecolor">雕刻雙色板 / ABS塑料</td>
+                                <td class="p-3 md:p-4 font-semibold text-slate-700 dark:text-slate-300" id="cell-doublecolor-speed" data-rpm="11,000 ~ 15,000" data-dial="2 ~ 3">11,000 ~ 15,000</td>
+                                <td class="p-3 md:p-4 font-mono text-emerald-600 dark:text-emerald-400 font-bold">1000 ~ 1500</td>
+                                <td class="p-3 md:p-4 font-mono font-medium text-slate-800 dark:text-slate-200">0.5 ~ 1.0</td>
+                                <td class="p-3 md:p-4 text-slate-600 dark:text-slate-400 leading-relaxed" data-i18n="note-doublecolor">標牌製作最愛。防熔熔化黏刀的秘訣在於適中轉速，配合流暢無停頓的走速設定。</td>
+                            </tr>
+                            <tr class="hover:bg-slate-50 transition-colors dark:hover:bg-slate-800/50 bg-orange-500/5">
+                                <td class="p-3 md:p-4 font-bold text-orange-600 dark:text-orange-400" data-i18n="mat-softmetal">軟金屬 (鋁6061 / 黃銅 / 紅銅)</td>
+                                <td class="p-3 md:p-4 font-semibold text-slate-700 dark:text-slate-300" id="cell-metal-speed" data-rpm="10,000 ~ 12,000" data-dial="1 ~ 2">10,000 ~ 12,000</td>
+                                <td class="p-3 md:p-4 font-mono text-emerald-600 dark:text-emerald-400 font-bold">1000 ~ 2000</td>
+                                <td class="p-3 md:p-4 font-mono font-bold text-orange-600 dark:text-orange-400">0.1 ~ 0.2</td>
+                                <td class="p-3 md:p-4 text-slate-600 dark:text-slate-400 leading-relaxed" data-i18n="note-softmetal">⚙️ 輕型機台保護機制：金屬加工採「高走速、極淺下刀（固定 0.2mm）」，嚴禁深切以防失步斷刀。</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- CNC Pro Tips (內建 SVG) -->
+            <section class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="bg-white border border-slate-200 rounded-xl p-4 md:p-6 transition-colors dark:bg-slate-900 dark:border-slate-800">
+                    <h4 class="font-bold text-slate-850 mb-2 flex items-center gap-2 dark:text-slate-200 text-sm md:text-base">
+                        <svg class="w-5 h-5 text-orange-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z"></path>
+                        </svg>
+                        <span data-i18n="tip-tab-title">何時需要勾選「橋位 (Tabs)」？</span>
+                    </h4>
+                    <p class="text-sm text-slate-600 transition-colors dark:text-slate-400 leading-relaxed animate-none" data-i18n="tip-tab-desc">切割完全脫離的零件時，最後一刀切斷瞬間工件易位移飛出，損壞表面並造成危險。勾選「橋位」可在邊緣保留微小連接，加工後手動切除，確保加工安全與精準。</p>
+                </div>
+                <div class="bg-white border border-slate-200 rounded-xl p-4 md:p-6 transition-colors dark:bg-slate-900 dark:border-slate-800">
+                    <h4 class="font-bold text-slate-850 mb-2 flex items-center gap-2 dark:text-slate-200 text-sm md:text-base">
+                        <svg class="w-5 h-5 text-orange-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v18m9-9H3m14.121-6.121l-10.24 10.24m0-10.24l10.24 10.24"></path>
+                        </svg>
+                        <span data-i18n="tip-chip-title">每刃進給量 (Chip Load) 法則</span>
+                    </h4>
+                    <p class="text-sm text-slate-600 transition-colors dark:text-slate-400 leading-relaxed animate-none" data-i18n="tip-chip-desc">健康的切削應排出「碎屑」而非「粉末」。若發出尖銳摩擦音或木材燒焦焦黑，代表轉速過快或走速太慢。請降低撥盤轉速刻度，或調高走速（最高限制 F2000）。</p>
+                </div>
+            </section>
+        </main>
+
+        <!-- Main Laser Section -->
+        <main id="content-laser" class="space-y-6 hidden">
+            <!-- Laser Parameters (內建 SVG) -->
+            <section class="bg-white border border-slate-200 rounded-xl p-4 md:p-6 transition-colors dark:bg-slate-900 dark:border-slate-800">
+                <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
+                    <div>
+                        <h3 class="text-lg font-bold flex items-center gap-2 text-orange-500">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
+                            </svg>
+                            <span data-i18n="laser-guide-title">10W 二極體雷射加工參數表（最高速 F2000）</span>
+                        </h3>
+                        <p class="text-sm text-slate-550 dark:text-slate-400 mt-1" data-i18n="laser-sub-title">整合業界主流廠商的 10W 機型常用參數 (相容 xTool / Ortur / Creality)</p>
+                    </div>
+
+                    <!-- Process Type Filters -->
+                    <div class="flex items-center gap-1.5 p-1 bg-slate-100 border border-slate-200 rounded-lg shadow-inner dark:bg-slate-950 dark:border-slate-850">
+                        <button id="filter-all" class="px-4 py-1.5 text-sm font-bold rounded-md transition-all cursor-pointer bg-orange-500 text-white shadow" onclick="filterLaser('all')">
+                            <span data-i18n="btn-filter-all">全部 / All</span>
+                        </button>
+                        <button id="filter-cut" class="px-4 py-1.5 text-sm font-bold rounded-md text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-all cursor-pointer" onclick="filterLaser('cut')">
+                            <span data-i18n="btn-filter-cut">精準切割 / Cutting</span>
+                        </button>
+                        <button id="filter-engrave" class="px-4 py-1.5 text-sm font-bold rounded-md text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-all cursor-pointer" onclick="filterLaser('engrave')">
+                            <span data-i18n="btn-filter-engrave">表面雕刻 / Engraving</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-slate-100 text-slate-600 font-bold border-b border-slate-200 dark:bg-slate-950 dark:text-slate-400 dark:border-slate-800">
+                            <tr>
+                                <th class="p-3 md:p-4" data-i18n="th-material">加工材質</th>
+                                <th class="p-3 md:p-4" data-i18n="th-process-type">加工類型</th>
+                                <th class="p-3 md:p-4" data-i18n="th-laser-power">雷射功率 (%)</th>
+                                <th class="p-3 md:p-4 font-semibold text-orange-500" data-i18n="th-laser-speed">移動速度 (mm/min)</th>
+                                <th class="p-3 md:p-4" data-i18n="th-passes">加工次數 (Passes)</th>
+                                <th class="p-3 md:p-4" data-i18n="th-air">吹氣輔助 (Air Assist)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="laser-table-body" class="divide-y divide-slate-200 dark:divide-slate-800">
+                            <!-- JS 動態插入 -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Laser Pro Tips (內建 SVG) -->
+            <section class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="bg-white border border-slate-200 rounded-xl p-4 md:p-6 transition-colors dark:bg-slate-900 dark:border-slate-800">
+                    <h4 class="font-bold text-slate-850 mb-2 flex items-center gap-2 dark:text-slate-200 text-sm md:text-base">
+                        <svg class="w-5 h-5 text-orange-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 14h16M3 18h10"></path>
+                        </svg>
+                        <span data-i18n="tip-air-title">吹氣輔助 (Air Assist) 的重要性</span>
+                    </h4>
+                    <p class="text-sm text-slate-600 transition-colors dark:text-slate-400 leading-relaxed animate-none" data-i18n="tip-air-desc">切割木材、MDF、皮革等材料時，建議開啟吹氣。高壓氣流能吹除灰燼防止二次燃燒，有效保護透鏡不被汙染，並能顯著減少切口邊緣的黑燻焦痕。</p>
+                </div>
+                <div class="bg-white border border-slate-200 rounded-xl p-4 md:p-6 transition-colors dark:bg-slate-900 dark:border-slate-800">
+                    <h4 class="font-bold text-slate-850 mb-2 flex items-center gap-2 dark:text-slate-200 text-sm md:text-base">
+                        <svg class="w-5 h-5 text-orange-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                        </svg>
+                        <span data-i18n="tip-smoke-title">環境通風與安全防護</span>
+                    </h4>
+                    <p class="text-sm text-slate-600 transition-colors dark:text-slate-400 leading-relaxed animate-none" data-i18n="tip-smoke-desc">⚠️ 嚴禁雷射燒灼 PVC 或人造皮革，其會釋放高溫毒性腐蝕氯氣，危及人體健康並鏽蝕軌道。加工應於通風處操作，強烈建議加裝活性碳排煙系統。</p>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer class="mt-8 text-center text-sm text-slate-500 border-t border-slate-200 dark:border-slate-800/60 pt-4">
+            <p>&copy; 2026 Gordix Studio Ecosystem. All Rights Reserved.</p>
+        </footer>
+    </div>
+
+    <script>
+        // --- 1. 語系資料定義 ---
+        const i18nData = {
+            'zh': {
+                'nav-subtitle': '參數指南',
+                'warning-title': '安全與免責聲明',
+                'warning-desc': '本參數為基礎參考值。實際加工效果取決於刀具狀況、板材品質與雷射焦距。首次加工新材質時，強烈建議從保守參數（低單次深度、低進給）開始測試。',
+                'tab-cnc-text': 'CNC 銑削與雕刻參數',
+                'tab-laser-text': '雷射加工與切割參數',
+                'dial-num': '刻度',
+                'cnc-matrix-title': '常用材料加工對照表 (以 3mm 或 1/8" 雙刃銑刀為例)',
+                'th-material': '加工材質',
+                'th-dial': 'Makita 刻度',
+                'th-rpm': '主軸轉速 (RPM)',
+                'th-feed': '走速 (F)',
+                'th-doc': '單次下刀深度 (DOC, mm)',
+                'th-notes': '工藝備註與技巧',
+                'mat-softwood': '軟木 / 密集板 (MDF)',
+                'note-softwood': '排屑快速、阻力低。保持高走速（不超過 F2000）可防止排屑積熱導致工件燒焦。',
+                'mat-plywood': '層板 / 膠合板 (Plywood)',
+                'note-plywood': '⚠️ 層板內層因含膠水層容易磨損刀具，邊緣亦較易起毛邊。採用順銑加工可有效減少木層撕裂。',
+                'mat-hardwood': '硬木 (櫸木 / 胡桃木)',
+                'note-hardwood': '材質緊密，應適度降低走速並控制下刀深度，避免切削阻力過大導致銑刀折斷。',
+                'mat-toolingboard': '代木 / 建模高密度樹脂 (Tooling Board)',
+                'note-toolingboard': '無方向性天然木紋，切削阻力極低，表面切口完美光滑，是最理想的打樣建模耗材。',
+                'mat-acrylic': '壓克力 / 工程塑膠 (POM)',
+                'note-acrylic': '⚠️ 轉速切勿過高。過高的轉速搭配慢速移動，會使摩擦熱熔化壓克力，造成高溫塑料黏刀。',
+                'mat-doublecolor': '雕刻雙色板 / ABS塑料',
+                'note-doublecolor': '標牌製作最愛。防熔熔化黏刀的秘訣在於適中轉速，配合流暢無停頓的走速設定。',
+                'mat-softmetal': '軟金屬 (鋁6061 / 黃銅 / 紅銅)',
+                'note-softmetal': '⚙️ 輕型機台保護機制：金屬加工採「高走速、極淺下刀（固定 0.2mm）」，嚴禁深切以防失步斷刀。',
+                'tip-tab-title': '何時需要勾選「橋位 (Tabs)」？',
+                'tip-tab-desc': '切割完全脫離的零件時，最後一刀切斷瞬間工件易位移飛出，損壞表面並造成危險。勾選「橋位」可在邊緣保留微小連接，加工後手動切除，確保加工安全與精準。',
+                'tip-chip-title': '每刃進給量 (Chip Load) 法則',
+                'tip-chip-desc': '健康的切削應排出「碎屑」而非「粉末」。若發出尖銳摩擦音或木材燒焦焦黑，代表轉速過快或走速太慢。請降低撥盤轉速刻度，或調高走速（最高限制 F2000）。',
+                'laser-guide-title': '10W 二極體雷射加工參數表（最高速 F2000）',
+                'laser-sub-title': '整合業界主流廠商的 10W 機型常用參數 (相容 xTool / Ortur / Creality)',
+                'btn-filter-all': '全部 / All',
+                'btn-filter-cut': '精準切割 / Cutting',
+                'btn-filter-engrave': '表面雕刻 / Engraving',
+                'th-process-type': '加工類型',
+                'th-laser-power': '雷射功率 (%)',
+                'th-laser-speed': '移動速度 (mm/min)',
+                'th-passes': '加工次數 (Passes)',
+                'th-air': '吹氣輔助 (Air Assist)',
+                'tip-air-title': '吹氣輔助 (Air Assist) 的重要性',
+                'tip-air-desc': '切割木材、MDF、皮革等材料時，建議開啟吹氣。高壓氣流能吹除灰燼防止二次燃燒，有效保護透鏡不被汙染，並能顯著減少切口邊緣的黑燻焦痕。',
+                'tip-smoke-title': '環境通風與安全防護',
+                'tip-smoke-desc': '⚠️ 嚴禁雷射燒灼 PVC 或人造皮革，其會釋放高溫毒性腐蝕氯氣，危及人體健康並鏽蝕軌道。加工應於通風處操作，強烈建議加裝活性碳排煙系統。',
+                // 計算器語系
+                'calc-title': '互動式 CNC 銑切參數計算器',
+                'calc-label-material': '1. 選擇加工材質',
+                'calc-label-diameter': '2. 刀具直徑 (D)',
+                'calc-label-flutes': '3. 刀具刃數 (z)',
+                'calc-label-cutter-type': '4. 選擇刃形種類 (Cutter Type)',
+                'mat-softwood-opt': '軟木 / 密集板 (MDF)',
+                'mat-plywood-opt': '層板 / 膠合板 (Plywood)',
+                'mat-hardwood-opt': '硬木 (櫸木 / 胡桃木)',
+                'mat-toolingboard-opt': '代木 / 建模高密度樹脂',
+                'mat-acrylic-opt': '壓克力 / POM 塑料',
+                'mat-doublecolor-opt': '雕刻雙色板 / ABS 塑料',
+                'mat-aluminum-opt': '鋁 6061 / 軟金屬 (Gordix 淺切保護模式)',
+                'out-dial-title': '推薦撥盤刻度<br>(Makita RT0700)',
+                'out-feed-title': '機台進給速率 (F)',
+                'out-doc-title': '最大下刀深度 (DOC)',
+                'out-doc-sub': '單次軸向吃刀深度',
+                'out-tip-title': '⚙️ 計算器工藝建議'
+            },
+            'en': {
+                'nav-subtitle': 'Parameters Guide',
+                'warning-title': 'Safety & Disclaimer',
+                'warning-desc': 'Parameters are baseline values. Actual results depend on bit condition, material quality, and focal length. When testing new materials, start with conservative values.',
+                'tab-cnc-text': 'CNC Milling & Carving',
+                'tab-laser-text': 'Laser Engraving & Cutting',
+                'dial-num': 'Dial',
+                'cnc-matrix-title': 'Common Material Processing Reference Table (e.g., 3mm or 1/8" 2-Flute Endmill)',
+                'th-material': 'Material',
+                'th-dial': 'Makita Dial',
+                'th-rpm': 'Spindle Speed (RPM)',
+                'th-feed': 'Feed Rate (F)',
+                'th-doc': 'Depth of Cut (DOC, mm)',
+                'th-notes': 'Pro Tips & Notes',
+                'mat-softwood': 'Softwood / MDF',
+                'note-softwood': 'Fast chip evacuation, low resistance. Keep high feed rates (Max F2000) to prevent burning.',
+                'mat-plywood': 'Plywood',
+                'note-plywood': '⚠️ Plywood adhesive layers dull cutters quickly, and edges may splinter. Up-cut milling helps minimize top tear-out.',
+                'mat-hardwood': 'Hardwood (Beech / Walnut)',
+                'note-hardwood': 'Dense wood. Reduce feed and DOC to prevent bit fracture from packed chips.',
+                'mat-toolingboard': 'Tooling Board / High Density Resin',
+                'note-toolingboard': 'Grainless structure with very low resistance. Yields perfectly smooth finishes, optimal for design prototyping.',
+                'mat-acrylic': 'Acrylic / Plastics (POM)',
+                'note-acrylic': '⚠️ Avoid high RPM with slow feeds. Generated heat will melt acrylic and gum up the bit.',
+                'mat-doublecolor': 'Engraving Plastic / ABS',
+                'note-doublecolor': 'Popular choice for signboards. Prevent melting by matching moderate RPM with steady, continuous feeds.',
+                'mat-softmetal': 'Soft Metals (Alu 6061 / Brass / Copper)',
+                'note-softmetal': '⚙️ Safety limit: Strictly use "High Feed, Shallow Pass (0.2mm)". Never cut deep to avoid lost steps.',
+                'tip-tab-title': 'When do you need "Tabs"?',
+                'tip-tab-desc': 'When cutting out a closed part, it can break free and kick out at the final pass. Tabs leave tiny un-machined bridges to secure it, easily trimmed later.',
+                'tip-chip-title': 'The Chip Load Golden Rule',
+                'tip-chip-desc': 'Your mill should produce "chips", not "dust". High-pitched rubbing or wood burning means spindle is too fast or feed is too slow. Decrease RPM or increase feed (Max F2000).',
+                'laser-guide-title': '10W Diode Laser Parameters Guide (Max F2000)',
+                'laser-sub-title': 'Aggregated parameters for standard 10W lasers (Compatible with xTool / Ortur / Creality)',
+                'btn-filter-all': 'All',
+                'btn-filter-cut': 'Cutting',
+                'btn-filter-engrave': 'Engraving',
+                'th-process-type': 'Process Type',
+                'th-laser-power': 'Power (%)',
+                'th-laser-speed': 'Speed (mm/min)',
+                'th-passes': 'Passes',
+                'th-air': 'Air Assist',
+                'tip-air-title': 'Importance of Air Assist',
+                'tip-air-desc': 'Highly recommended for wood, MDF, and leather cutting. Blows away embers, protects lenses, and minimizes charred edges.',
+                'tip-smoke-title': 'Ventilation & Environmental Safety',
+                'tip-smoke-desc': '⚠️ Never laser burn PVC or synthetic leather. It releases toxic, corrosive chlorine gas. Run in well-ventilated areas or use an active carbon extractor.',
+                // Calc English
+                'calc-title': 'Interactive CNC Feeds & Speeds Calculator',
+                'calc-label-material': '1. Select Material',
+                'calc-label-diameter': '2. Tool Diameter (D)',
+                'calc-label-flutes': '3. Flutes (z)',
+                'calc-label-cutter-type': '4. Cutter Type',
+                'mat-softwood-opt': 'Softwood / MDF',
+                'mat-plywood-opt': 'Plywood',
+                'mat-hardwood-opt': 'Hardwood (Beech / Walnut)',
+                'mat-toolingboard-opt': 'Tooling Board / HD Resin',
+                'mat-acrylic-opt': 'Acrylic / POM Plastics',
+                'mat-doublecolor-opt': 'Engraving Board / ABS',
+                'mat-aluminum-opt': 'Aluminum 6061 / Soft Metals',
+                'out-dial-title': 'Recommended Dial<br>(Makita RT0700)',
+                'out-feed-title': 'Feed Rate (F)',
+                'out-doc-title': 'Max Depth of Cut (DOC)',
+                'out-doc-sub': 'Per axial pass depth',
+                'out-tip-title': '⚙️ Calculator Expert Advice'
+            }
+        };
+
+        // --- 2. 雷射模組參數數據 (適用10W，最高速度限制在 F2000 以內) ---
+        const laserMatrixData = [
+            { matZh: '3mm MDF 密集板', matEn: '3mm MDF Board', typeZh: '精準切割', typeEn: 'Cutting', category: 'cut', power: '95%', speed: '200', passes: '3', airZh: '強烈建議開啟', airEn: 'Highly Rec.' },
+            { matZh: 'MDF 密集板', matEn: 'MDF Board', typeZh: '表面雕刻', typeEn: 'Engraving', category: 'engrave', power: '30%', speed: '1500', passes: '1', airZh: '建議關閉/低風量', airEn: 'Off/Low' },
+            { matZh: '3mm 椴木膠合板', matEn: '3mm Basswood Plywood', typeZh: '精準切割', typeEn: 'Cutting', category: 'cut', power: '90%', speed: '350', passes: '2', airZh: '強烈建議開啟', airEn: 'Highly Rec.' },
+            { matZh: '5mm 椴木膠合板', matEn: '5mm Basswood Plywood', typeZh: '精準切割', typeEn: 'Cutting', category: 'cut', power: '95%', speed: '150', passes: '3', airZh: '強烈建議開啟', airEn: 'Highly Rec.' },
+            { matZh: '椴木膠合板', matEn: 'Basswood Plywood', typeZh: '一般雕刻', typeEn: 'Engraving', category: 'engrave', power: '25%', speed: '1500', passes: '1', airZh: '建議關閉/低風量', airEn: 'Off/Low' },
+            { matZh: '3mm 櫻桃木實木', matEn: '3mm Cherry Solid Wood', typeZh: '精準切割', typeEn: 'Cutting', category: 'cut', power: '90%', speed: '240', passes: '2', airZh: '強烈建議開啟', airEn: 'Highly Rec.' },
+            { matZh: '櫻桃木/胡桃木實木', matEn: 'Cherry/Walnut Solid Wood', typeZh: '高對比雕刻', typeEn: 'Engraving', category: 'engrave', power: '35%', speed: '1200', passes: '1', airZh: '建議關閉', airEn: 'Off' },
+            { matZh: '3mm 壓克力(深色)', matEn: '3mm Dark Acrylic', typeZh: '乾淨切割', typeEn: 'Cutting', category: 'cut', power: '95%', speed: '250', passes: '2', airZh: '建議開啟', airEn: 'Recommended' },
+            { matZh: '壓克力(深色)', matEn: 'Dark Acrylic', typeZh: '磨砂雕刻', typeEn: 'Engraving', category: 'engrave', power: '20%', speed: '1600', passes: '1', airZh: '建議關閉', airEn: 'Off' },
+            { matZh: '瓦楞紙 / 快遞紙箱', matEn: 'Cardboard Box', typeZh: '輪廓切割', typeEn: 'Cutting', category: 'cut', power: '70%', speed: '800', passes: '1', airZh: '建議開啟', airEn: 'Recommended' },
+            { matZh: '黑卡紙 (250g)', matEn: 'Black Cardstock (250g)', typeZh: '高速切割', typeEn: 'Cutting', category: 'cut', power: '80%', speed: '1200', passes: '1', airZh: '建議開啟', airEn: 'Recommended' },
+            { matZh: '植鞣皮革', matEn: 'Vegetable Tanned Leather', typeZh: '輪廓切割', typeEn: 'Cutting', category: 'cut', power: '80%', speed: '600', passes: '1', airZh: '強烈建議開啟', airEn: 'Highly Rec.' },
+            { matZh: '植鞣皮革', matEn: 'Vegetable Tanned Leather', typeZh: '表面雕刻', typeEn: 'Engraving', category: 'engrave', power: '25%', speed: '1500', passes: '1', airZh: '建議關閉/低風量', airEn: 'Off/Low' },
+            { matZh: '不織布 / 毛氈 (2mm)', matEn: 'Felt (2mm)', typeZh: '高速切割', typeEn: 'Cutting', category: 'cut', power: '75%', speed: '700', passes: '1', airZh: '建議開啟', airEn: 'Recommended' },
+            { matZh: '陽極氧化鋁表面', matEn: 'Anodized Aluminum', typeZh: '表面打標', typeEn: 'Marking', category: 'engrave', power: '60%', speed: '1800', passes: '1', airZh: '無影響', airEn: 'N/A' },
+            { matZh: '304 不鏽鋼 (無鍍膜/需慢速)', matEn: '304 Stainless Steel (Bare)', typeZh: '高能雕刻/打標', typeEn: 'Marking', category: 'engrave', power: '95%', speed: '600', passes: '1', airZh: '無影響', airEn: 'N/A' },
+            { matZh: '岩板 / 深色石材', matEn: 'Slate / Dark Stone', typeZh: '高對比雕刻', typeEn: 'Engraving', category: 'engrave', power: '80%', speed: '1400', passes: '1', airZh: '無影響', airEn: 'N/A' },
+            { matZh: '平板玻璃 (需事先塗黑或貼貼紙)', matEn: 'Glass (Pre-treated Black)', typeZh: '磨砂打標', typeEn: 'Engraving', category: 'engrave', power: '90%', speed: '1000', passes: '1', airZh: '無影響', airEn: 'N/A' }
+        ];
+
+        // 狀態管理
+        let currentLang = 'zh';
+        let currentTab = 'cnc';
+        let currentLaserFilter = 'all'; // 'all', 'cut', 'engrave'
+        let currentFlutes = 2;
+        let currentCutterType = 'downcut'; // 'upcut', 'downcut', 'straight' (預設為附贈之下旋刀)
+        let currentTableDisplay = 'rpm'; // 'rpm' or 'dial'
+
+        // --- 3. 初始化與主題控制 ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedTheme = localStorage.getItem('gordix-theme') || 'dark';
+            setTheme(savedTheme);
+
+            const savedLang = localStorage.getItem('gordix-lang') || 'zh';
+            setLanguage(savedLang);
+
+            document.getElementById('theme-toggle').addEventListener('click', () => {
+                const isDark = document.documentElement.classList.contains('dark');
+                setTheme(isDark ? 'light' : 'dark');
+            });
+
+            document.getElementById('lang-toggle').addEventListener('click', () => {
+                setLanguage(currentLang === 'zh' ? 'en' : 'zh');
+            });
+
+            updateLaserTable();
+            calculateParams(); // 初始計算計算器
+        });
+
+        function setTheme(theme) {
+            const themeIcon = document.getElementById('theme-icon');
+            if (theme === 'dark') {
+                document.documentElement.classList.add('dark');
+                // 太陽 SVG 圖示
+                themeIcon.innerHTML = `
+                    <svg class="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707M14 12a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                    </svg>
+                `;
+                localStorage.setItem('gordix-theme', 'dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+                // 月亮 SVG 圖示
+                themeIcon.innerHTML = `
+                    <svg class="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+                    </svg>
+                `;
+                localStorage.setItem('gordix-theme', 'light');
+            }
+        }
+
+        function setLanguage(lang) {
+            currentLang = lang;
+            localStorage.setItem('gordix-lang', lang);
+            
+            document.getElementById('lang-toggle').innerText = lang === 'zh' ? 'EN' : '中文';
+
+            document.querySelectorAll('[data-i18n]').forEach(element => {
+                const key = element.getAttribute('data-i18n');
+                if (i18nData[lang][key]) {
+                    // 為了支持 HTML 標籤（如 <br>），將 innerText 改為 innerHTML
+                    element.innerHTML = i18nData[lang][key];
+                }
+            });
+
+            // 更新表格標題顯示與切換按鈕文字
+            const toggleBtnText = document.getElementById('display-toggle-text');
+            const speedHeader = document.getElementById('th-speed-header');
+            if (currentTableDisplay === 'rpm') {
+                toggleBtnText.innerText = lang === 'zh' ? '切換為 Makita 刻度' : 'Switch to Makita Dial';
+                speedHeader.innerText = lang === 'zh' ? '主軸轉速 (RPM)' : 'Spindle Speed (RPM)';
+            } else {
+                toggleBtnText.innerText = lang === 'zh' ? '切換為轉速 (RPM)' : 'Switch to RPM';
+                speedHeader.innerText = lang === 'zh' ? 'Makita 刻度' : 'Makita Dial';
+            }
+
+            updateLaserTable();
+            calculateParams(); // 更新語言時重新渲染計算器說明
+        }
+
+        // --- 4. Tab 切換邏輯 ---
+        function switchTab(tab) {
+            currentTab = tab;
+            const btnCnc = document.getElementById('tab-cnc');
+            const btnLaser = document.getElementById('tab-laser');
+            const contentCnc = document.getElementById('content-cnc');
+            const contentLaser = document.getElementById('content-laser');
+
+            if (tab === 'cnc') {
+                btnCnc.className = "px-6 py-3 font-bold border-b-2 border-orange-500 text-orange-500 transition-all flex items-center gap-2 text-sm md:text-base cursor-pointer";
+                btnLaser.className = "px-6 py-3 font-bold border-b-2 border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-all flex items-center gap-2 text-sm md:text-base cursor-pointer";
+                contentCnc.classList.remove('hidden');
+                contentCnc.classList.add('block');
+                contentLaser.classList.remove('block');
+                contentLaser.classList.add('hidden');
+                calculateParams();
+            } else {
+                btnLaser.className = "px-6 py-3 font-bold border-b-2 border-orange-500 text-orange-500 transition-all flex items-center gap-2 text-sm md:text-base cursor-pointer";
+                btnCnc.className = "px-6 py-3 font-bold border-b-2 border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-all flex items-center gap-2 text-sm md:text-base cursor-pointer";
+                contentLaser.classList.remove('hidden');
+                contentLaser.classList.add('block');
+                contentCnc.classList.remove('block');
+                contentCnc.classList.add('hidden');
+            }
+        }
+
+        // --- 5. 雷射過濾切換邏輯 ---
+        function filterLaser(category) {
+            currentLaserFilter = category;
+            
+            const filters = ['all', 'cut', 'engrave'];
+            filters.forEach(filter => {
+                const btn = document.getElementById(`filter-${filter}`);
+                if (filter === category) {
+                    btn.className = "px-4 py-1.5 text-sm font-bold rounded-md transition-all cursor-pointer bg-orange-500 text-white shadow";
+                } else {
+                    btn.className = "px-4 py-1.5 text-sm font-bold rounded-md text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-all cursor-pointer";
+                }
+            });
+
+            updateLaserTable();
+        }
+
+        // --- 6. 雷射表格渲染 ---
+        function updateLaserTable() {
+            const tableBody = document.getElementById('laser-table-body');
+            if (!tableBody) return;
+            
+            tableBody.innerHTML = '';
+            
+            const filteredData = laserMatrixData.filter(item => {
+                if (currentLaserFilter === 'all') return true;
+                return item.category === currentLaserFilter;
+            });
+            
+            filteredData.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors";
+                
+                const material = currentLang === 'zh' ? item.matZh : item.matEn;
+                const type = currentLang === 'zh' ? item.typeZh : item.typeEn;
+                const air = currentLang === 'zh' ? item.airZh : item.airEn;
+                
+                tr.innerHTML = `
+                    <td class="p-3 md:p-4 font-bold text-slate-800 dark:text-slate-200">${material}</td>
+                    <td class="p-3 md:p-4 text-orange-500 font-bold">${type}</td>
+                    <td class="p-3 md:p-4 font-mono text-slate-700 dark:text-slate-300">${item.power}</td>
+                    <td class="p-3 md:p-4 font-mono text-emerald-600 dark:text-emerald-400 font-bold">${item.speed}</td>
+                    <td class="p-3 md:p-4 text-slate-700 dark:text-slate-300">${item.passes}</td>
+                    <td class="p-3 md:p-4 text-slate-600 dark:text-slate-400">${air}</td>
+                `;
+                tableBody.appendChild(tr);
+            });
+        }
+
+        // --- 7. 對照表轉速與撥盤刻度切換控制 ---
+        function toggleTableDisplay() {
+            currentTableDisplay = currentTableDisplay === 'rpm' ? 'dial' : 'rpm';
+            const toggleBtnText = document.getElementById('display-toggle-text');
+            const speedHeader = document.getElementById('th-speed-header');
+            
+            if (currentTableDisplay === 'rpm') {
+                toggleBtnText.innerText = currentLang === 'zh' ? '切換為 Makita 刻度' : 'Switch to Makita Dial';
+                speedHeader.innerText = currentLang === 'zh' ? '主軸轉速 (RPM)' : 'Spindle Speed (RPM)';
+            } else {
+                toggleBtnText.innerText = currentLang === 'zh' ? '切換為轉速 (RPM)' : 'Switch to RPM';
+                speedHeader.innerText = currentLang === 'zh' ? 'Makita 刻度' : 'Makita Dial';
+            }
+
+            // 更新所有表格刻度行資料
+            const cells = [
+                { id: 'cell-softwood-speed', name: 'softwood' },
+                { id: 'cell-plywood-speed', name: 'plywood' },
+                { id: 'cell-hardwood-speed', name: 'hardwood' },
+                { id: 'cell-tooling-speed', name: 'tooling' },
+                { id: 'cell-acrylic-speed', name: 'acrylic' },
+                { id: 'cell-doublecolor-speed', name: 'doublecolor' },
+                { id: 'cell-metal-speed', name: 'metal' }
+            ];
+
+            cells.forEach(item => {
+                const el = document.getElementById(item.id);
+                if (el) {
+                    const rpm = el.getAttribute('data-rpm');
+                    const dial = el.getAttribute('data-dial');
+                    el.innerText = currentTableDisplay === 'rpm' ? rpm : dial;
+                }
+            });
+        }
+
+        // --- 8. CNC 計算器邏輯 ---
+        function setPresetDiameter(val) {
+            document.getElementById('calc-diameter').value = val;
+            calculateParams();
+        }
+
+        function setFlutes(val) {
+            currentFlutes = val;
+            for (let i = 1; i <= 4; i++) {
+                const btn = document.getElementById(`flute-${i}`);
+                if (i === val) {
+                    btn.className = "py-1.5 rounded-lg border text-sm font-bold transition-all cursor-pointer border-orange-500 bg-orange-500/10 text-orange-400";
+                } else {
+                    btn.className = "py-1.5 rounded-lg border text-sm font-bold transition-all cursor-pointer border-slate-300 bg-slate-100 text-slate-600 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800";
+                }
+            }
+            calculateParams();
+        }
+
+        function setCutterType(type) {
+            currentCutterType = type;
+            const types = ['upcut', 'downcut', 'straight'];
+            types.forEach(t => {
+                const btn = document.getElementById(`cutter-${t}`);
+                if (t === type) {
+                    btn.className = "py-1.5 rounded-lg border text-sm font-bold transition-all cursor-pointer border-orange-500 bg-orange-500/10 text-orange-400";
+                } else {
+                    btn.className = "py-1.5 rounded-lg border text-sm font-bold transition-all cursor-pointer border-slate-300 bg-slate-100 text-slate-600 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800";
+                }
+            });
+            calculateParams();
+        }
+
+        function calculateParams() {
+            const material = document.getElementById('calc-material').value;
+            const diameter = parseFloat(document.getElementById('calc-diameter').value);
+            
+            // 顯示當前直徑值
+            document.getElementById('calc-diameter-val').innerText = `${diameter.toFixed(3)} mm`;
+
+            // 理論基礎參數設置 (基於一般高速鋼/硬質合金刀具加工)
+            let surfaceSpeed = 150; // Vc (m/min)
+            let baseChipLoad = 0.015; // 基礎每齒進給量常數
+            let maxDocRatio = 0.5; // 最大吃刀深度相較直徑之比例
+
+            // 針對隨機附贈 6mm 或 1/4" 下旋螺旋刀、實測切木頭深度設定 3.0mm ~ 3.2mm 之優化邏輯：
+            const isLargeWoodCutter = (diameter >= 5.9 && ['softwood', 'plywood', 'hardwood'].includes(material));
+
+            if (material === 'softwood') {
+                surfaceSpeed = 180;
+                baseChipLoad = 0.018;
+                maxDocRatio = isLargeWoodCutter ? 0.5 : 0.5; 
+            } else if (material === 'plywood') {
+                surfaceSpeed = 140;
+                baseChipLoad = 0.014;
+                maxDocRatio = isLargeWoodCutter ? 0.5 : 0.4; 
+            } else if (material === 'hardwood') {
+                surfaceSpeed = 120;
+                baseChipLoad = 0.012;
+                maxDocRatio = isLargeWoodCutter ? 0.5 : 0.3; 
+            } else if (material === 'toolingboard') {
+                surfaceSpeed = 160;
+                baseChipLoad = 0.018;
+                maxDocRatio = diameter >= 5.9 ? 0.5 : 0.6; 
+            } else if (material === 'acrylic') {
+                surfaceSpeed = 100;
+                baseChipLoad = 0.015;
+                maxDocRatio = 0.3;
+            } else if (material === 'doublecolor') {
+                surfaceSpeed = 110;
+                baseChipLoad = 0.012;
+                maxDocRatio = 0.3;
+            } else if (material === 'aluminum') {
+                surfaceSpeed = 70;
+                baseChipLoad = 0.005;
+                maxDocRatio = 0.0;
+            }
+
+            // 刃形修正係數：
+            if (currentCutterType === 'straight') {
+                baseChipLoad *= 0.9;
+                maxDocRatio *= 0.9;
+            } else if (currentCutterType === 'upcut') {
+                baseChipLoad *= 1.05;
+                maxDocRatio *= 1.05;
+            }
+
+            // 計算轉速 N = (Vc * 1000) / (pi * D)
+            let calculatedRpm = (surfaceSpeed * 1000) / (Math.PI * diameter);
+            
+            // 限制主軸 Makita 在 10,000 ~ 30,000 RPM 之內
+            if (calculatedRpm > 30000) calculatedRpm = 30000;
+            if (calculatedRpm < 10000) calculatedRpm = 10000;
+
+            // 換算 Makita 撥盤
+            let dial = '1';
+            if (calculatedRpm < 11000) {
+                dial = '1';
+            } else if (calculatedRpm < 14500) {
+                dial = '2';
+            } else if (calculatedRpm < 19500) {
+                dial = '3';
+            } else if (calculatedRpm < 24500) {
+                dial = '4';
+            } else if (calculatedRpm < 28500) {
+                dial = '5';
+            } else {
+                dial = '6';
+            }
+
+            // 計算 Chip Load (隨直徑增加，剛性增強，每齒進給量成比例提高)
+            let chipLoad = diameter * baseChipLoad;
+            
+            // 計算走速 Feed Rate = RPM * Flutes * ChipLoad
+            let calculatedFeed = calculatedRpm * currentFlutes * chipLoad;
+            
+            // 限制與警示：Gordix 機台走速上限 F2000
+            let isLimited = false;
+            if (calculatedFeed > 2000) {
+                calculatedFeed = 2000;
+                isLimited = true;
+            }
+            if (calculatedFeed < 100) {
+                calculatedFeed = 100; // 防呆下限
+            }
+
+            // 計算下刀量 (DOC)
+            let doc = 0.2;
+            if (material !== 'aluminum') {
+                doc = diameter * maxDocRatio;
+                
+                // 針對 6.0mm / 1/4" 刀具下旋切削，安全吃刀上限調整至 3.2mm 以滿足實測 3.0mm 的需求
+                let maxDocCap = 2.0;
+                if (diameter >= 5.9 && ['softwood', 'plywood', 'hardwood', 'toolingboard'].includes(material)) {
+                    maxDocCap = 3.2; 
+                }
+
+                if (doc > maxDocCap) doc = maxDocCap;
+                if (doc < 0.2) doc = 0.2;
+            } else {
+                doc = 0.2; // 軟金屬強制單次 0.2mm 以免保護性失步
+            }
+
+            // 輸出渲染
+            document.getElementById('out-dial').innerText = `${currentLang === 'zh' ? '刻度' : 'Dial'} ${dial}`;
+            document.getElementById('out-rpm').innerText = `${Math.round(calculatedRpm).toLocaleString()} RPM`;
+            document.getElementById('out-feed').innerText = `F${Math.round(calculatedFeed)}`;
+            document.getElementById('out-doc').innerText = `${doc.toFixed(1)} mm`;
+
+            // 限制警示顯示
+            const warningEl = document.getElementById('out-limit-warning');
+            if (isLimited) {
+                warningEl.classList.remove('hidden');
+                warningEl.innerText = currentLang === 'zh' ? '⚠️ 已自動限制在 Gordix 最大安全走速 F2000 內！' : '⚠️ Limited to Gordix safety speed cap F2000!';
+            } else {
+                warningEl.classList.add('hidden');
+            }
+
+            // 調整下旋/上旋模式與直刀提示標籤
+            const badgeEl = document.getElementById('cutter-type-badge');
+            if (currentCutterType === 'downcut') {
+                badgeEl.classList.remove('hidden');
+                badgeEl.className = "px-2.5 py-0.5 rounded text-sm font-bold bg-orange-500/20 text-orange-600 dark:text-orange-400 border border-orange-500/30";
+                badgeEl.innerText = currentLang === 'zh' ? '下旋刀 (Down-cut) 模式已啟用' : 'Down-cut Mode Active';
+            } else if (currentCutterType === 'upcut') {
+                badgeEl.classList.remove('hidden');
+                badgeEl.className = "px-2.5 py-0.5 rounded text-sm font-bold bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/30";
+                badgeEl.innerText = currentLang === 'zh' ? '上旋刀 (Up-cut) 模式已啟用' : 'Up-cut Mode Active';
+            } else {
+                badgeEl.classList.remove('hidden');
+                badgeEl.className = "px-2.5 py-0.5 rounded text-sm font-bold bg-slate-500/20 text-slate-600 dark:text-slate-400 border border-slate-500/30";
+                badgeEl.innerText = currentLang === 'zh' ? '直刀 (Straight-cut) 模式已啟用' : 'Straight-cut Mode Active';
+            }
+
+            // 渲染說明建議
+            const tipDesc = document.getElementById('out-tip-desc');
+            const sizeLabel = diameter >= 6.1 ? '1/4" (6.35mm)' : `${diameter.toFixed(1)}mm`;
+            
+            if (currentLang === 'zh') {
+                let text = `選用 ${diameter.toFixed(2)}mm ${currentFlutes}刃`;
+                
+                // 刀刃類型工藝敘述
+                let cutterDesc = '';
+                if (currentCutterType === 'downcut') {
+                    cutterDesc = `「<span class="text-orange-500 font-bold">下旋螺旋刀</span>」進行加工：刀齒具有向下壓實的作用力，切削時可完美保護木材表層與邊緣、杜絕撕裂起毛。但因切屑會向下壓入溝槽底部不易排出，深槽切削容易積熱焦黑，請務必開啟強力吹氣排屑並維持較高的進給走速 F${Math.round(calculatedFeed)} 拋出木屑。`;
+                } else if (currentCutterType === 'upcut') {
+                    cutterDesc = `「<span class="text-blue-500 font-bold">上旋螺旋刀</span>」進行加工：螺旋槽具有極佳的向上抽屑與排屑力，能最大化散熱，但加工木材時容易在頂部邊緣產生撕裂毛刺。強烈建議搭配「橋位 (Tabs)」或在工件表面貼上美紋紙膠帶防止木板表層剝離。`;
+                } else {
+                    cutterDesc = `「<span class="text-slate-550 dark:text-slate-400 font-bold">直刃刀</span>」進行加工：刀齒切削力垂直於旋轉方向，無上下推力，加工槽道不偏擺。適合開槽與基礎雕刻，但切削進給走速建議保守設定在 F${Math.round(calculatedFeed)}。`;
+                }
+
+                if (material === 'softwood') {
+                    text += `「軟木或MDF」搭配 ${cutterDesc} 材料阻力低，單次深度推薦切深達 ${doc.toFixed(1)}mm（實測約3.0mm）、進給走速 F${Math.round(calculatedFeed)}。`;
+                } else if (material === 'plywood') {
+                    text += `「層板 / 膠合板」搭配 ${cutterDesc} 推薦走速 F${Math.round(calculatedFeed)}、吃刀深達 ${doc.toFixed(1)}mm（實測約3.0mm）。若使用下旋刀可獲得完美切面；若使用上旋刀則必須做好防毛邊準備。`;
+                } else if (material === 'hardwood') {
+                    text += `「實木硬木」搭配 ${cutterDesc} 木質緻密，配合 F${Math.round(calculatedFeed)} 穩定進給、單次下刀深度達 ${doc.toFixed(1)}mm（實測約3.0mm）切削。`;
+                } else if (material === 'toolingboard') {
+                    text += `「代木建模樹脂」搭配 ${cutterDesc} 材料均勻無紋路。設定 F${Math.round(calculatedFeed)}、深度 ${doc.toFixed(1)}mm，表面呈現玉石般絲滑質感。`;
+                } else if (material === 'acrylic') {
+                    text += `「壓克力」搭配 ${cutterDesc} 壓克力極易受熱融化。選用偏低的轉速（撥盤刻度 ${dial}）配合快走速，可帶走熱量，嚴防塑料黏在刀具上！`;
+                } else if (material === 'doublecolor') {
+                    text += `「雕刻雙色板 / ABS」搭配 ${cutterDesc} 雕刻表面時切削深度約為 ${doc.toFixed(1)}mm，適合高走速 F${Math.round(calculatedFeed)}。路徑應儘量流暢避免在拐角處停頓，以免摩擦生熱融化工件。`;
+                } else if (material === 'aluminum') {
+                    text += `「鋁合金 / 軟金屬」搭配 ${cutterDesc} ⚙️採「極淺切、高走速」策略。單次深度固定在 0.2mm。必須開啟吹氣，並適量噴灑切削油（如WD-40）以防黏刀與失步。`;
+                }
+                tipDesc.innerHTML = text;
+            } else {
+                let text = `Using ${diameter.toFixed(2)}mm ${currentFlutes}-Flute `;
+                let cutterDesc = '';
+                if (currentCutterType === 'downcut') {
+                    cutterDesc = `"<span class="text-orange-500 font-bold">Down-cut spiral bit</span>": The downward force suppresses veneer splintering perfectly, giving an elite surface finish. However, chips get packed in deep slots. High feed rates of F${Math.round(calculatedFeed)} or pressurized air is recommended to throw chips out.`;
+                } else if (currentCutterType === 'upcut') {
+                    cutterDesc = `"<span class="text-blue-500 font-bold">Up-cut spiral bit</span>": Outstanding upward chip evacuation and heat management. Tends to splinter wood top fibers; we strongly recommend using "Tabs" or masking tape to protect the top layer.`;
+                } else {
+                    cutterDesc = `"<span class="text-slate-550 dark:text-slate-400 font-bold">Straight bit</span>": Neutral vertical force, balanced groove carving. Evacuation is average, run feed conservatively at F${Math.round(calculatedFeed)}.`;
+                }
+
+                if (material === 'softwood') {
+                    text += `Softwood/MDF with ${cutterDesc} Low resistance. DOC ${doc.toFixed(1)}mm (large tool 3.0mm) at F${Math.round(calculatedFeed)}.`;
+                } else if (material === 'plywood') {
+                    text += `Plywood with ${cutterDesc} Run feed F${Math.round(calculatedFeed)} and DOC ${doc.toFixed(1)}mm (large tool 3.0mm). Down-cut action naturally yields superb edges without masking tape.`;
+                } else if (material === 'hardwood') {
+                    text += `Hardwood with ${cutterDesc} Run F${Math.round(calculatedFeed)} and DOC ${doc.toFixed(1)}mm for dense grains.`;
+                } else if (material === 'toolingboard') {
+                    text += `Tooling Board with ${cutterDesc} homogenous structure allows highly efficient cut of F${Math.round(calculatedFeed)} and DOC up to ${doc.toFixed(1)}mm.`;
+                } else if (material === 'acrylic') {
+                    text += `Acrylic with ${cutterDesc} High melt risk. Pair low RPM (Dial ${dial}) with fast feed rates to throw big chips and dissipate heat.`;
+                } else if (material === 'doublecolor') {
+                    text += `Double-color ABS with ${cutterDesc} Recommended engraving feed F${Math.round(calculatedFeed)} and depth ${doc.toFixed(1)}mm. Ensure fluid CAM paths.`;
+                } else if (material === 'aluminum') {
+                    text += `Aluminum/Metals with ${cutterDesc} ⚙️ Forced "Shallow-depth, Fast-feed" strategy. DOC strictly at 0.2mm. Air cooling and cutting fluid (e.g., WD-40) are required.`;
+                }
+                text = text.replace(/<br>/g, " ");
+                tipDesc.innerHTML = text;
+            }
+        }
+    </script>
+</body>
+</html>
