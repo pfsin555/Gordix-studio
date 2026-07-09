@@ -291,23 +291,6 @@
         </div>
     </div>
 
-    <script>
-        // 安全包裝的 localStorage，避免 Iframe 沙盒阻斷性安全報錯 (SecurityError)
-        const safeLocalStorage = {
-            getItem(key) {
-                try {
-                    return localStorage.getItem(key);
-                } catch (e) {
-                    return null;
-                }
-            },
-            setItem(key, value) {
-                try {
-                    localStorage.setItem(key, value);
-                } catch (e) {}
-            }
-        };
-
         const i18n = {
             zh: {
                 title: "轉檔工具 (繪圖)",
