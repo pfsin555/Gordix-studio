@@ -87,7 +87,12 @@
             -moz-appearance: textfield;
         }
     </style>
-
+    <!-- PWA Meta Tags -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="icon-192.png">
     
 </head>
 <body class="bg-slate-50 dark:bg-slate-950 min-h-screen p-4 md:p-8 text-slate-800 dark:text-slate-200 font-sans transition-colors duration-300">
@@ -291,6 +296,7 @@
         </div>
     </div>
 
+    <script>
         const i18n = {
             zh: {
                 title: "轉檔工具 (繪圖)",
@@ -375,7 +381,7 @@
         const themeIcon = document.getElementById('theme-icon');
 
         function initTheme() {
-            const savedTheme = safeLocalStorage.getItem('theme') || 'dark'; // 預設暗色主題
+            const savedTheme = localStorage.getItem('theme') || 'dark'; // 預設暗色主題
             setTheme(savedTheme);
         }
 
@@ -384,12 +390,12 @@
                 document.documentElement.classList.add('dark');
                 // Sun 圖示 (點擊變亮)
                 themeIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m0-12.728l.707.707m12.728 12.728l.707.707M12 8a4 4 0 100 8 4 4 0 000-8z" />`;
-                safeLocalStorage.setItem('theme', 'dark');
+                localStorage.setItem('theme', 'dark');
             } else {
                 document.documentElement.classList.remove('dark');
                 // Moon 圖示 (點擊變暗)
                 themeIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />`;
-                safeLocalStorage.setItem('theme', 'light');
+                localStorage.setItem('theme', 'light');
             }
             // 每次主題變更後，更新輸出格式 UI（確保非選取按鈕的底色在明/暗模式下完美對比）
             updateOutputFormatUI();
@@ -1121,7 +1127,6 @@
                 `G21`, 
                 `G90`, 
                 `G1 F${feed}`
-
             ];
 
             // 整合所有路徑 (輪廓為封閉，填滿線條為開放)
@@ -1234,6 +1239,15 @@
         initTheme();
         updateUI();
     </script>
-
+    <!-- PWA Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./service-worker.js')
+                    .then((reg) => console.log('Service Worker registered successfully with scope: ', reg.scope))
+                    .catch((err) => console.error('Service Worker registration failed: ', err));
+            });
+        }
+    </script>
 </body>
 </html>
