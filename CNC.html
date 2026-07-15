@@ -1397,7 +1397,7 @@
                                             currentG1F = 300;
                                         }
                                     } else {
-                                        gc.push("M3 S255");
+                                        gc.push("M03 S255"); // 切線段起點，開啟雷射
                                     }
                                 } else {
                                     if (!isLaser) {
@@ -1413,6 +1413,7 @@
                                         gc.push(`G1 X${start.x.toFixed(3)} Y${start.y.toFixed(3)}${fStr}`);
                                         if (fStr) currentG1F = cfg.f;
                                     } else {
+                                        gc.push("M03 S255"); // 無需退刀時，亦在移動至新切削點前，先開啟雷射
                                         const fStr = (currentG1F !== cfg.f) ? ` F${cfg.f}` : "";
                                         gc.push(`G1 X${start.x.toFixed(3)} Y${start.y.toFixed(3)}${fStr}`);
                                         if (fStr) currentG1F = cfg.f;
@@ -1444,6 +1445,9 @@
                                         }
                                     }
                                 }
+                                if (isLaser) {
+                                    gc.push("M05"); // 當前線段結束，關閉雷射
+                                }
                                 lastPtInLayer = finalPath[finalPath.length - 1];
                                 lastPointOfPart = lastPtInLayer;
                             });
@@ -1459,7 +1463,7 @@
                     if (lastPointOfPart) { currentX = lastPointOfPart.x; currentY = lastPointOfPart.y; }
                 }
             });
-            gc.push("G0 X0Y0");
+            gc.push("G0 X0 Y0");
             const blob = new Blob([gc.join('\n')], { type: 'text/plain' });
             const a = document.createElement('a'); 
             a.href = URL.createObjectURL(blob); 
@@ -1481,6 +1485,5 @@
             });
         }
     </script>
-
 </body>
 </html>
