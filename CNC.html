@@ -71,31 +71,29 @@
         }
         .file-custom-label:hover { background: #f97316; }
     </style>
-
     <!-- PWA Meta Tags -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0f172a">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" href="icon-192.png">
-
 </head>
 <body class="flex flex-col min-h-screen">
     
-    <!-- 改進為橘色漸層風格後的導覽列 -->
+    <!-- 橘色漸層導覽列 -->
     <header class="w-full bg-gradient-to-r from-orange-500 via-orange-600 to-red-600 p-6 text-white flex justify-between items-center border-b border-orange-500/30 sticky top-0 z-50 shadow-md">
         <div>
             <h1 class="text-2xl font-black tracking-tight" data-i18n="appTitle">轉檔工具 (切割)</h1>
         </div>
         <div class="flex gap-3 items-center">
-                                <!-- 返回上一頁按鈕 -->
-        <button onclick="if(window.history.length > 1) { window.history.back(); } else { window.location.href='index.html'; }" class="flex items-center justify-center text-slate-300 hover:text-orange-400 transition-colors font-bold bg-white/10 hover:bg-white/20 p-1.5 rounded-lg border border-white/20 cursor-pointer" title="返回上一頁 / Go Back">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <line x1="20" y1="12" x2="4" y2="12"></line>
-                <polyline points="10 18 4 12 10 6"></polyline>
-            </svg>
-        </button>
-            <!-- 增加明暗主題切換按鈕，配置在中英切換按鈕左側 -->
+            <!-- 返回上一頁按鈕 -->
+            <button onclick="if(window.history.length > 1) { window.history.back(); } else { window.location.href='index.html'; }" class="flex items-center justify-center text-slate-300 hover:text-orange-400 transition-colors font-bold bg-white/10 hover:bg-white/20 p-1.5 rounded-lg border border-white/20 cursor-pointer" title="返回上一頁 / Go Back">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <line x1="20" y1="12" x2="4" y2="12"></line>
+                    <polyline points="10 18 4 12 10 6"></polyline>
+                </svg>
+            </button>
+            <!-- 主題切換按鈕 -->
             <button id="theme-toggle" class="p-1.5 rounded-lg text-[11px] font-bold bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-all flex items-center justify-center" aria-label="Toggle Theme">
                 <svg id="theme-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <!-- 圖示由 JS 動態注入 -->
@@ -105,13 +103,13 @@
             <button id="lang-toggle" class="px-3 py-1.5 rounded-lg text-[11px] font-bold bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-all flex items-center gap-2">
                 <span>中文 / EN</span>
             </button>
-        <!-- 書頁按鈕 (指向 params.html，取代 V2.8 顯示) -->
-        <a href="params.html" class="flex items-center justify-center text-slate-300 hover:text-emerald-400 transition-colors bg-white/10 hover:bg-white/20 p-1.5 rounded-lg border border-white/20 cursor-pointer" title="工藝參數建議 / Parameters Guide">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
-                <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
-            </svg>
-        </a>
+            <!-- 書頁按鈕 (工藝參數) -->
+            <a href="params.html" class="flex items-center justify-center text-slate-300 hover:text-emerald-400 transition-colors bg-white/10 hover:bg-white/20 p-1.5 rounded-lg border border-white/20 cursor-pointer" title="工藝參數建議 / Parameters Guide">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+                    <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+                </svg>
+            </a>
         </div>
     </header>
 
@@ -326,6 +324,7 @@
             return current;
         }
 
+        // DP 折線簡化演算法
         function simplifyPath(points, tolerance) {
             if (points.length <= 2) return points;
             let maxSqDist = 0, index = 0;
@@ -736,7 +735,7 @@
             }
         }
 
-        // --- 輔助：縮放向量以符合設定寬度並置中 ---
+        // --- 輔劇：縮放向量以符合設定寬度並置中 ---
         function scaleVectorPaths(paths, targetW) {
             if (paths.length === 0) return [];
             let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
@@ -783,7 +782,8 @@
                     currentDim: { w: pMaxX-pMinX, h: pMaxY-pMinY }, 
                     visible: true, 
                     jobConfig: { type: 'pocket', f: 1000, d: 3.175, depth: 3.0, step: 1.0, overlap: 0.5, resolution: 0.1, useTab: false }, 
-                    toolpath: null, appliedMethod: null 
+                    toolpath: null, appliedMethod: null,
+                    pocketContourPaths: null, pocketScanPaths: null
                 };
             });
 
@@ -825,7 +825,6 @@
                     methodText = i18n[currentLang][methodMap[p.appliedMethod]] || p.appliedMethod;
                 }
                 const div = document.createElement('div');
-                // 將框線與 Hover 配色優化為響應主題的形式
                 div.className = `p-4 border border-slate-300 dark:border-slate-700 rounded-xl flex flex-col transition-all cursor-pointer ${isSelected ? 'active-part shadow-lg' : 'hover:bg-slate-100 dark:hover:bg-slate-800'}`;
                 div.innerHTML = `
                     <div class="flex justify-between items-center mb-2">
@@ -928,6 +927,8 @@
 
             selectedIndices.forEach(idx => {
                 parts[idx].toolpath = null;
+                parts[idx].pocketContourPaths = null;
+                parts[idx].pocketScanPaths = null;
                 parts[idx].jobConfig = { type: newType, f: newF, d: newD, depth: newDepth, step: newStep, overlap: newOverlap, resolution: newRes, useTab: newUseTab };
                 parts[idx].currentDim = { w: parts[idx].originalDim.w * groupScale, h: parts[idx].originalDim.h * groupScale };
                 parts[idx].appliedMethod = newType; 
@@ -973,7 +974,10 @@
             cl.Execute(ClipperLib.ClipType.ctUnion, polyTree, ClipperLib.PolyFillType.pftNonZero, ClipperLib.PolyFillType.pftNonZero);
             const firstIdx = selectedArr[0];
             const cfg = parts[firstIdx].jobConfig;
-            const finalResults = [];
+            
+            const pocketContourPaths = [];
+            const pocketScanPaths = [];
+
             function traverseTree(node) {
                 const children = node.Childs();
                 for (let i = 0; i < children.length; i++) {
@@ -989,7 +993,7 @@
                             islandOuters.forEach(l => {
                                 let p = l.map(pt => ({ x: pt.X/scale, y: pt.Y/scale })); 
                                 if(p.length > 0) p.push(p[0]);
-                                finalResults.push(cleanPath(p, cfg.resolution));
+                                pocketContourPaths.push(cleanPath(p, cfg.resolution));
                             });
                         }
                         const subjectOffsetter = new ClipperLib.ClipperOffset();
@@ -999,10 +1003,10 @@
                         subjectInners.forEach(l => {
                             let p = l.map(pt => ({ x: pt.X/scale, y: pt.Y/scale })); 
                             if(p.length > 0) p.push(p[0]);
-                            finalResults.push(cleanPath(p, cfg.resolution));
+                            pocketContourPaths.push(cleanPath(p, cfg.resolution));
                         });
                         const scanPaths = computeScanlinePocket(subjectPath, islands, cfg, scale);
-                        finalResults.push(...scanPaths);
+                        pocketScanPaths.push(...scanPaths);
                         outerNode.Childs().forEach(holeNode => traverseTree(holeNode));
                     }
                 }
@@ -1010,7 +1014,16 @@
             traverseTree(polyTree);
             
             selectedArr.forEach(idx => {
-                parts[idx].toolpath = (idx === firstIdx) ? finalResults : []; 
+                if (idx === firstIdx) {
+                    parts[idx].pocketContourPaths = pocketContourPaths;
+                    parts[idx].pocketScanPaths = pocketScanPaths;
+                    // 將所有路徑合併至 toolpath，供 3D 繪製渲染使用
+                    parts[idx].toolpath = [...pocketContourPaths, ...pocketScanPaths];
+                } else {
+                    parts[idx].pocketContourPaths = [];
+                    parts[idx].pocketScanPaths = [];
+                    parts[idx].toolpath = [];
+                }
                 parts[idx].appliedMethod = 'pocket';
             });
         }
@@ -1096,7 +1109,6 @@
             parts.forEach((p, idx) => {
                 if(!p.visible) return;
                 const isSelected = selectedIndices.has(idx);
-                // 零件未選中時，亮色模式下改為較深的 Slate 以提供足夠對比度
                 const color = isSelected ? 0x22c55e : (isDark ? 0xFFFFFF : 0x475569);
                 const opacity = isSelected ? 0.8 : 0.5;
                 const geomOrig = new THREE.BufferGeometry().setFromPoints(p.rawPath.map(pt => new THREE.Vector3(pt.x, pt.y, 0)));
@@ -1107,8 +1119,9 @@
                         const currentZ = cfg.type === 'laser' ? 0.2 : -(Math.min(cfg.depth, (i + 1) * cfg.step)) + 0.2;
                         const matTool = new THREE.LineBasicMaterial({ color: 0xfacc15, opacity: 1.0 - (i * 0.1), transparent: true });
                         p.toolpath.forEach(path => {
-                            // 判斷該道次是否啟用 6mm 安全抬刀橋位 (最後一圈且啟用 TAB)
-                            const useTabThisPass = (cfg.useTab && (i === passes - 1) && (cfg.type === 'outer' || cfg.type === 'inner'));
+                            // 判斷該路徑是否為槽加工外邊緣輪廓路徑或是標準外輪廓、內輪廓路徑
+                            const isContourPath = (cfg.type === 'outer' || cfg.type === 'inner' || (cfg.type === 'pocket' && p.pocketContourPaths && p.pocketContourPaths.includes(path)));
+                            const useTabThisPass = (cfg.useTab && (i === passes - 1) && isContourPath);
                             if (useTabThisPass) {
                                 const tabCenters = getTabPointsForPath(path);
                                 const subPath = subdividePath(path, 0.5);
@@ -1177,76 +1190,96 @@
 
                     let lastPointOfPart = null;
 
-                    for (let i = 1; i <= passes; i++) {
-                        const targetZ = isLaser ? 0 : -(Math.min(cfg.depth, i * cfg.step));
-                        let lastPtInLayer = null;
-
-                        p.toolpath.forEach((path, pathIdx) => {
-                            if (path.length < 2) return;
-                            
-                            const useTabThisPass = (!isLaser && cfg.useTab && i === passes && (cfg.type === 'outer' || cfg.type === 'inner'));
-                            const finalPath = useTabThisPass ? subdividePath(path, 0.5) : path;
-                            const tabCenters = useTabThisPass ? getTabPointsForPath(path) : [];
-                            const tabZVal = useTabThisPass ? Math.min(0, targetZ + cfg.step) : targetZ;
-
-                            const start = finalPath[0];
-                            const startZ = useTabThisPass && isPointInTab(start, tabCenters, 6) ? tabZVal : targetZ;
-
-                            let needRetract = true;
-                            if (i > 1 && pathIdx === 0 && lastPointOfPart) {
-                                const dToStart = Math.sqrt(Math.pow(start.x - lastPointOfPart.x, 2) + Math.pow(start.y - lastPointOfPart.y, 2));
-                                if (dToStart < 0.5) needRetract = false; 
-                            } else if (lastPtInLayer) {
-                                const dToLast = Math.sqrt(Math.pow(start.x - lastPtInLayer.x, 2) + Math.pow(start.y - lastPtInLayer.y, 2));
-                                if (dToLast < (cfg.d * 1.5)) needRetract = false;
-                            }
-
-                            if (needRetract) {
-                                if (!isLaser) {
-                                    const travelZToSafe = Math.abs(currentZ - SAFE_Z_VAL);
-                                    totalSec += (travelZToSafe / G0_SPEED) * 60;
-                                    currentZ = SAFE_Z_VAL;
-                                }
-
-                                const travelXY = Math.sqrt(Math.pow(start.x - currentX, 2) + Math.pow(start.y - currentY, 2));
-                                totalSec += (travelXY / G0_SPEED) * 60;
-                                currentX = start.x;
-                                currentY = start.y;
-
-                                if (!isLaser) {
-                                    const plungeZ = Math.abs(currentZ - startZ);
-                                    totalSec += (plungeZ / PLUNGE_SPEED) * 60;
-                                    currentZ = startZ;
-                                }
-                            } else {
-                                const travelXY = Math.sqrt(Math.pow(start.x - currentX, 2) + Math.pow(start.y - currentY, 2));
-                                totalSec += (travelXY / cuttingFeedrate) * 60;
-                                currentX = start.x;
-                                currentY = start.y;
-                            }
-
-                            let lastZ = startZ;
-                            for (let j = 1; j < finalPath.length; j++) {
-                                const pt = finalPath[j];
-                                const ptZ = useTabThisPass && isPointInTab(pt, tabCenters, 6) ? tabZVal : targetZ;
-                                const segmentDist = Math.sqrt(Math.pow(pt.x - finalPath[j - 1].x, 2) + Math.pow(pt.y - finalPath[j - 1].y, 2));
-                                const zDist = Math.abs(ptZ - lastZ);
-                                
-                                // 合併 X/Y 移動與 Z 軸抬升
-                                const totalTravel = Math.sqrt(segmentDist * segmentDist + zDist * zDist);
-                                totalSec += (totalTravel / cuttingFeedrate) * 60;
-                                lastZ = ptZ;
-                            }
-
-                            const lastPtInPath = finalPath[finalPath.length - 1];
-                            currentX = lastPtInPath.x;
-                            currentY = lastPtInPath.y;
-                            currentZ = useTabThisPass && isPointInTab(lastPtInPath, tabCenters, 6) ? tabZVal : targetZ;
-
-                            lastPtInLayer = lastPtInPath;
-                            lastPointOfPart = lastPtInPath;
-                        });
+                    // 槽加工分成「先內部掃描」再「外部輪廓」兩階段，各階段自表面層層切入至底
+                    let phases = [];
+                    if (cfg.type === 'pocket') {
+                        phases = [
+                            { paths: p.pocketScanPaths || [], isContour: false },
+                            { paths: p.pocketContourPaths || [], isContour: true }
+                        ];
+                    } else {
+                        phases = [
+                            { paths: p.toolpath || [], isContour: (cfg.type === 'outer' || cfg.type === 'inner') }
+                        ];
                     }
+
+                    phases.forEach(phase => {
+                        if (phase.paths.length === 0) return;
+                        for (let i = 1; i <= passes; i++) {
+                            const targetZ = isLaser ? 0 : -(Math.min(cfg.depth, i * cfg.step));
+                            let lastPtInLayer = null;
+
+                            phase.paths.forEach((path, pathIdx) => {
+                                if (path.length < 2) return;
+                                
+                                const useTabThisPass = (!isLaser && cfg.useTab && i === passes && phase.isContour);
+                                const finalPath = useTabThisPass ? subdividePath(path, 0.5) : path;
+                                const tabCenters = useTabThisPass ? getTabPointsForPath(path) : [];
+                                const tabZVal = useTabThisPass ? Math.min(0, targetZ + cfg.step) : targetZ;
+
+                                const start = finalPath[0];
+                                const startZ = useTabThisPass && isPointInTab(start, tabCenters, 6) ? tabZVal : targetZ;
+
+                                let needRetract = true;
+                                if (i > 1 && pathIdx === 0 && lastPointOfPart) {
+                                    const dToStart = Math.sqrt(Math.pow(start.x - lastPointOfPart.x, 2) + Math.pow(start.y - lastPointOfPart.y, 2));
+                                    if (dToStart < 0.5) needRetract = false; 
+                                } else if (lastPtInLayer) {
+                                    const dToLast = Math.sqrt(Math.pow(start.x - lastPtInLayer.x, 2) + Math.pow(start.y - lastPtInLayer.y, 2));
+                                    if (dToLast < (cfg.d * 1.5)) needRetract = false;
+                                }
+
+                                if (needRetract) {
+                                    if (!isLaser) {
+                                        const travelZToSafe = Math.abs(currentZ - SAFE_Z_VAL);
+                                        totalSec += (travelZToSafe / G0_SPEED) * 60;
+                                        currentZ = SAFE_Z_VAL;
+                                    }
+
+                                    const travelXY = Math.sqrt(Math.pow(start.x - currentX, 2) + Math.pow(start.y - currentY, 2));
+                                    totalSec += (travelXY / G0_SPEED) * 60;
+                                    currentX = start.x;
+                                    currentY = start.y;
+
+                                    if (!isLaser) {
+                                        const plungeZ = Math.abs(currentZ - startZ);
+                                        totalSec += (plungeZ / PLUNGE_SPEED) * 60;
+                                        currentZ = startZ;
+                                    }
+                                } else {
+                                    if (!isLaser) {
+                                        const plungeZ = Math.abs(currentZ - startZ);
+                                        totalSec += (plungeZ / PLUNGE_SPEED) * 60;
+                                        currentZ = startZ;
+                                    }
+                                    const travelXY = Math.sqrt(Math.pow(start.x - currentX, 2) + Math.pow(start.y - currentY, 2));
+                                    totalSec += (travelXY / cuttingFeedrate) * 60;
+                                    currentX = start.x;
+                                    currentY = start.y;
+                                }
+
+                                let lastZ = startZ;
+                                for (let j = 1; j < finalPath.length; j++) {
+                                    const pt = finalPath[j];
+                                    const ptZ = useTabThisPass && isPointInTab(pt, tabCenters, 6) ? tabZVal : targetZ;
+                                    const segmentDist = Math.sqrt(Math.pow(pt.x - finalPath[j - 1].x, 2) + Math.pow(pt.y - finalPath[j - 1].y, 2));
+                                    const zDist = Math.abs(ptZ - lastZ);
+                                    
+                                    const totalTravel = Math.sqrt(segmentDist * segmentDist + zDist * zDist);
+                                    totalSec += (totalTravel / cuttingFeedrate) * 60;
+                                    lastZ = ptZ;
+                                }
+
+                                const lastPtInPath = finalPath[finalPath.length - 1];
+                                currentX = lastPtInPath.x;
+                                currentY = lastPtInPath.y;
+                                currentZ = useTabThisPass && isPointInTab(lastPtInPath, tabCenters, 6) ? tabZVal : targetZ;
+
+                                lastPtInLayer = lastPtInPath;
+                                lastPointOfPart = lastPtInPath;
+                            });
+                        }
+                    });
 
                     if (!isLaser) {
                         const travelZToSafe = Math.abs(currentZ - SAFE_Z_VAL);
@@ -1285,6 +1318,10 @@
                 grouped[type].push(p);
             });
             let currentX = 0, currentY = 0;
+            let currentZ = parseFloat(SAFE_Z) || 2.0; 
+            const SAFE_Z_VAL = parseFloat(SAFE_Z) || 2.0;
+            let currentG1F = null; // 實時追蹤 G1 模態進給速率 (Modal Feedrate)
+            
             const sortedTypes = Object.keys(grouped).sort((a, b) => (orderPriority[a] ?? 99) - (orderPriority[b] ?? 99));
             sortedTypes.forEach(type => {
                 let unvisitedInGroup = [...grouped[type]];
@@ -1303,67 +1340,122 @@
                     const p = unvisitedInGroup.splice(nearestIdx, 1)[0];
                     const cfg = p.jobConfig, isLaser = cfg.type === 'laser', passes = isLaser ? 1 : Math.ceil(cfg.depth / cfg.step);
                     let lastPointOfPart = null;
-                    for (let i = 1; i <= passes; i++) {
-                        const targetZ = isLaser ? 0 : -(Math.min(cfg.depth, i * cfg.step)).toFixed(3);
-                        let lastPtInLayer = null;
-                        let isFirstMoveOfPass = true;
-                        p.toolpath.forEach((path, pathIdx) => {
-                            if (path.length < 2) return;
-                            
-                            const useTabThisPass = (!isLaser && cfg.useTab && i === passes && (cfg.type === 'outer' || cfg.type === 'inner'));
-                            const finalPath = useTabThisPass ? subdividePath(path, 0.5) : path;
-                            const tabCenters = useTabThisPass ? getTabPointsForPath(path) : [];
-                            const tabZVal = useTabThisPass ? Math.min(0, targetZ + cfg.step) : targetZ;
 
-                            const start = finalPath[0];
-                            const startZ = useTabThisPass && isPointInTab(start, tabCenters, 6) ? tabZVal : targetZ;
-
-                            let needRetract = true;
-                            if (i > 1 && pathIdx === 0 && lastPointOfPart) {
-                                const dToStart = Math.sqrt(Math.pow(start.x - lastPointOfPart.x, 2) + Math.pow(start.y - lastPointOfPart.y, 2));
-                                if (dToStart < 0.5) needRetract = false; 
-                            } else if (lastPtInLayer) {
-                                const dToLast = Math.sqrt(Math.pow(start.x - lastPtInLayer.x, 2) + Math.pow(start.y - lastPtInLayer.y, 2));
-                                if (dToLast < (cfg.d * 1.5)) needRetract = false;
-                            }
-                            
-                            let forceFeedrate = false;
-                            if (needRetract) {
-                                if (!isLaser) gc.push(`G0 Z${SAFE_Z}`);
-                                gc.push(`G0 X${start.x.toFixed(3)} Y${start.y.toFixed(3)}`);
-                                if (!isLaser) {
-                                    gc.push(`G1 Z${startZ.toFixed(3)} F300`);
-                                    forceFeedrate = true; 
-                                } else {
-                                    gc.push("M3 S255");
-                                }
-                            } else {
-                                if (!isLaser) gc.push(`G1 X${start.x.toFixed(3)} Y${start.y.toFixed(3)} Z${startZ.toFixed(3)} ${isFirstMoveOfPass ? 'F' + cfg.f : ''}`);
-                                else gc.push(`G1 X${start.x.toFixed(3)} Y${start.y.toFixed(3)} ${isFirstMoveOfPass ? 'F' + cfg.f : ''}`);
-                            }
-                            
-                            let lastZ = startZ;
-                            for (let j = 1; j < finalPath.length; j++) {
-                                const pt = finalPath[j];
-                                const ptZ = useTabThisPass && isPointInTab(pt, tabCenters, 6) ? tabZVal : targetZ;
-                                const fStr = (isFirstMoveOfPass || forceFeedrate) ? ` F${cfg.f}` : "";
-                                
-                                if (Math.abs(ptZ - lastZ) > 0.001) {
-                                    // 橋位邊界：X、Y、Z 聯動拉升或下插，達成平滑的斜面或抬升
-                                    gc.push(`G1 X${pt.x.toFixed(3)} Y${pt.y.toFixed(3)} Z${ptZ.toFixed(3)}${fStr}`);
-                                    lastZ = ptZ;
-                                } else {
-                                    gc.push(`G1 X${pt.x.toFixed(3)} Y${pt.y.toFixed(3)}${fStr}`);
-                                }
-                                isFirstMoveOfPass = false;
-                                forceFeedrate = false; 
-                            }
-                            lastPtInLayer = finalPath[finalPath.length - 1];
-                            lastPointOfPart = lastPtInLayer;
-                        });
-                        if (isLaser) gc.push("M5");
+                    // 槽加工分成「先內部掃描」再「外部輪廓」兩階段，各階段自表面層層切入至底
+                    let phases = [];
+                    if (cfg.type === 'pocket') {
+                        phases = [
+                            { paths: p.pocketScanPaths || [], isContour: false },
+                            { paths: p.pocketContourPaths || [], isContour: true }
+                        ];
+                    } else {
+                        phases = [
+                            { paths: p.toolpath || [], isContour: (cfg.type === 'outer' || cfg.type === 'inner') }
+                        ];
                     }
-                    if (!isLaser) gc.push(`G0 Z${SAFE_Z}`);
+
+                    phases.forEach(phase => {
+                        if (phase.paths.length === 0) return;
+                        for (let i = 1; i <= passes; i++) {
+                            const targetZ = isLaser ? 0 : -(Math.min(cfg.depth, i * cfg.step)).toFixed(3);
+                            let lastPtInLayer = null;
+                            phase.paths.forEach((path, pathIdx) => {
+                                if (path.length < 2) return;
+                                
+                                const useTabThisPass = (!isLaser && cfg.useTab && i === passes && phase.isContour);
+                                const finalPath = useTabThisPass ? subdividePath(path, 0.5) : path;
+                                const tabCenters = useTabThisPass ? getTabPointsForPath(path) : [];
+                                const tabZVal = useTabThisPass ? Math.min(0, targetZ + cfg.step) : targetZ;
+
+                                const start = finalPath[0];
+                                const startZ = useTabThisPass && isPointInTab(start, tabCenters, 6) ? tabZVal : targetZ;
+
+                                let needRetract = true;
+                                if (i > 1 && pathIdx === 0 && lastPointOfPart) {
+                                    const dToStart = Math.sqrt(Math.pow(start.x - lastPointOfPart.x, 2) + Math.pow(start.y - lastPointOfPart.y, 2));
+                                    if (dToStart < 0.5) needRetract = false; 
+                                } else if (lastPtInLayer) {
+                                    const dToLast = Math.sqrt(Math.pow(start.x - lastPtInLayer.x, 2) + Math.pow(start.y - lastPtInLayer.y, 2));
+                                    if (dToLast < (cfg.d * 1.5)) needRetract = false;
+                                }
+                                
+                                if (needRetract) {
+                                    if (!isLaser) {
+                                        // 只有當前高度不等於安全高度才抬刀
+                                        if (Math.abs(currentZ - SAFE_Z_VAL) > 0.001) {
+                                            gc.push(`G0 Z${SAFE_Z_VAL.toFixed(3)}`);
+                                            currentZ = SAFE_Z_VAL;
+                                        }
+                                    }
+                                    gc.push(`G0 X${start.x.toFixed(3)} Y${start.y.toFixed(3)}`);
+                                    if (!isLaser) {
+                                        // 只有當前高度不等於目標起步 Z 軸時才垂直下刀
+                                        if (Math.abs(currentZ - startZ) > 0.001) {
+                                            const fStr = (currentG1F !== 300) ? " F300" : "";
+                                            gc.push(`G1 Z${startZ.toFixed(3)}${fStr}`);
+                                            currentZ = startZ;
+                                            currentG1F = 300;
+                                        }
+                                    } else {
+                                        gc.push("M3 S255");
+                                    }
+                                } else {
+                                    if (!isLaser) {
+                                        // 垂直下刀與水平切削分離。只有在當前 Z 軸高度與目標加工深度不一致時，才垂直下刀
+                                        if (Math.abs(currentZ - startZ) > 0.001) {
+                                            const fStr = (currentG1F !== 300) ? " F300" : "";
+                                            gc.push(`G1 Z${startZ.toFixed(3)}${fStr}`);
+                                            currentZ = startZ;
+                                            currentG1F = 300;
+                                        }
+                                        // 然後在水平面移動至起始點並恢復切削進給率 (模態控制：只有當進給率改變時才輸出)
+                                        const fStr = (currentG1F !== cfg.f) ? ` F${cfg.f}` : "";
+                                        gc.push(`G1 X${start.x.toFixed(3)} Y${start.y.toFixed(3)}${fStr}`);
+                                        if (fStr) currentG1F = cfg.f;
+                                    } else {
+                                        const fStr = (currentG1F !== cfg.f) ? ` F${cfg.f}` : "";
+                                        gc.push(`G1 X${start.x.toFixed(3)} Y${start.y.toFixed(3)}${fStr}`);
+                                        if (fStr) currentG1F = cfg.f;
+                                    }
+                                }
+                                
+                                let lastZ = startZ;
+                                for (let j = 1; j < finalPath.length; j++) {
+                                    const pt = finalPath[j];
+                                    const ptZ = useTabThisPass && isPointInTab(pt, tabCenters, 6) ? tabZVal : targetZ;
+                                    const fStr = (currentG1F !== cfg.f) ? ` F${cfg.f}` : "";
+                                    
+                                    if (Math.abs(ptZ - lastZ) > 0.001) {
+                                        // 僅在橋位邊界：X、Y、Z 聯動拉升或下插，達成平滑斜面
+                                        gc.push(`G1 X${pt.x.toFixed(3)} Y${pt.y.toFixed(3)} Z${ptZ.toFixed(3)}${fStr}`);
+                                        if (fStr) currentG1F = cfg.f;
+                                        lastZ = ptZ;
+                                        currentZ = ptZ;
+                                    } else {
+                                        // 雙重安全閥值：若全局高度因其他製程或切換而不同步，則修正；若完全相同則只作 XY 平面移動，去冗餘
+                                        if (Math.abs(currentZ - ptZ) > 0.001) {
+                                            gc.push(`G1 X${pt.x.toFixed(3)} Y${pt.y.toFixed(3)} Z${ptZ.toFixed(3)}${fStr}`);
+                                            if (fStr) currentG1F = cfg.f;
+                                            currentZ = ptZ;
+                                            lastZ = ptZ;
+                                        } else {
+                                            gc.push(`G1 X${pt.x.toFixed(3)} Y${pt.y.toFixed(3)}${fStr}`);
+                                            if (fStr) currentG1F = cfg.f;
+                                        }
+                                    }
+                                }
+                                lastPtInLayer = finalPath[finalPath.length - 1];
+                                lastPointOfPart = lastPtInLayer;
+                            });
+                        }
+                    });
+
+                    if (!isLaser) {
+                        if (Math.abs(currentZ - SAFE_Z_VAL) > 0.001) {
+                            gc.push(`G0 Z${SAFE_Z_VAL.toFixed(3)}`);
+                            currentZ = SAFE_Z_VAL;
+                        }
+                    }
                     if (lastPointOfPart) { currentX = lastPointOfPart.x; currentY = lastPointOfPart.y; }
                 }
             });
@@ -1389,5 +1481,6 @@
             });
         }
     </script>
+
 </body>
 </html>
