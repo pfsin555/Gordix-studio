@@ -150,7 +150,9 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" href="icon-192.png">
 </head>
-<body class="pb-4">
+<body class="bg-slate-50 dark:bg-slate-950 min-h-screen p-4 md:p-8 text-slate-800 dark:text-slate-200 font-sans transition-colors duration-300">
+    <div class="max-w-7xl mx-auto bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800 transition-colors duration-300">
+
 
 <!-- 頂部導航 -->
 <div class="bg-gradient-to-r from-emerald-600 to-teal-950 p-5 text-white flex justify-between items-center border-b border-emerald-500/30 shadow-lg mb-4">
@@ -446,7 +448,7 @@
     const i18n = {
         zh: {
             headerTitle: "Gcode 即時調整",
-            langBtn: "EN/中文",
+            langBtn: "中文 / EN",
             secUpload: "1. 檔案上傳",
             btnUpload: "選擇 G-code 檔案",
             fileName: "檔名",
@@ -491,7 +493,7 @@
         },
         en: {
             headerTitle: "Gcode Adjuster",
-            langBtn: "中文/EN",
+            langBtn: "中文 / EN",
             secUpload: "1. File Upload",
             btnUpload: "Choose G-code File",
             fileName: "File",
