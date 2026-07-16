@@ -12,8 +12,8 @@
         }
     </script>
     <script>
-        // 立即在網頁頂部設定主題，防範載入時的背景閃爍問題
-        const savedTheme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        // 立即在網頁頂部設定主題，防範載入時的背景閃爍問題，預設初始化狀態為 dark
+        const savedTheme = localStorage.getItem('gordix_theme') || localStorage.getItem('theme') || 'dark';
         if (savedTheme === 'dark') {
             document.documentElement.classList.add('dark');
         } else {
@@ -79,7 +79,8 @@
     <link rel="apple-touch-icon" href="icon-192.png">
 </head>
 <body class="flex flex-col min-h-screen">
-    
+    <div class="max-w-7xl mx-auto bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800 transition-colors duration-300">
+ 
     <!-- 橘色漸層導覽列 -->
     <header class="w-full bg-gradient-to-r from-orange-500 via-orange-600 to-red-600 p-6 text-white flex justify-between items-center border-b border-orange-500/30 sticky top-0 z-50 shadow-md">
         <div>
@@ -269,11 +270,13 @@
                 document.documentElement.classList.add('dark');
                 // Sun 圖示 (點擊變亮)
                 themeIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m0-12.728l.707.707m12.728 12.728l.707.707M12 8a4 4 0 100 8 4 4 0 000-8z" />`;
+                localStorage.setItem('gordix_theme', 'dark');
                 localStorage.setItem('theme', 'dark');
             } else {
                 document.documentElement.classList.remove('dark');
                 // Moon 圖示 (點擊變暗)
                 themeIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />`;
+                localStorage.setItem('gordix_theme', 'light');
                 localStorage.setItem('theme', 'light');
             }
             if (typeof renderer !== 'undefined' && renderer !== null) {
@@ -362,7 +365,6 @@
         }
 
         // --- 橋位 (TAB) 計算核心輔助演算法 ---
-        // 1. 細分路徑，確保在大跨距的線段中有充足的頂點做 Z-lift 精細偵測
         function subdividePath(path, maxLen = 0.5) {
             if (path.length < 2) return path;
             const result = [path[0]];
@@ -387,11 +389,9 @@
             return result;
         }
 
-        // 2. 獲取橋位的中心投影座標點
         function getTabPointsForPath(path) {
             if (!path || path.length < 3) return [];
             
-            // 計算 Bounding Box 外框
             let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
             path.forEach(pt => {
                 minX = Math.min(minX, pt.x);
@@ -400,13 +400,11 @@
                 maxY = Math.max(maxY, pt.y);
             });
             
-            // 四個對角頂點
             const A = { x: minX, y: minY };
             const B = { x: maxX, y: maxY };
             const C = { x: minX, y: maxY };
             const D = { x: maxX, y: minY };
             
-            // 第一對角線 (A-B) 尋找路徑上最靠近之投射點
             let ptA = path[0], ptB = path[0];
             let minDistA = Infinity, minDistB = Infinity;
             
@@ -420,16 +418,14 @@
             
             const centers = [ptA, ptB];
             
-            // 計算路徑圍成之面積
             let area = 0;
             for (let i = 0; i < path.length; i++) {
                 let j = (i + 1) % path.length;
                 area += path[i].x * path[j].y;
                 area -= path[j].x * path[i].y;
             }
-            area = Math.abs(area / 2); // 單位為 mm2
+            area = Math.abs(area / 2);
             
-            // 當面積大於 1600 mm2 時，在第二對角線 (C-D) 處多配置一對橋位
             if (area > 1600) {
                 let ptC = path[0], ptD = path[0];
                 let minDistC = Infinity, minDistD = Infinity;
@@ -450,7 +446,6 @@
             return centers;
         }
 
-        // 3. 判斷特定點是否位在橋位保護區間內 (半寬 3mm，合計 6mm)
         function isPointInTab(pt, tabCenters, tabLength = 6) {
             const halfLenSq = Math.pow(tabLength / 2, 2);
             for (let i = 0; i < tabCenters.length; i++) {
@@ -541,7 +536,9 @@
             }
         };
 
-        let currentLang = 'zh';
+        // 讀取同步語系，預設繁中
+        let currentLang = localStorage.getItem('gordix_lang') || 'zh';
+
         function updateLanguage() {
             document.querySelectorAll('[data-i18n]').forEach(el => {
                 const key = el.getAttribute('data-i18n');
@@ -550,7 +547,11 @@
             renderPartList();
         }
 
-        document.getElementById('lang-toggle').onclick = () => { currentLang = currentLang === 'zh' ? 'en' : 'zh'; updateLanguage(); };
+        document.getElementById('lang-toggle').onclick = () => { 
+            currentLang = currentLang === 'zh' ? 'en' : 'zh'; 
+            localStorage.setItem('gordix_lang', currentLang);
+            updateLanguage(); 
+        };
 
         // --- 全局變數 ---
         const fileInput = document.getElementById('file-input');
@@ -735,7 +736,7 @@
             }
         }
 
-        // --- 輔劇：縮放向量以符合設定寬度並置中 ---
+        // --- 縮放與置中輔助 ---
         function scaleVectorPaths(paths, targetW) {
             if (paths.length === 0) return [];
             let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
@@ -755,7 +756,7 @@
             })));
         }
 
-        // --- 將路徑處理成 UI 使用的零件格式 ---
+        // --- 將路徑轉換為零件結構 ---
         function processVectorIntoParts(vectorPaths) {
             let gMinX = Infinity, gMaxX = -Infinity, gMinY = Infinity, gMaxY = -Infinity;
             vectorPaths.forEach(p => p.forEach(pt => {
@@ -799,7 +800,7 @@
         const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 10000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(container.clientWidth, container.clientHeight);
-        updateRendererBg(); // 動態依據當前主題設定 ClearColor
+        updateRendererBg(); 
         container.appendChild(renderer.domElement);
         const controls = new THREE.OrbitControls(camera, renderer.domElement);
         camera.position.set(0, 0, 200);
@@ -813,7 +814,7 @@
             renderer.setSize(container.clientWidth, container.clientHeight);
         });
 
-        // --- 其他 UI 控制邏輯 ---
+        // --- UI 控制與零件清單渲染 ---
         function renderPartList(){
             const list = document.getElementById('part-list');
             list.innerHTML = '';
@@ -905,7 +906,6 @@
             const val = document.getElementById('job-type').value;
             document.getElementById('milling-opts').classList.toggle('hidden', val === 'laser');
             document.getElementById('pocket-opts').classList.toggle('hidden', val !== 'pocket');
-            // 橋位(TAB)選項僅在外加工(outer)或內加工(inner)時顯示
             document.getElementById('tab-opts-container').classList.toggle('hidden', val !== 'outer' && val !== 'inner');
         }
         document.getElementById('job-type').onchange = toggleMillingOptions;
@@ -1017,7 +1017,6 @@
                 if (idx === firstIdx) {
                     parts[idx].pocketContourPaths = pocketContourPaths;
                     parts[idx].pocketScanPaths = pocketScanPaths;
-                    // 將所有路徑合併至 toolpath，供 3D 繪製渲染使用
                     parts[idx].toolpath = [...pocketContourPaths, ...pocketScanPaths];
                 } else {
                     parts[idx].pocketContourPaths = [];
@@ -1100,7 +1099,6 @@
         function update3D() {
             while(scene.children.length > 0) scene.remove(scene.children[0]);
             
-            // 依據當前明暗主題來決定網格線條的顯色
             const isDark = document.documentElement.classList.contains('dark');
             const gridColor1 = isDark ? 0x334155 : 0xcbd5e1;
             const gridColor2 = isDark ? 0x1e293b : 0xf1f5f9;
@@ -1119,7 +1117,6 @@
                         const currentZ = cfg.type === 'laser' ? 0.2 : -(Math.min(cfg.depth, (i + 1) * cfg.step)) + 0.2;
                         const matTool = new THREE.LineBasicMaterial({ color: 0xfacc15, opacity: 1.0 - (i * 0.1), transparent: true });
                         p.toolpath.forEach(path => {
-                            // 判斷該路徑是否為槽加工外邊緣輪廓路徑或是標準外輪廓、內輪廓路徑
                             const isContourPath = (cfg.type === 'outer' || cfg.type === 'inner' || (cfg.type === 'pocket' && p.pocketContourPaths && p.pocketContourPaths.includes(path)));
                             const useTabThisPass = (cfg.useTab && (i === passes - 1) && isContourPath);
                             if (useTabThisPass) {
@@ -1190,7 +1187,6 @@
 
                     let lastPointOfPart = null;
 
-                    // 槽加工分成「先內部掃描」再「外部輪廓」兩階段，各階段自表面層層切入至底
                     let phases = [];
                     if (cfg.type === 'pocket') {
                         phases = [
@@ -1320,7 +1316,7 @@
             let currentX = 0, currentY = 0;
             let currentZ = parseFloat(SAFE_Z) || 2.0; 
             const SAFE_Z_VAL = parseFloat(SAFE_Z) || 2.0;
-            let currentG1F = null; // 實時追蹤 G1 模態進給速率 (Modal Feedrate)
+            let currentG1F = null; 
             
             const sortedTypes = Object.keys(grouped).sort((a, b) => (orderPriority[a] ?? 99) - (orderPriority[b] ?? 99));
             sortedTypes.forEach(type => {
@@ -1341,7 +1337,6 @@
                     const cfg = p.jobConfig, isLaser = cfg.type === 'laser', passes = isLaser ? 1 : Math.ceil(cfg.depth / cfg.step);
                     let lastPointOfPart = null;
 
-                    // 槽加工分成「先內部掃描」再「外部輪廓」兩階段，各階段自表面層層切入至底
                     let phases = [];
                     if (cfg.type === 'pocket') {
                         phases = [
@@ -1381,7 +1376,6 @@
                                 
                                 if (needRetract) {
                                     if (!isLaser) {
-                                        // 只有當前高度不等於安全高度才抬刀
                                         if (Math.abs(currentZ - SAFE_Z_VAL) > 0.001) {
                                             gc.push(`G0 Z${SAFE_Z_VAL.toFixed(3)}`);
                                             currentZ = SAFE_Z_VAL;
@@ -1389,7 +1383,6 @@
                                     }
                                     gc.push(`G0 X${start.x.toFixed(3)} Y${start.y.toFixed(3)}`);
                                     if (!isLaser) {
-                                        // 只有當前高度不等於目標起步 Z 軸時才垂直下刀
                                         if (Math.abs(currentZ - startZ) > 0.001) {
                                             const fStr = (currentG1F !== 300) ? " F300" : "";
                                             gc.push(`G1 Z${startZ.toFixed(3)}${fStr}`);
@@ -1397,23 +1390,21 @@
                                             currentG1F = 300;
                                         }
                                     } else {
-                                        gc.push("M03 S255"); // 切線段起點，開啟雷射
+                                        gc.push("M03 S255"); 
                                     }
                                 } else {
                                     if (!isLaser) {
-                                        // 垂直下刀與水平切削分離。只有在當前 Z 軸高度與目標加工深度不一致時，才垂直下刀
                                         if (Math.abs(currentZ - startZ) > 0.001) {
                                             const fStr = (currentG1F !== 300) ? " F300" : "";
                                             gc.push(`G1 Z${startZ.toFixed(3)}${fStr}`);
                                             currentZ = startZ;
                                             currentG1F = 300;
                                         }
-                                        // 然後在水平面移動至起始點並恢復切削進給率 (模態控制：只有當進給率改變時才輸出)
                                         const fStr = (currentG1F !== cfg.f) ? ` F${cfg.f}` : "";
                                         gc.push(`G1 X${start.x.toFixed(3)} Y${start.y.toFixed(3)}${fStr}`);
                                         if (fStr) currentG1F = cfg.f;
                                     } else {
-                                        gc.push("M03 S255"); // 無需退刀時，亦在移動至新切削點前，先開啟雷射
+                                        gc.push("M03 S255"); 
                                         const fStr = (currentG1F !== cfg.f) ? ` F${cfg.f}` : "";
                                         gc.push(`G1 X${start.x.toFixed(3)} Y${start.y.toFixed(3)}${fStr}`);
                                         if (fStr) currentG1F = cfg.f;
@@ -1427,13 +1418,11 @@
                                     const fStr = (currentG1F !== cfg.f) ? ` F${cfg.f}` : "";
                                     
                                     if (Math.abs(ptZ - lastZ) > 0.001) {
-                                        // 僅在橋位邊界：X、Y、Z 聯動拉升或下插，達成平滑斜面
                                         gc.push(`G1 X${pt.x.toFixed(3)} Y${pt.y.toFixed(3)} Z${ptZ.toFixed(3)}${fStr}`);
                                         if (fStr) currentG1F = cfg.f;
                                         lastZ = ptZ;
                                         currentZ = ptZ;
                                     } else {
-                                        // 雙重安全閥值：若全局高度因其他製程或切換而不同步，則修正；若完全相同則只作 XY 平面移動，去冗餘
                                         if (Math.abs(currentZ - ptZ) > 0.001) {
                                             gc.push(`G1 X${pt.x.toFixed(3)} Y${pt.y.toFixed(3)} Z${ptZ.toFixed(3)}${fStr}`);
                                             if (fStr) currentG1F = cfg.f;
@@ -1446,7 +1435,7 @@
                                     }
                                 }
                                 if (isLaser) {
-                                    gc.push("M05"); // 當前線段結束，關閉雷射
+                                    gc.push("M05"); 
                                 }
                                 lastPtInLayer = finalPath[finalPath.length - 1];
                                 lastPointOfPart = lastPtInLayer;
