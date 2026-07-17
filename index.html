@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-TW" class="dark">
+<html lang="zh" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -26,7 +26,7 @@
     <meta name="theme-color" content="#0f172a">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="apple-touch-icon" href="icon-192.png">
+    <link class="theme-transition" rel="apple-touch-icon" href="icon-192.png">
 </head>
 <body class="bg-slate-50 dark:bg-slate-950 min-h-screen p-4 md:p-8 text-slate-800 dark:text-slate-200 font-sans theme-transition">
     <!-- 主卡片容器 (承襲 1.html 的外觀與風格) -->
@@ -84,7 +84,7 @@
                 </a>
 
                 <!-- Tool 3: 轉檔工具(繪圖) (藍色) -->
-                <a href="draw.html" class="group w-full sm:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)] max-w-sm bg-slate-50 dark:bg-slate-800/40 p-8 rounded-xl border border-slate-200 dark:border-slate-800/80 flex flex-col items-center justify-center text-center transition-all duration-200 hover:-translate-y-1 hover:border-blue-500 dark:hover:border-blue-500 hover:shadow-lg">
+                <a href="Laser.html" class="group w-full sm:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)] max-w-sm bg-slate-50 dark:bg-slate-800/40 p-8 rounded-xl border border-slate-200 dark:border-slate-800/80 flex flex-col items-center justify-center text-center transition-all duration-200 hover:-translate-y-1 hover:border-blue-500 dark:hover:border-blue-500 hover:shadow-lg">
                     <div class="w-14 h-14 bg-slate-200 dark:bg-slate-800 rounded-xl mb-5 flex items-center justify-center text-slate-500 dark:text-slate-400 group-hover:bg-blue-500 group-hover:text-white group-hover:shadow-[0_0_15px_rgba(59,130,246,0.4)] transition-all duration-200">
                         <svg class="w-7 h-7" fill="currentColor" viewBox="0 0 24 24">
                             <path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm0 6c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zM11 2v4h2V2h-2zm0 16v4h2v-4h-2zm11-7h-4v2h4v-2zM6 11H2v2h4v-2z"/>
@@ -116,7 +116,7 @@
                     <p data-zh="即時編輯與校正 Gcode 內容" data-en="Live Gcode editing and correction" class="text-sm text-slate-500 dark:text-slate-400">即時編輯與校正 Gcode 內容</p>
                 </a>
 
-                <!-- Tool 6: 參數指南 (紫色) - 新增項目 -->
+                <!-- Tool 6: 參數指南 (紫色) -->
                 <a href="params.html" class="group w-full sm:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)] max-w-sm bg-slate-50 dark:bg-slate-800/40 p-8 rounded-xl border border-slate-200 dark:border-slate-800/80 flex flex-col items-center justify-center text-center transition-all duration-200 hover:-translate-y-1 hover:border-purple-500 dark:hover:border-purple-500 hover:shadow-lg">
                     <div class="w-14 h-14 bg-slate-200 dark:bg-slate-800 rounded-xl mb-5 flex items-center justify-center text-slate-500 dark:text-slate-400 group-hover:bg-purple-500 group-hover:text-white group-hover:shadow-[0_0_15px_rgba(168,85,247,0.4)] transition-all duration-200">
                         <svg class="w-7 h-7" fill="currentColor" viewBox="0 0 24 24">
@@ -138,28 +138,56 @@
     </div>
 
     <script>
+        // 設定全域變數，並以您指定的規格做為預設值
         let currentLang = 'zh';
         let currentTheme = 'dark';
 
-        // 語言切換
-        function toggleLanguage() {
-            currentLang = currentLang === 'zh' ? 'en' : 'zh';
-            
+        // 語系載入、儲存與套用
+        function initLanguage() {
+            const savedLang = localStorage.getItem('gordix-lang');
+            if (savedLang) {
+                currentLang = savedLang;
+            } else {
+                currentLang = 'zh'; // 預設繁中
+                localStorage.setItem('gordix-lang', currentLang);
+            }
+            applyLanguage();
+        }
+
+        function applyLanguage() {
             const elements = document.querySelectorAll('[data-zh]');
             elements.forEach(el => {
                 el.textContent = el.getAttribute(`data-${currentLang}`);
             });
 
             const btn = document.getElementById('lang-text');
-            btn.textContent = currentLang === 'zh' ? '中文 / EN' : 'EN / 中文';
+            if (btn) {
+                btn.textContent = currentLang === 'zh' ? '中文 / EN' : 'EN / 中文';
+            }
+        }
 
+        function toggleLanguage() {
+            currentLang = currentLang === 'zh' ? 'en' : 'zh';
+            applyLanguage();
             localStorage.setItem('gordix-lang', currentLang);
         }
 
-        // 主題切換
+        // 主題載入、儲存與套用
+        function initTheme() {
+            const savedTheme = localStorage.getItem('gordix-theme');
+            if (savedTheme) {
+                currentTheme = savedTheme;
+            } else {
+                currentTheme = 'dark'; // 預設深色模式
+                localStorage.setItem('gordix-theme', currentTheme);
+            }
+            applyTheme();
+        }
+
         function toggleTheme() {
             currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
             applyTheme();
+            localStorage.setItem('gordix-theme', currentTheme);
         }
 
         function applyTheme() {
@@ -167,49 +195,45 @@
             const themeIcon = document.getElementById('theme-icon');
             
             if (currentTheme === 'light') {
-                html.classList.remove('dark');
-                // 亮色模式顯示月亮 (代表点击可以切换成暗色)
-                themeIcon.innerHTML = `
-                                    <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
-                                        `;
+                html.classList.remove('dark'); // 淺色模式：移除 dark class
+                if (themeIcon) {
+                    // 顯示月亮圖示
+                    themeIcon.innerHTML = `
+                        <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
+                    `;
+                }
             } else {
-                html.classList.add('dark');
-                // 暗色模式顯示太陽 (代表点击可以切换成亮色)
-                themeIcon.innerHTML = `
-                                    <path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clip-rule="evenodd" />
-                                    `;
+                html.classList.add('dark'); // 深色模式：加上 dark class
+                if (themeIcon) {
+                    // 顯示太陽圖示
+                    themeIcon.innerHTML = `
+                        <path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clip-rule="evenodd" />
+                    `;
+                }
             }
-            localStorage.setItem('gordix-theme', currentTheme);
         }
 
         // 初始化載入偏好設定
         window.onload = () => {
-            // 語系載入
-            const savedLang = localStorage.getItem('gordix-lang');
-            if (savedLang && savedLang !== currentLang) {
-                toggleLanguage();
-            }
-            
-            // 主題載入
-            const savedTheme = localStorage.getItem('gordix-theme');
-            if (savedTheme) {
-                currentTheme = savedTheme;
-            } else {
-                // 如果無本機設定，預設為暗色主題
-                currentTheme = 'dark';
-            }
-            applyTheme();
+            initLanguage();
+            initTheme();
         };
-    </script>
-        <!-- PWA Service Worker Registration -->
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./service-worker.js')
-                    .then((reg) => console.log('Service Worker registered successfully with scope: ', reg.scope))
-                    .catch((err) => console.error('Service Worker registration failed: ', err));
-            });
-        }
+
+        // 跨分頁與跨視窗事件監聽 (當 A 網頁更新設定後，B 網頁會自動、即時同步更新)
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'gordix-theme') {
+                if (e.newValue) {
+                    currentTheme = e.newValue;
+                    applyTheme();
+                }
+            }
+            if (e.key === 'gordix-lang') {
+                if (e.newValue) {
+                    currentLang = e.newValue;
+                    applyLanguage();
+                }
+            }
+        });
     </script>
 </body>
 </html>
