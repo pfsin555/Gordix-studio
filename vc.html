@@ -135,24 +135,24 @@
     <meta name="theme-color" content="#0f172a">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="apple-touch-icon" href="icon-192.png">
+    <link class="apple-touch-icon" href="icon-192.png">
 </head>
 <body class="flex flex-col min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-900 dark:text-slate-100 transition-colors duration-200">
-         <div class="max-w-7xl mx-auto bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800 transition-colors duration-300">
+    <div class="max-w-7xl mx-auto bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800 transition-colors duration-300">
    
     <header class="w-full bg-gradient-to-r from-red-700 to-rose-950 p-6 text-white flex justify-between items-center border-b border-red-500/30 sticky top-0 z-50 shadow-md">
         <div>
             <h1 id="i18n-title" class="text-2xl font-black tracking-tight text-white" data-i18n="appTitle">轉檔工具 (V雕刻)</h1>
         </div>
         <div class="flex gap-3 items-center">
-                    <!-- 返回上一頁按鈕 -->
-        <button onclick="if(window.history.length > 1) { window.history.back(); } else { window.location.href='index.html'; }" class="flex items-center justify-center text-slate-300 hover:text-orange-400 transition-colors font-bold bg-white/10 hover:bg-white/20 p-1.5 rounded-lg border border-white/20 cursor-pointer" title="返回上一頁 / Go Back">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <line x1="20" y1="12" x2="4" y2="12"></line>
-                <polyline points="10 18 4 12 10 6"></polyline>
-            </svg>
-        </button>
-            <!-- 太陽/月亮主題切換按鈕 (已修改為高對比度橘色) -->
+            <!-- 返回上一頁按鈕 -->
+            <button onclick="if(window.history.length > 1) { window.history.back(); } else { window.location.href='index.html'; }" class="flex items-center justify-center text-slate-300 hover:text-orange-400 transition-colors font-bold bg-white/10 hover:bg-white/20 p-1.5 rounded-lg border border-white/20 cursor-pointer" title="返回上一頁 / Go Back">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <line x1="20" y1="12" x2="4" y2="12"></line>
+                    <polyline points="10 18 4 12 10 6"></polyline>
+                </svg>
+            </button>
+            <!-- 太陽/月亮主題切換按鈕 -->
             <button class="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-orange-500 hover:text-orange-400 border border-white/20 transition-all flex items-center justify-center cursor-pointer" onclick="toggleTheme()" aria-label="Toggle Theme">
                 <svg id="theme-icon" class="w-5 h-5" viewBox="0 0 24 24" style="width:18px; height:18px;" fill="currentColor">
                     <!-- 預設為太陽圖示 -->
@@ -164,13 +164,13 @@
             <button id="lang-toggle" class="px-4 py-1.5 rounded-lg text-[11px] font-bold bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-all flex items-center gap-2 cursor-pointer">
                 <span>中文 / EN</span>
             </button>
-         <!-- 書頁按鈕 -->
-        <a href="params.html" class="flex items-center justify-center text-slate-300 hover:text-emerald-400 transition-colors bg-white/10 hover:bg-white/20 p-1.5 rounded-lg border border-white/20 cursor-pointer" title="工藝參數建議 / Parameters Guide">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
-                <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
-            </svg>
-        </a>
+            <!-- 書頁按鈕 -->
+            <a href="params.html" class="flex items-center justify-center text-slate-300 hover:text-emerald-400 transition-colors bg-white/10 hover:bg-white/20 p-1.5 rounded-lg border border-white/20 cursor-pointer" title="工藝參數建議 / Parameters Guide">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+                    <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+                </svg>
+            </a>
         </div>
     </header>
 
@@ -270,6 +270,7 @@
                         <!-- 加工模式在此工具中固定為 vcarve 故隱藏 -->
                         <input type="hidden" id="job-type" value="vcarve">
 
+                        <!-- 加工參數區：已對調位置，刀具直徑與 V型角度排在首行（即時定義實體刀具幾何），加工深度放於下方（受幾何動態限制） -->
                         <div id="milling-opts" class="space-y-4 pt-4 border-t border-slate-200 dark:border-slate-700">
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
@@ -277,20 +278,17 @@
                                     <input type="number" id="mill-d" value="6.0" step="0.1">
                                 </div>
                                 <div>
-                                    <label class="block text-[10px] text-slate-500 dark:text-slate-400 font-bold mb-1" data-i18n="totalDepth">加工深度</label>
-                                    <input type="number" id="mill-depth" value="3.0" step="0.1">
-                                </div>
-                            </div>
-                            <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block text-[10px] text-slate-500 dark:text-slate-400 font-bold mb-1" data-i18n="stepDown">每次下刀</label>
-                                    <input type="number" id="mill-step" value="1.0" step="0.1">
+                                    <label class="block text-[10px] text-slate-500 dark:text-slate-400 font-bold mb-1" data-i18n="vbitAngle">V型刀具角度 (度)</label>
+                                    <input type="number" id="vbit-angle" value="90" min="10" max="150" step="1">
                                 </div>
                             </div>
                             <div id="vcarve-opts" class="space-y-4">
                                 <div>
-                                    <label class="block text-[10px] text-slate-500 dark:text-slate-400 font-bold mb-1" data-i18n="vbitAngle">V型刀具角度 (度)</label>
-                                    <input type="number" id="vbit-angle" value="90" min="10" max="150" step="1">
+                                    <label class="block text-[10px] text-slate-500 dark:text-slate-400 font-bold mb-1 flex justify-between items-center">
+                                        <span data-i18n="totalDepth">加工深度</span>
+                                        <span id="depth-limit-hint" class="text-[9px] text-slate-400 dark:text-slate-500 font-normal"></span>
+                                    </label>
+                                    <input type="number" id="mill-depth" value="3.0" step="0.1">
                                 </div>
                                 <div>
                                     <label class="block text-[10px] text-slate-500 dark:text-slate-400 font-bold mb-1" data-i18n="vcarveLayer">V-Carve 雕刻區域選擇</label>
@@ -346,7 +344,6 @@
                 feedRate: "進給速率",
                 toolDia: "刀具直徑",
                 totalDepth: "加工深度",
-                stepDown: "每次下刀",
                 vbitAngle: "V型刀具角度 (度)",
                 vcarveLayer: "V-Carve 雕刻區域選擇",
                 optVCarveEven: "雕刻凹部 (預設藍色填滿)",
@@ -385,7 +382,6 @@
                 feedRate: "Feed Rate (F)",
                 toolDia: "Tool Diameter",
                 totalDepth: "Total Depth",
-                stepDown: "Step Down",
                 vbitAngle: "V-Bit Angle (deg)",
                 vcarveLayer: "V-Carve Region",
                 optVCarveEven: "Carve Concave (Blue Fill)",
@@ -594,6 +590,7 @@
             return Math.sqrt((pt.x - proj.x)**2 + (pt.y - proj.y)**2);
         }
 
+        // 刀軌點過濾，移除不必要的微小路徑冗餘
         function cleanPath(path, resolution) {
             if (path.length < 2) return path;
             let filtered = [path[0]], lastPt = path[0];
@@ -659,6 +656,17 @@
                 area += (p1.x * p2.y - p2.x * p1.y);
             }
             return area / 2;
+        }
+
+        function getPathsWidth(paths) {
+            if (!paths || paths.length === 0) return 100;
+            let minX = Infinity, maxX = -Infinity;
+            paths.forEach(p => p.forEach(pt => {
+                minX = Math.min(minX, pt.x);
+                maxX = Math.max(maxX, pt.x);
+            }));
+            const w = maxX - minX;
+            return isFinite(w) && w > 0 ? w : 100;
         }
 
         /**
@@ -813,7 +821,7 @@
             });
         }
 
-        function parseSVG(svgString, targetW, smoothTol) {
+        function parseSVG(svgString, smoothTol) {
             const parser = new DOMParser();
             const doc = parser.parseFromString(svgString, 'image/svg+xml');
             const svgEl = doc.querySelector('svg');
@@ -860,10 +868,10 @@
                 }
             });
 
-            return scaleVectorPaths(paths, targetW);
+            return paths;
         }
 
-        function parseDXF(dxfString, targetW, smoothTol) {
+        function parseDXF(dxfString, smoothTol) {
             const parser = new DxfParser();
             try {
                 const dxf = parser.parseSync(dxfString);
@@ -886,7 +894,7 @@
                     }
                     if (pts.length > 1) paths.push(simplifyPath(pts, smoothTol));
                 });
-                return scaleVectorPaths(paths, targetW);
+                return paths;
             } catch(e) {
                 console.error("DXF Parse Error", e);
                 return [];
@@ -937,7 +945,7 @@
                     originalDim: { w: pMaxX-pMinX, h: pMaxY-pMinY }, 
                     currentDim: { w: pMaxX-pMinX, h: pMaxY-pMinY }, 
                     visible: true, 
-                    jobConfig: { type: 'vcarve', f: 1500, d: 6.0, depth: 3.0, step: 1.0, overlap: 0.5, resolution: 0.1 }, 
+                    jobConfig: { type: 'vcarve', f: 1500, d: 6.0, depth: 3.0, overlap: 0.5, resolution: 0.1, vbitAngle: 90 }, 
                     toolpath: null, appliedMethod: null 
                 };
             });
@@ -1064,7 +1072,7 @@
         }
 
         /**
-         * 預估總加工時間算法 (同步更新：採用與 G-code 相同的全域 TSP 最短提刀空跑最佳化與免提刀直接過渡規則)
+         * 預估總加工時間算法
          */
         function updateStats() {
             let totalSec = 0;
@@ -1075,7 +1083,6 @@
             const G0_SPEED = 2000;      
             const PLUNGE_SPEED = 300;   
 
-            // 1. 蒐集所有零件的全部刀軌線段
             let allPathsToCut = [];
             parts.forEach(p => {
                 if (p.visible && p.toolpath && p.toolpath.length > 0) {
@@ -1092,7 +1099,6 @@
                 return;
             }
 
-            // 2. 模擬全域 TSP 排序計算
             let optimizedPaths = [];
             let tempX = 0, tempY = 0;
             let unvisited = [...allPathsToCut];
@@ -1137,7 +1143,6 @@
                 tempY = lastPt.y;
             }
 
-            // 3. 根據優化後的加工排序，模擬計算總切削與空跑耗時
             optimizedPaths.forEach((item) => {
                 const path = item.path;
                 const cfg = item.cfg;
@@ -1146,10 +1151,9 @@
                 const cuttingFeedrate = cfg.f || 1500;
 
                 const distSq = Math.pow(start.x - currentX, 2) + Math.pow(start.y - currentY, 2);
-                const contiguous = distSq < 0.01; // 起點間距小於 0.1mm 時視為相連路徑
+                const contiguous = distSq < 0.01; 
 
                 if (contiguous) {
-                    // 相連過渡：免提刀，直接 G1 控制
                     const plungeZ = Math.abs(currentZ - startZ);
                     totalSec += (plungeZ / PLUNGE_SPEED) * 60;
                     currentZ = startZ;
@@ -1159,7 +1163,6 @@
                     currentX = start.x;
                     currentY = start.y;
                 } else {
-                    // 非連續過渡：抬刀至安全 Z 高度、G0 空跑至目標點、再 Z 軸下刀
                     const travelZToSafe = Math.abs(currentZ - SAFE_Z_VAL);
                     totalSec += (travelZToSafe / G0_SPEED) * 60;
                     currentZ = SAFE_Z_VAL;
@@ -1174,7 +1177,6 @@
                     currentZ = startZ;
                 }
 
-                // 切削進給耗時
                 let pathDist = 0;
                 for (let j = 1; j < path.length; j++) {
                     const pt1 = path[j-1];
@@ -1191,7 +1193,6 @@
                 currentZ = (lastPtInPath.z !== undefined) ? lastPtInPath.z : 0;
             });
 
-            // 回到原點的空跑耗時
             const travelZToSafe = Math.abs(currentZ - SAFE_Z_VAL);
             totalSec += (travelZToSafe / G0_SPEED) * 60;
             currentZ = SAFE_Z_VAL;
@@ -1256,6 +1257,26 @@
             updateJobUI();
         }
 
+        // 動態幾何最大下刀深度計算與即時限制
+        function updateDepthLimit() {
+            const d = parseFloat(document.getElementById('mill-d').value) || 6.0;
+            const angle = parseFloat(document.getElementById('vbit-angle').value) || 90;
+            const tanHalf = Math.tan((angle / 2) * Math.PI / 180);
+            const maxDepth = d / (2 * tanHalf);
+            
+            const depthInput = document.getElementById('mill-depth');
+            const limitHint = document.getElementById('depth-limit-hint');
+            if (depthInput) {
+                depthInput.max = maxDepth.toFixed(3);
+                if (parseFloat(depthInput.value) > maxDepth) {
+                    depthInput.value = parseFloat(maxDepth.toFixed(2));
+                }
+                if (limitHint) {
+                    limitHint.innerText = `(Max: ${maxDepth.toFixed(1)} mm)`;
+                }
+            }
+        }
+
         function updateJobUI(){
             const panel = document.getElementById('job-panel'), hint = document.getElementById('no-selection-hint');
             if (!panel || !hint) return;
@@ -1266,7 +1287,7 @@
                 document.getElementById('resize-w').value = (maxX - minX).toFixed(2);
                 document.getElementById('resize-h').value = (maxY - minY).toFixed(2);
                 const lastP = parts[Array.from(selectedIndices).pop()];
-                ['resolution','job-f','job-type','mill-d','mill-depth','mill-step'].forEach(id => {
+                ['resolution','job-f','job-type','mill-d','mill-depth'].forEach(id => {
                     const key = id.replace('job-','').replace('mill-','');
                     const el = document.getElementById(id);
                     if (el) {
@@ -1277,12 +1298,13 @@
                 if (elVBit && lastP.jobConfig.vbitAngle !== undefined) {
                     elVBit.value = lastP.jobConfig.vbitAngle;
                 }
+                updateDepthLimit();
             } else { panel.classList.add('hidden'); hint.classList.remove('hidden'); }
             toggleMillingOptions();
         }
 
         // ==========================================
-        // 5. 刀軌路徑計算與 V-Carving 核心演算法 (雙軸填充與角降骨架整合)
+        // 5. 刀軌路徑計算與 V-Carving 核心演算法
         // ==========================================
         function calculateAllVCarvePaths(groupScale) {
             const selectedArr = Array.from(selectedIndices);
@@ -1404,7 +1426,7 @@
         }
 
         /**
-         * 嵌套式 2D 距離變換 Medial Axis 骨架中心路徑與「主要軸/垂直軸共軛補強填滿」求解器
+         * 嵌套式 2D 距離變換 Medial Axis 骨架中心路徑
          */
         function computeNestedVCarve(shape, cfg) {
             const outer = [...shape.outer];
@@ -1491,11 +1513,10 @@
             let bypassedSkeleton = false;
 
             // ==========================================
-            // 核心優化 1：直線多邊形與小菱形(Quad) 完美十字斜切填充
+            // 完美十字斜切填充
             // ==========================================
             if (isStraight && holes.length === 0) {
                 if (simpOuter.length === 4) {
-                    // 四邊形 (如菱形、長方形) - 直接求解雙對角線交叉十字路徑
                     const C = getLineIntersection(simpOuter[0], simpOuter[2], simpOuter[1], simpOuter[3]);
                     if (C !== null) {
                         let dMin = Infinity;
@@ -1506,13 +1527,11 @@
                         const Z_C = -dMin / tanHalf;
                         const targetZC = Math.max(-maxDepth, Z_C);
 
-                        // 對角線 A (0 -> 2)
                         const stroke1 = [
                             { x: simpOuter[0].x, y: simpOuter[0].y, z: 0 },
                             { x: C.x, y: C.y, z: targetZC },
                             { x: simpOuter[2].x, y: simpOuter[2].y, z: 0 }
                         ];
-                        // 對角線 B (1 -> 3)
                         const stroke2 = [
                             { x: simpOuter[1].x, y: simpOuter[1].y, z: 0 },
                             { x: C.x, y: C.y, z: targetZC },
@@ -1521,10 +1540,9 @@
 
                         finishedStrokes.push(cleanPath(stroke1, cfg.resolution));
                         finishedStrokes.push(cleanPath(stroke2, cfg.resolution));
-                        bypassedSkeleton = true; // 直接套用完美對角 miter, 繞過一般骨架與細碎補刀
+                        bypassedSkeleton = true;
                     }
                 } else if (simpOuter.length === 3) {
-                    // 三角形 - 直接求解內心 (Incenter)
                     const A = simpOuter[0], B = simpOuter[1], Ct = simpOuter[2];
                     const a = Math.sqrt((B.x - Ct.x)**2 + (B.y - Ct.y)**2);
                     const b = Math.sqrt((A.x - Ct.x)**2 + (A.y - Ct.y)**2);
@@ -1554,7 +1572,7 @@
             }
 
             // ==========================================
-            // 若非簡易四邊形/三角形，則執行標準中軸骨架演算法
+            // 標準中軸骨架演算法
             // ==========================================
             if (!bypassedSkeleton) {
                 loops.forEach((loop, loopIdx) => {
@@ -1691,7 +1709,6 @@
                     return pts;
                 }).map(path => cleanPath(path, cfg.resolution)).filter(path => path.length >= 2);
 
-                // 為大於 4 點的多邊形 (如五角星、凹多邊形) 尋找外圍 Convex 頂點並連接至中軸骨架，形成完美清角斜切
                 if (isStraight && simpOuter.length > 4) {
                     const N_verts = simpOuter.length;
                     for (let i = 0; i < N_verts; i++) {
@@ -1706,8 +1723,7 @@
                         if (len1 < 1e-6 || len2 < 1e-6) continue;
 
                         const cross = (v1.x / len1) * (v2.y / len2) - (v1.y / len1) * (v2.x / len2);
-                        if (cross < -1e-5) { // 凸起角點 (Convex vertex)
-                            // 搜尋標準中軸骨架上離該角點最近的脊點
+                        if (cross < -1e-5) { 
                             let nearestPtOnSpine = null;
                             let minDistSq = Infinity;
                             finishedStrokes.forEach(stroke => {
@@ -1733,7 +1749,7 @@
             }
 
             // ==========================================
-            // 核心優化 2：自適應局部寬度過濾，決定是否生成平行副軸切削線段
+            // 自適應局部寬度過濾，決定是否生成平行副軸切削線段
             // ==========================================
             const perpendicularStrokes = [];
             if (isStraight && outer.length > 2) {
@@ -1764,7 +1780,6 @@
                     }
                 });
 
-                // 沿主要軸步進，投影出橫截面切片
                 for (let t = tMin + stepSize * 0.5; t < tMax; t += stepSize) {
                     const oX = center.x + t * cosA;
                     const oY = center.y + t * sinA;
@@ -1790,15 +1805,12 @@
 
                     intersections.sort((a, b) => a - b);
 
-                    // 在零件內部的實體切割段
                     for (let j = 0; j < intersections.length - 1; j += 2) {
                         const pStart = intersections[j];
                         const pEnd = intersections[j+1];
                         const segLength = pEnd - pStart;
                         if (segLength < 0.1) continue;
 
-                        // 核心過濾修正：只有在該特定位置的「局部實際寬度」大於最大平底切削寬度時，才生成補刀。
-                        // 這能確保在大型菱形收窄處、或是已經小於加工極限的窄道上，絕對不生成細碎贅餘的垂直橫切路徑！
                         if (segLength > Math.min(cfg.d, wCarveMax * 0.95)) {
                             const perpPath = [];
                             const sampleSpacing = Math.max(0.2, cfg.resolution * 3);
@@ -1828,7 +1840,6 @@
                 }
             }
 
-            // 合併所有軌跡並套用雙端 TSP 旅行商演算法優化切削順序與空跑行程
             const allStrokes = [...finishedStrokes, ...perpendicularStrokes];
             return optimizePathOrder(allStrokes, 0, 0);
         }
@@ -1883,7 +1894,6 @@
                 if (themeIcon) {
                     themeIcon.setAttribute('fill', 'currentColor');
                     themeIcon.setAttribute('stroke', 'none');
-                    // 深色模式下顯示太陽圖示 (太陽為實心填充圖案)
                     themeIcon.innerHTML = `<path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1zM5.99 4.58c-.39-.39-1.03-.39-1.41 0s-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.02 0-1.41L5.99 4.58zm12.37 12.37c-.39-.39-1.03-.39-1.41 0s-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41l-1.06-1.06zm1.06-12.37c-.39-.39-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06c.39-.38.39-1.02 0-1.41zm-12.37 12.37c-.39-.39-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06c.39-.38.39-1.02 0-1.41z"/>`;
                 }
                 localStorage.setItem('theme', 'dark');
@@ -1894,8 +1904,7 @@
                     themeIcon.setAttribute('fill', 'none');
                     themeIcon.setAttribute('stroke', 'currentColor');
                     themeIcon.setAttribute('stroke-width', '2');
-                    // 明亮模式下顯示精緻的月亮圖示 (月亮為空心線條描邊圖案)
-                     themeIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />`;
+                    themeIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />`;
                 }
                 localStorage.setItem('theme', 'light');
                 currentTheme = 'light';
@@ -1939,8 +1948,6 @@
         // ==========================================
         window.onload = () => {
             initThreeJS();
-            
-            // 套用初始化的明亮或黑暗主題
             applyTheme(currentTheme);
             
             fileInput = document.getElementById('file-input');
@@ -1954,14 +1961,29 @@
                 fileExtension = file.name.split('.').pop().toLowerCase();
 
                 const r = new FileReader();
-                r.onload = (ev) => {
+                r.onload = async (ev) => {
                     rawFileData = ev.target.result;
+                    
+                    const isImg = ["jpg","jpeg","png","bmp","webp"].includes(fileExtension);
+                    document.getElementById('threshold-container').style.display = isImg ? 'block' : 'none';
+
+                    if (!isImg) {
+                        const smoothTol = parseFloat(document.getElementById('smooth-range').value) || 0.1;
+                        let origW = 100;
+                        if (fileExtension === 'svg') {
+                            const rawPaths = parseSVG(rawFileData, smoothTol);
+                            origW = getPathsWidth(rawPaths);
+                        } else if (fileExtension === 'dxf') {
+                            const rawPaths = parseDXF(rawFileData, smoothTol);
+                            origW = getPathsWidth(rawPaths);
+                        }
+                        document.getElementById('target-width').value = parseFloat(origW.toFixed(2));
+                    }
+                    
                     document.getElementById('process-img-btn').click();
                 };
 
                 const isImg = ["jpg","jpeg","png","bmp","webp"].includes(fileExtension);
-                document.getElementById('threshold-container').style.display = isImg ? 'block' : 'none';
-
                 if (isImg) {
                     r.readAsDataURL(file);
                 } else {
@@ -1972,7 +1994,7 @@
             document.getElementById('process-img-btn').onclick = async () => {
                 if(!rawFileData) return;
                 
-                const targetW = parseFloat(document.getElementById('target-width').value);
+                const targetW = parseFloat(document.getElementById('target-width').value) || 100;
                 const smoothTol = parseFloat(document.getElementById('smooth-range').value);
                 
                 let vectorPaths = []; 
@@ -1980,9 +2002,11 @@
                 if (["jpg","jpeg","png","bmp","webp"].includes(fileExtension)) {
                     vectorPaths = await parseBitmap(rawFileData, targetW, smoothTol);
                 } else if (fileExtension === 'svg') {
-                    vectorPaths = parseSVG(rawFileData, targetW, smoothTol);
+                    const rawPaths = parseSVG(rawFileData, smoothTol);
+                    vectorPaths = scaleVectorPaths(rawPaths, targetW);
                 } else if (fileExtension === 'dxf') {
-                    vectorPaths = parseDXF(rawFileData, targetW, smoothTol);
+                    const rawPaths = parseDXF(rawFileData, smoothTol);
+                    vectorPaths = scaleVectorPaths(rawPaths, targetW);
                 }
 
                 if (vectorPaths.length > 0) {
@@ -2022,13 +2046,27 @@
                 update3D();
             };
 
+            // 監聽刀徑及角度變更，以即時限制與警示深度
+            document.getElementById('mill-d').addEventListener('input', updateDepthLimit);
+            document.getElementById('vbit-angle').addEventListener('input', updateDepthLimit);
+            document.getElementById('mill-depth').addEventListener('input', () => {
+                const d = parseFloat(document.getElementById('mill-d').value) || 6.0;
+                const angle = parseFloat(document.getElementById('vbit-angle').value) || 90;
+                const tanHalf = Math.tan((angle / 2) * Math.PI / 180);
+                const maxDepth = d / (2 * tanHalf);
+                const depthInput = document.getElementById('mill-depth');
+                if (parseFloat(depthInput.value) > maxDepth) {
+                    depthInput.value = parseFloat(maxDepth.toFixed(2));
+                }
+            });
+
             document.getElementById('apply-job-btn').onclick = () => {
+                updateDepthLimit(); 
                 const newRes = Math.max(0.1, parseFloat(document.getElementById('resolution').value) || 0.1);
                 const newF = parseFloat(document.getElementById('job-f').value);
                 const newType = 'vcarve';
                 const newD = parseFloat(document.getElementById('mill-d').value);
                 const newDepth = parseFloat(document.getElementById('mill-depth').value);
-                const newStep = parseFloat(document.getElementById('mill-step').value);
                 const newOverlap = 0.5; 
                 const newVBitAngle = parseFloat(document.getElementById('vbit-angle').value) || 90;
 
@@ -2039,7 +2077,7 @@
                 selectedIndices.forEach(idx => {
                     parts[idx].toolpath = null;
                     parts[idx].jobConfig = { 
-                        type: newType, f: newF, d: newD, depth: newDepth, step: newStep, 
+                        type: newType, f: newF, d: newD, depth: newDepth, 
                         overlap: newOverlap, resolution: newRes, vbitAngle: newVBitAngle 
                     };
                     parts[idx].currentDim = { w: parts[idx].originalDim.w * groupScale, h: parts[idx].originalDim.h * groupScale };
@@ -2052,12 +2090,11 @@
             };
 
             /**
-             * 高性能 G-code 導出模組 (採用全域扁平 TSP 最佳化與免提刀相鄰過渡規則)
+             * 高性能 G-code 導出模組
              */
             document.getElementById('export-gcode').onclick = () => {
                 if(parts.length === 0) return;
 
-                // 1. 蒐集所有零件的所有雕刻路徑 (扁平化)
                 let allPathsToCut = [];
                 parts.forEach(p => {
                     if (p.visible && p.toolpath && p.toolpath.length > 0) {
@@ -2075,7 +2112,6 @@
 
                 if (allPathsToCut.length === 0) return;
 
-                // 2. 執行全域雙向最鄰近 (TSP) 最佳化排序
                 let optimizedPaths = [];
                 let currentX = 0, currentY = 0;
                 let unvisited = [...allPathsToCut];
@@ -2089,7 +2125,6 @@
                         const item = unvisited[i];
                         const path = item.path;
                         
-                        // 正向間距
                         const startPt = path[0];
                         const dStartSq = Math.pow(startPt.x - currentX, 2) + Math.pow(startPt.y - currentY, 2);
                         if (dStartSq < bestDistSq) {
@@ -2098,7 +2133,6 @@
                             reversePath = false;
                         }
 
-                        // 反向間距
                         const endPt = path[path.length - 1];
                         const dEndSq = Math.pow(endPt.x - currentX, 2) + Math.pow(endPt.y - currentY, 2);
                         if (dEndSq < bestDistSq) {
@@ -2126,7 +2160,6 @@
                     currentY = lastPt.y;
                 }
 
-                // 3. 輸出極致提刀空跑最佳化的 G-code
                 let gc = [
                     `; CNC V5.5 - Global TSP V-Carving Pro`, 
                     `G21`, 
@@ -2134,7 +2167,7 @@
                     `G0 X0 Y0 F2000`
                 ];
                 
-                let currentZ = null; // 紀錄當前 Z 軸高度，防止冗餘抬升
+                let currentZ = null; 
                 currentX = 0;
                 currentY = 0;
                 const SAFE_Z_VAL = parseFloat(SAFE_Z) || 1.0;
@@ -2146,10 +2179,9 @@
                     const startZ = (start.z !== undefined) ? start.z : 0;
 
                     const distSq = Math.pow(start.x - currentX, 2) + Math.pow(start.y - currentY, 2);
-                    const contiguous = distSq < 0.01; // 起點間距小於 0.1mm 時視為相連
+                    const contiguous = distSq < 0.01; 
 
                     if (contiguous) {
-                        // 【最短抬刀優化 1：相連過渡】免提刀！直接 G1 走向下一段起點
                         if (currentZ === null || Math.abs(currentZ - startZ) > 1e-4) {
                             gc.push(`G1 Z${startZ.toFixed(3)} F300`);
                             currentZ = startZ;
@@ -2160,24 +2192,19 @@
                             currentY = start.y;
                         }
                     } else {
-                        // 【最短抬刀優化 2：一般空跑過渡】
-                        // 2.1 提刀（若當前未在安全高度，才提刀至安全 Z）
                         if (currentZ === null || currentZ < SAFE_Z_VAL) {
                             gc.push(`G0 Z${SAFE_Z_VAL.toFixed(3)}`);
                             currentZ = SAFE_Z_VAL;
                         }
-                        // 2.2 G0 快速橫移至下一路徑起點
                         if (Math.abs(currentX - start.x) > 1e-4 || Math.abs(currentY - start.y) > 1e-4) {
                             gc.push(`G0 X${start.x.toFixed(3)} Y${start.y.toFixed(3)}`);
                             currentX = start.x;
                             currentY = start.y;
                         }
-                        // 2.3 快速插刀至切削起點深度
                         gc.push(`G1 Z${startZ.toFixed(3)} F300`);
                         currentZ = startZ;
                     }
 
-                    // 4. 沿著線段進給
                     let isFirstMoveOfPass = true;
                     for (let j = 1; j < path.length; j++) {
                         const pt = path[j];
@@ -2187,14 +2214,12 @@
                         isFirstMoveOfPass = false;
                     }
 
-                    // 更新當前位置狀態
                     const lastPt = path[path.length - 1];
                     currentX = lastPt.x;
                     currentY = lastPt.y;
                     currentZ = (lastPt.z !== undefined) ? lastPt.z : 0;
                 });
 
-                // 回到安全 Z 軸與原點
                 if (currentZ === null || currentZ < SAFE_Z_VAL) {
                     gc.push(`G0 Z${SAFE_Z_VAL.toFixed(3)}`);
                 }
@@ -2213,16 +2238,17 @@
                 updateLanguage(); 
             };
 
-            // 全域註冊指定的 toggleTheme 函式
+            // 主題切換
             window.toggleTheme = function() {
                 const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
                 applyTheme(nextTheme);
             };
 
             updateLanguage();
+            updateDepthLimit();
         };
     </script>
-                 <!-- PWA Service Worker Registration -->
+    <!-- PWA Service Worker 註冊 -->
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
