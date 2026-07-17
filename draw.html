@@ -92,8 +92,7 @@
     <meta name="theme-color" content="#0f172a">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="apple-touch-icon" href="icon-192.png">
-    
+    <link class="apple-touch-icon" href="icon-192.png">
 </head>
 <body class="bg-slate-50 dark:bg-slate-950 min-h-screen p-4 md:p-8 text-slate-800 dark:text-slate-200 font-sans transition-colors duration-300">
     <div class="max-w-7xl mx-auto bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800 transition-colors duration-300">
@@ -142,7 +141,7 @@
                     <label id="i18n-label-source" class="block text-[10px] font-black text-slate-500 dark:text-slate-400 none tracking-widest mb-2">1. 圖片來源</label>
                     <div class="flex items-center gap-3">
                         <label for="file-input" class="custom-file-upload" id="i18n-btn-browse">選擇檔案</label>
-                        <input type="file" id="file-input" accept="image/*" class="hidden">
+                        <input type="file" id="file-input" accept="image/*,.svg,.dxf" class="hidden">
                         <span id="file-name-display" class="text-[10px] text-slate-500 dark:text-slate-400 truncate max-w-[150px]">No file chosen</span>
                     </div>
                 </section>
@@ -204,6 +203,10 @@
                                 <label id="i18n-label-spacing" class="block text-[10px] text-slate-500 dark:text-slate-400 mb-1 none font-bold">間隔 (mm)</label>
                                 <input type="number" id="fill-spacing" value="1.0" step="0.1" min="0.1" class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 p-2 rounded text-xs outline-none text-slate-800 dark:text-white font-mono transition-colors duration-300">
                             </div>
+                        </div>
+                        <div class="flex items-center justify-between pt-1 border-t border-slate-200 dark:border-slate-700">
+                            <label id="i18n-label-gray-fill" class="text-[10px] font-bold text-slate-500 dark:text-slate-400">灰階漸變填滿</label>
+                            <input type="checkbox" id="enable-grayscale-fill" class="w-4 h-4 accent-blue-500 rounded">
                         </div>
                     </div>
                 </section>
@@ -320,6 +323,7 @@
                 labelFillTitle: "填滿設定 (Hatch)",
                 labelAngle: "填滿角度",
                 labelSpacing: "間隔 (mm)",
+                labelGrayFill: "灰階漸變填滿",
                 labelFormat: "輸出格式",
                 btnDownload: "點擊下載檔案",
                 legendContour: "向量輪廓",
@@ -356,6 +360,7 @@
                 labelFillTitle: "Fill Settings (Hatch)",
                 labelAngle: "Fill Angle",
                 labelSpacing: "Spacing (mm)",
+                labelGrayFill: "Grayscale Hatch",
                 labelFormat: "Output Format",
                 btnDownload: "Download File",
                 legendContour: "Vector Contour",
@@ -384,7 +389,6 @@
         const toolBadge = document.getElementById('tool-type-badge');
         const offsetPreview = document.getElementById('offset-preview');
 
-        // 主題切換變數與邏輯
         const themeToggleBtn = document.getElementById('theme-toggle');
         const themeIcon = document.getElementById('theme-icon');
 
@@ -397,19 +401,17 @@
             const isDark = (theme === 'dark');
             if (isDark) {
                 document.documentElement.classList.add('dark');
-                // Sun 圖示 (點擊變亮)
+                // Sun 圖示
                 themeIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m0-12.728l.707.707m12.728 12.728l.707.707M12 8a4 4 0 100 8 4 4 0 000-8z" />`;
                 localStorage.setItem('theme', 'dark');
             } else {
                 document.documentElement.classList.remove('dark');
-                // Moon 圖示 (點擊變暗)
+                // Moon 圖示
                 themeIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />`;
                 localStorage.setItem('theme', 'light');
             }
-            // 每次主題變更後，更新輸出格式 UI
             updateOutputFormatUI();
             
-            // 每次切換主題時，重新繪製尺寸網格線，確保格線與明暗對比一致
             if (originalImage) {
                 const currentScale = isSvgSource ? (1000 / parseFloat(widthInput.value)) : (previewCanvas.width / parseFloat(widthInput.value));
                 renderGrid(previewCanvas.width, previewCanvas.height, currentScale);
@@ -431,6 +433,7 @@
             document.getElementById('i18n-label-fill-title').innerText = data.labelFillTitle;
             document.getElementById('i18n-label-angle').innerText = data.labelAngle;
             document.getElementById('i18n-label-spacing').innerText = data.labelSpacing;
+            document.getElementById('i18n-label-gray-fill').innerText = data.labelGrayFill;
             document.getElementById('i18n-label-format').innerText = data.labelFormat;
             document.getElementById('i18n-btn-download').innerText = data.btnDownload;
             document.getElementById('i18n-legend-contour').innerText = data.legendContour;
@@ -445,7 +448,6 @@
             document.getElementById('i18n-opt-90').innerText = data.opt90;
             document.getElementById('i18n-opt-135').innerText = data.opt135;
             
- 
             if(!fileInput.files.length) {
                 document.getElementById('file-name-display').innerText = data.noFile;
                 document.getElementById('coord-range').innerText = data.noData;
@@ -455,10 +457,7 @@
                 updateStats(previewCanvas.width, previewCanvas.height);
             }
             
-            // 轉型為整數安全讀取
             smoothText.innerText = data.smoothLabels[parseInt(smoothSlider.value)];
-            
-            // 更新即時滑桿旁的數值標籤
             thresholdValText.innerText = thresholdSlider.value;
             noiseValText.innerText = noiseSlider.value + (currentLang === 'zh' ? ' 像素' : ' px');
             
@@ -480,7 +479,6 @@
             offsetPreview.innerText = `Y-Offset: ${offset.toFixed(2)}mm`;
         }
 
-        // --- Core Logic ---
         const state = {
             scale: 1,
             translateX: 0,
@@ -505,7 +503,6 @@
         const contourGroup = document.getElementById('contour-group');
         const gridGroup = document.getElementById('grid-group');
         
-        // 即時拖拉滑桿與輸入項變數
         const thresholdSlider = document.getElementById('threshold-slider');
         const thresholdValText = document.getElementById('threshold-val-text');
         const noiseSlider = document.getElementById('noise-slider');
@@ -518,6 +515,7 @@
         const legendFillBox = document.getElementById('legend-fill-box');
         const fillAngleSelect = document.getElementById('fill-angle');
         const fillSpacingInput = document.getElementById('fill-spacing');
+        const grayscaleFillCheckbox = document.getElementById('enable-grayscale-fill');
 
         const smoothSlider = document.getElementById('smooth-iterations');
         const smoothText = document.getElementById('smooth-val-text');
@@ -532,15 +530,17 @@
         const btnFormatSvg = document.getElementById('format-svg');
         
         let originalImage = null;
+        let originalPixelData = null; // 儲存最原始底圖色彩像素
+        let originalPixelWidth = 0;
+        let originalPixelHeight = 0;
         let originalFileName = "output";
         let outputMode = "gcode";
         let finalContours = [];
         let finalFillLines = [];
         let showImage = true, showContour = true, showHatch = true;
-        let isSvgSource = false; // 標記是否為向量來源
-        let rawSvgPaths = [];    // 儲存從 SVG 提取的原始路徑點位
+        let isSvgSource = false; 
+        let rawSvgPaths = [];    
 
-        // --- 防抖動即時重算機制 (Debounce Engine) ---
         let processDebounceTimeout;
         function triggerLiveProcess() {
             if (originalImage) {
@@ -551,11 +551,10 @@
             }
         }
 
-        // 滑桿與輸入項即時互動綁定
         thresholdSlider.oninput = () => {
             thresholdValText.innerText = thresholdSlider.value;
             if (originalImage && !isSvgSource) {
-                renderBinary(); // 底圖黑白效果 0 延遲更新
+                renderBinary(); 
                 triggerLiveProcess();
             }
         };
@@ -590,11 +589,11 @@
             }
         };
 
-        // 參數與填滿設定即時同步
         widthInput.oninput = () => { if (originalImage) triggerLiveProcess(); };
         feedInput.oninput = () => { if (originalImage) triggerLiveProcess(); };
         fillAngleSelect.onchange = () => { if (originalImage) triggerLiveProcess(); };
         fillSpacingInput.oninput = () => { if (originalImage) triggerLiveProcess(); };
+        grayscaleFillCheckbox.onchange = () => { if (originalImage) triggerLiveProcess(); };
 
         function updateLayerVisibility() {
             previewCanvas.classList.toggle('canvas-dimmed', !showImage);
@@ -726,21 +725,112 @@
             updateDownloadFileName();
         }
 
+        function parseSvgDimension(val, fallbackPx) {
+            if (!val) return fallbackPx * 0.264583; // fallback 96 DPI
+            val = val.trim();
+            const num = parseFloat(val);
+            if (isNaN(num)) return fallbackPx * 0.264583;
+            if (val.endsWith('mm')) return num;
+            if (val.endsWith('cm')) return num * 10;
+            if (val.endsWith('in')) return num * 25.4;
+            if (val.endsWith('px')) return num * 0.264583;
+            return num * 0.264583; // 預設當 px
+        }
+
+        async function extractPointsFromDxf(dxfText) {
+            const lines = dxfText.split(/\r?\n/);
+            const paths = [];
+            let i = 0;
+            
+            let currentEntity = null;
+            let x1 = 0, y1 = 0, x2 = 0, y2 = 0;
+            let cx = 0, cy = 0, radius = 0;
+            let polylinePoints = [];
+            
+            while (i < lines.length) {
+                const line = lines[i];
+                if (!line) { i++; continue; }
+                const code = parseInt(line.trim());
+                const val = lines[i+1] ? lines[i+1].trim() : "";
+                if (isNaN(code)) { i++; continue; }
+                
+                if (code === 0) {
+                    if (currentEntity === 'LINE') {
+                        paths.push([{x: x1, y: y1}, {x: x2, y: y2}]);
+                    } else if (currentEntity === 'LWPOLYLINE' || currentEntity === 'POLYLINE') {
+                        if (polylinePoints.length > 1) {
+                            paths.push(polylinePoints);
+                        }
+                    } else if (currentEntity === 'CIRCLE') {
+                        const circlePts = [];
+                        const segments = 64;
+                        for (let s = 0; s <= segments; s++) {
+                            const angle = (s / segments) * Math.PI * 2;
+                            circlePts.push({
+                                x: cx + radius * Math.cos(angle),
+                                y: cy + radius * Math.sin(angle)
+                            });
+                        }
+                        paths.push(circlePts);
+                    }
+                    
+                    currentEntity = val.toUpperCase();
+                    polylinePoints = [];
+                    x1 = 0; y1 = 0; x2 = 0; y2 = 0;
+                    cx = 0; cy = 0; radius = 0;
+                } else {
+                    if (currentEntity === 'LINE') {
+                        if (code === 10) x1 = parseFloat(val);
+                        if (code === 20) y1 = parseFloat(val);
+                        if (code === 11) x2 = parseFloat(val);
+                        if (code === 21) y2 = parseFloat(val);
+                    } else if (currentEntity === 'LWPOLYLINE') {
+                        if (code === 10) {
+                            polylinePoints.push({ x: parseFloat(val), y: 0 });
+                        } else if (code === 20) {
+                            if (polylinePoints.length > 0) {
+                                polylinePoints[polylinePoints.length - 1].y = parseFloat(val);
+                            }
+                        }
+                    } else if (currentEntity === 'CIRCLE') {
+                        if (code === 10) cx = parseFloat(val);
+                        if (code === 20) cy = parseFloat(val);
+                        if (code === 40) radius = parseFloat(val);
+                    }
+                }
+                i += 2;
+            }
+            
+            if (currentEntity === 'LINE') {
+                paths.push([{x: x1, y: y1}, {x: x2, y: y2}]);
+            } else if (currentEntity === 'LWPOLYLINE' && polylinePoints.length > 1) {
+                paths.push(polylinePoints);
+            } else if (currentEntity === 'CIRCLE') {
+                const circlePts = [];
+                const segments = 64;
+                for (let s = 0; s <= segments; s++) {
+                    const angle = (s / segments) * Math.PI * 2;
+                    circlePts.push({ x: cx + radius * Math.cos(angle), y: cy + radius * Math.sin(angle) });
+                }
+                paths.push(circlePts);
+            }
+            
+            return paths;
+        }
+
         fileInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (!file) return;
 
-            // 1. 清空畫布、SVG與格線內容
             pCtx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
             hatchGroup.innerHTML = '';
             contourGroup.innerHTML = '';
             gridGroup.innerHTML = '';
             
-            // 2. 重置數據狀態
             finalContours = [];
             finalFillLines = [];
+            originalPixelData = null;
             
-            // 3. 變更狀態文字為處理中，並將下載按鈕設為暫時禁用
             document.getElementById('coord-range').innerText = currentLang === 'zh' ? '處理中...' : 'Processing...';
             downloadBtn.disabled = true;
             downloadBtn.className = "w-full py-4 bg-slate-300 dark:bg-slate-800 text-slate-500 cursor-not-allowed font-black rounded-xl transition flex flex-col items-center justify-center leading-tight";
@@ -750,14 +840,80 @@
             originalFileName = file.name.replace(/\.[^/.]+$/, "").replace(/[^a-z0-9_\u4e00-\u9fa5]/gi, '_');
             updateDownloadFileName();
 
-            if (file.type === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg')) {
+            if (file.name.toLowerCase().endsWith('.dxf')) {
+                const reader = new FileReader();
+                reader.onload = async (event) => {
+                    const dxfText = event.target.result;
+                    isSvgSource = true; 
+                    
+                    const lines = dxfText.split(/\r?\n/);
+                    let insunits = 4; // 預設 mm
+                    for (let k = 0; k < lines.length - 2; k++) {
+                        if (lines[k].trim() === '$INSUNITS') {
+                            if (lines[k+2] && lines[k+2].trim() === '70') {
+                                insunits = parseInt(lines[k+4]);
+                                break;
+                            }
+                        }
+                    }
+                    let unitScale = 1.0;
+                    if (insunits === 1) unitScale = 25.4; 
+                    if (insunits === 5) unitScale = 10;   
+                    if (insunits === 6) unitScale = 1000; 
+                    
+                    const rawPaths = await extractPointsFromDxf(dxfText);
+                    rawSvgPaths = rawPaths.map(pts => pts.map(p => ({ x: p.x * unitScale, y: p.y * unitScale })));
+                    
+                    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+                    rawSvgPaths.forEach(pts => pts.forEach(p => {
+                        minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x);
+                        minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y);
+                    }));
+
+                    const dxfW_mm = maxX - minX || 1;
+                    const dxfH_mm = maxY - minY || 1;
+                    
+                    // 套用 DXF 原檔物理毫米尺寸
+                    widthInput.value = dxfW_mm.toFixed(1);
+
+                    const internalScale = 1000 / dxfW_mm;
+                    previewCanvas.width = 1000;
+                    previewCanvas.height = dxfH_mm * internalScale;
+                    
+                    pCtx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+                    pCtx.strokeStyle = "rgba(255, 255, 255, 0.3)";
+                    pCtx.lineWidth = 1;
+                    
+                    rawSvgPaths.forEach(pts => {
+                        if (pts.length < 2) return;
+                        pCtx.beginPath();
+                        pCtx.moveTo((pts[0].x - minX) * internalScale, (pts[0].y - minY) * internalScale);
+                        for(let i=1; i<pts.length; i++) {
+                            pCtx.lineTo((pts[i].x - minX) * internalScale, (pts[i].y - minY) * internalScale);
+                        }
+                        pCtx.stroke();
+                    });
+
+                    originalImage = { width: 1000, height: previewCanvas.height };
+                    svgOverlay.setAttribute('viewBox', `0 0 1000 ${previewCanvas.height}`);
+                    
+                    document.getElementById('empty-state').classList.add('hidden');
+                    processImage();
+                    setTimeout(resetView, 50);
+                };
+                reader.readAsText(file);
+            } 
+            else if (file.type === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg')) {
                 const reader = new FileReader();
                 reader.onload = async (event) => {
                     const svgText = event.target.result;
                     isSvgSource = true;
                     rawSvgPaths = await extractPointsFromSvg(svgText);
                     
-                    // 找出邊界以設定畫布比例
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(svgText, "image/svg+xml");
+                    const svgEl = doc.querySelector("svg");
+                    
                     let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
                     rawSvgPaths.forEach(pts => pts.forEach(p => {
                         minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x);
@@ -766,15 +922,31 @@
 
                     const svgW = maxX - minX || 1;
                     const svgH = maxY - minY || 1;
+
+                    let fileWidthMm = 100; 
+                    if (svgEl) {
+                        const wAttr = svgEl.getAttribute('width');
+                        const vbAttr = svgEl.getAttribute('viewBox');
+                        
+                        if (wAttr) {
+                            fileWidthMm = parseSvgDimension(wAttr, svgW);
+                        } else if (vbAttr) {
+                            const vb = vbAttr.split(/[\s,]+/);
+                            if (vb.length === 4) {
+                                fileWidthMm = parseFloat(vb[2]) * 0.264583; 
+                            }
+                        }
+                    }
                     
-                    // 固定預覽解析度寬度為 1000
+                    // 套用 SVG 原檔物理毫米尺寸
+                    widthInput.value = fileWidthMm.toFixed(1);
+
                     const internalScale = 1000 / svgW;
                     previewCanvas.width = 1000;
                     previewCanvas.height = svgH * internalScale;
                     
-                    // 繪製白色底圖 (線條)
                     pCtx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
-                    pCtx.strokeStyle = "rgba(255, 255, 255, 0.3)"; // 白色半透明底圖
+                    pCtx.strokeStyle = "rgba(255, 255, 255, 0.3)";
                     pCtx.lineWidth = 1;
                     
                     rawSvgPaths.forEach(pts => {
@@ -791,8 +963,6 @@
                     svgOverlay.setAttribute('viewBox', `0 0 1000 ${previewCanvas.height}`);
                     
                     document.getElementById('empty-state').classList.add('hidden');
-                    
-                    // 載入 SVG 後即時自動計算
                     processImage();
                     setTimeout(resetView, 50);
                 };
@@ -804,10 +974,19 @@
                     const img = new Image();
                     img.onload = () => {
                         originalImage = img;
+                        
+                        // 建立離線畫布儲存高精度原圖色彩數據
+                        const offCanvas = document.createElement('canvas');
+                        offCanvas.width = img.width;
+                        offCanvas.height = img.height;
+                        const offCtx = offCanvas.getContext('2d');
+                        offCtx.drawImage(img, 0, 0);
+                        originalPixelData = offCtx.getImageData(0, 0, img.width, img.height).data;
+                        originalPixelWidth = img.width;
+                        originalPixelHeight = img.height;
+
                         document.getElementById('empty-state').classList.add('hidden');
                         renderBinary();
-                        
-                        // 載入一般圖片後即時自動計算
                         processImage();
                         setTimeout(resetView, 50);
                     };
@@ -902,7 +1081,6 @@
             svgOverlay.setAttribute('viewBox', `0 0 ${previewCanvas.width} ${previewCanvas.height}`);
         }
 
-        // --- Path Calculation Helpers ---
         function simplifyPath(pts, epsilon) {
             if (pts.length <= 2) return pts;
             let dmax = 0, idx = 0;
@@ -928,7 +1106,6 @@
             return Math.pow(p.x - x, 2) + Math.pow(p.y - y, 2);
         }
 
-        // --- Chaikin Algorithm ---
         function smoothPathChaikin(pts, iters) {
             if (iters === 0 || pts.length < 3) return pts;
             let cur = pts;
@@ -947,7 +1124,6 @@
 
         function resamplePath(pts, segPx) {
             if (pts.length < 2) return pts;
-            // 極端防護：確保分段長度大於等於 1 像素，避免超高密集重算卡死
             const targetSegPx = Math.max(1.0, segPx);
             const res = [pts[0]];
             let last = pts[0], acc = 0;
@@ -990,12 +1166,10 @@
             return path;
         }
 
-        // --- 填滿線段產生器 (加入防卡死雙重鎖) ---
         function generateFillLines(paths, deg, spacingPx) {
             const lines = [];
             if (!paths.length) return lines;
             
-            // 【硬體級安全鎖一】：如果像素間隔小於等於 1px，強制返回空，避免無限迴圈卡死
             if (isNaN(spacingPx) || spacingPx <= 1.0) {
                 return lines;
             }
@@ -1006,10 +1180,9 @@
             let minY = Infinity, maxY = -Infinity;
             rotated.forEach(rp => rp.forEach(pt => { minY = Math.min(minY, pt.y); maxY = Math.max(maxY, pt.y); }));
             
-            // 【硬體級安全鎖二】：若線條間隙跨距異常大於 5000 條，限制生成上限，保障運算安全
             const lineCountEstimate = (maxY - minY) / spacingPx;
             if (lineCountEstimate > 3000) {
-                return lines; // 超過安全填充行數時直接不繪製，維護畫面穩定
+                return lines; 
             }
 
             for (let y = minY + spacingPx; y < maxY; y += spacingPx) {
@@ -1028,20 +1201,17 @@
             return lines;
         }
 
-        // --- 動態尺寸網格生成系統 (5cm / 50mm) ---
         function renderGrid(w, h, mmToPx) {
             if (!gridGroup) return;
             gridGroup.innerHTML = '';
             if (!originalImage || isNaN(mmToPx) || mmToPx <= 0) return;
 
-            // 5 公分等於 50 毫米
             const gridSpacingPx = 50 * mmToPx; 
-            if (gridSpacingPx <= 5) return; // 格線過密防護
+            if (gridSpacingPx <= 5) return; 
 
             const centerX = w / 2;
             const centerY = h / 2;
 
-            // 偵測當前明暗模式，動態設定對齊格線風格與色彩
             const isDark = document.documentElement.classList.contains('dark');
             const lineStroke = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(15, 23, 42, 0.08)';
             const axisStroke = isDark ? 'rgba(239, 68, 68, 0.35)' : 'rgba(220, 38, 38, 0.4)';
@@ -1050,8 +1220,6 @@
 
             let gridLines = [];
 
-            // 垂直線 (自中心向兩側擴展)
-            // 往右
             for (let x = centerX, idx = 0; x < w; x += gridSpacingPx, idx++) {
                 const isMainAxis = (idx === 0);
                 gridLines.push(`<line x1="${x}" y1="0" x2="${x}" y2="${h}" stroke="${isMainAxis ? axisStroke : lineStroke}" stroke-width="${isMainAxis ? 1.5 : 0.8}" ${isMainAxis ? '' : 'stroke-dasharray="4,4"'} />`);
@@ -1059,14 +1227,11 @@
                     gridLines.push(`<text x="${x + 4}" y="${centerY - 6}" fill="${textFill}" font-size="9" font-family="monospace">${idx * 50}mm</text>`);
                 }
             }
-            // 往左
             for (let x = centerX - gridSpacingPx, idx = 1; x >= 0; x -= gridSpacingPx, idx++) {
                 gridLines.push(`<line x1="${x}" y1="0" x2="${x}" y2="${h}" stroke="${lineStroke}" stroke-width="0.8" stroke-dasharray="4,4" />`);
                 gridLines.push(`<text x="${x + 4}" y="${centerY - 6}" fill="${textFill}" font-size="9" font-family="monospace">-${idx * 50}mm</text>`);
             }
 
-            // 水平線 (自中心向上下擴展)
-            // 往下 (CNC 原點之 Y 軸往下為負)
             for (let y = centerY, idx = 0; y < h; y += gridSpacingPx, idx++) {
                 const isMainAxis = (idx === 0);
                 gridLines.push(`<line x1="0" y1="${y}" x2="${w}" y2="${y}" stroke="${isMainAxis ? axisStroke : lineStroke}" stroke-width="${isMainAxis ? 1.5 : 0.8}" ${isMainAxis ? '' : 'stroke-dasharray="4,4"'} />`);
@@ -1074,13 +1239,11 @@
                     gridLines.push(`<text x="${centerX + 4}" y="${y - 4}" fill="${textFill}" font-size="9" font-family="monospace">-${idx * 50}mm</text>`);
                 }
             }
-            // 往上 (CNC 原點之 Y 軸往上為正)
             for (let y = centerY - gridSpacingPx, idx = 1; y >= 0; y -= gridSpacingPx, idx++) {
                 gridLines.push(`<line x1="0" y1="${y}" x2="${w}" y2="${y}" stroke="${lineStroke}" stroke-width="0.8" stroke-dasharray="4,4" />`);
                 gridLines.push(`<text x="${centerX + 4}" y="${y - 4}" fill="${textFill}" font-size="9" font-family="monospace">${idx * 50}mm</text>`);
             }
 
-            // 圓點 X0 Y0 原點標籤
             gridLines.push(`<text x="${centerX + 4}" y="${centerY - 6}" fill="${centerTextFill}" font-weight="bold" font-size="10" font-family="monospace">X0 Y0</text>`);
 
             gridGroup.innerHTML = gridLines.join('');
@@ -1090,16 +1253,14 @@
             document.getElementById('loading-spinner').classList.remove('hidden');
             await new Promise(r => setTimeout(r, 50));
             
-            // 【防空值安全防護】：確保輸出寬度大於 1
             let targetW_mm = parseFloat(widthInput.value);
             if (isNaN(targetW_mm) || targetW_mm <= 1.0) {
-                targetW_mm = 100.0; // 預設 100mm 寬度
+                targetW_mm = 100.0; 
             }
 
-            // 【防空值安全防護】：確保填滿間隔大於 0.05
             let fillSpacing_mm = parseFloat(fillSpacingInput.value);
             if (isNaN(fillSpacing_mm) || fillSpacing_mm <= 0.05) {
-                fillSpacing_mm = 1.0; // 預設 1mm 間距
+                fillSpacing_mm = 1.0; 
             }
 
             if (isSvgSource) {
@@ -1112,7 +1273,6 @@
                 const svgW = maxX - minX || 1;
                 const svgH = maxY - minY || 1;
                 
-                // 設定虛擬預覽畫布寬度為 1000
                 const internalScale = 1000 / svgW;
                 previewCanvas.width = 1000;
                 previewCanvas.height = svgH * internalScale;
@@ -1154,18 +1314,65 @@
                 }
             }
             
-            // 填滿設定：不論來源皆套用
+            // 灰階漸變與填滿計算
             const currentScale = isSvgSource ? (1000 / targetW_mm) : (previewCanvas.width / targetW_mm);
-            finalFillLines = fillEnable.checked ? generateFillLines(finalContours, parseFloat(fillAngleSelect.value), fillSpacing_mm * currentScale) : [];
+            const rawHatchLines = fillEnable.checked ? generateFillLines(finalContours, parseFloat(fillAngleSelect.value), fillSpacing_mm * currentScale) : [];
             
+            finalFillLines = [];
+            const segPx = parseFloat(segmentSlider.value) * currentScale;
+            const isGrayscale = grayscaleFillCheckbox.checked;
+
+            rawHatchLines.forEach(line => {
+                const p1 = line[0], p2 = line[1];
+                const dx = p2.x - p1.x, dy = p2.y - p1.y;
+                const d = Math.sqrt(dx*dx + dy*dy);
+                if (d === 0) return;
+                
+                const pts = [p1];
+                const powers = [];
+                
+                if (isGrayscale && originalPixelData) {
+                    let currentDist = 0;
+                    while (currentDist < d) {
+                        const nextDist = Math.min(d, currentDist + segPx);
+                        const r1 = currentDist / d;
+                        const r2 = nextDist / d;
+                        const ptStart = { x: p1.x + dx*r1, y: p1.y + dy*r1 };
+                        const ptEnd = { x: p1.x + dx*r2, y: p1.y + dy*r2 };
+                        
+                        const mx = (ptStart.x + ptEnd.x) / 2;
+                        const my = (ptStart.y + ptEnd.y) / 2;
+                        
+                        const rx = (mx / previewCanvas.width) * originalPixelWidth;
+                        const ry = (my / previewCanvas.height) * originalPixelHeight;
+                        const ix = Math.max(0, Math.min(originalPixelWidth - 1, Math.floor(rx)));
+                        const iy = Math.max(0, Math.min(originalPixelHeight - 1, Math.floor(ry)));
+                        const idx = (iy * originalPixelWidth + ix) * 4;
+                        
+                        const r = originalPixelData[idx];
+                        const g = originalPixelData[idx+1];
+                        const b = originalPixelData[idx+2];
+                        const gray = r * 0.299 + g * 0.587 + b * 0.114;
+                        const power = Math.round(255 - gray);
+                        
+                        pts.push(ptEnd);
+                        powers.push(power);
+                        currentDist = nextDist;
+                    }
+                } else {
+                    pts.push(p2);
+                    powers.push(255);
+                }
+                
+                if (pts.length > 1) {
+                    finalFillLines.push({ pts: pts, powers: powers });
+                }
+            });
+
             renderOverlay();
-            
-            // 產生 5cm 對齊格線
             renderGrid(previewCanvas.width, previewCanvas.height, currentScale);
-            
             updateStats(previewCanvas.width, previewCanvas.height);
             
-            // 動態啟用/禁用下載按鈕並切換樣式
             if (finalContours.length > 0 || finalFillLines.length > 0) {
                 downloadBtn.disabled = false;
                 downloadBtn.className = "w-full py-4 bg-emerald-600 text-white font-black rounded-xl hover:bg-emerald-500 transition flex flex-col items-center justify-center leading-tight shadow-xl cursor-pointer";
@@ -1178,20 +1385,29 @@
         }
 
         function renderOverlay() {
-            hatchGroup.innerHTML = finalFillLines.map(l => `<line x1="${l[0].x}" y1="${l[0].y}" x2="${l[1].x}" y2="${l[1].y}" stroke="#3b82f6" stroke-width="1.2" opacity="0.8" />`).join('');
+            let hatchHtml = '';
+            finalFillLines.forEach(line => {
+                for (let i = 0; i < line.powers.length; i++) {
+                    const pStart = line.pts[i];
+                    const pEnd = line.pts[i+1];
+                    const power = line.powers[i];
+                    const alpha = 0.15 + 0.85 * (power / 255);
+                    hatchHtml += `<line x1="${pStart.x}" y1="${pStart.y}" x2="${pEnd.x}" y2="${pEnd.y}" stroke="#3b82f6" stroke-width="1.2" opacity="${alpha}" />`;
+                }
+            });
+            hatchGroup.innerHTML = hatchHtml;
             contourGroup.innerHTML = finalContours.map(p => `<path d="M ${p[0].x} ${p[0].y} ${p.slice(1).map(pt => `L ${pt.x} ${pt.y}`).join(' ')} Z" fill="none" stroke="#10b981" stroke-width="1.5" />`).join('');
             updateLayerVisibility();
         }
 
         function updateStats(w, h) {
-            // 安全防護讀取
             let targetW = parseFloat(widthInput.value);
             if (isNaN(targetW) || targetW <= 0) targetW = 100;
             const scale = targetW / w;
             let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
             const up = p => { minX = Math.min(minX, p.x*scale); maxX = Math.max(maxX, p.x*scale); minY = Math.min(minY, p.y*scale); maxY = Math.max(maxY, p.y*scale); };
             finalContours.forEach(p => p.forEach(up));
-            finalFillLines.forEach(l => l.forEach(up));
+            finalFillLines.forEach(line => line.pts.forEach(up));
             
             const d = i18n[currentLang];
             if (minX !== Infinity) {
@@ -1204,7 +1420,6 @@
             }
         }
 
-        // --- Export Functions ---
         function generateGcode() {
             let targetW = parseFloat(widthInput.value);
             if (isNaN(targetW) || targetW <= 0) targetW = 100;
@@ -1214,18 +1429,16 @@
             const dPen = parseFloat(penDiamInput.value) || 0;
             const yOffset = (dPen === 0) ? 0 : (dPen / 2) - 12.6;
 
-            // 計算邊界以便置中 (與預覽一致)
             let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
             const updateBounds = p => { 
                 minX = Math.min(minX, p.x * scale); maxX = Math.max(maxX, p.x * scale); 
                 minY = Math.min(minY, p.y * scale); maxY = Math.max(maxY, p.y * scale); 
             };
             finalContours.forEach(path => path.forEach(updateBounds));
-            finalFillLines.forEach(line => line.forEach(updateBounds));
+            finalFillLines.forEach(line => line.pts.forEach(updateBounds));
             
             const midX = (minX + maxX) / 2, midY = (minY + maxY) / 2;
 
-            // 坐標轉換：將中心移至 (0,0)，並套用 Y 軸偏移
             const tx = x => (x - midX).toFixed(3);
             const ty = y => (midY - (y * scale) + yOffset).toFixed(3); 
 
@@ -1238,12 +1451,11 @@
                 `G1 F${feed}`
             ];
 
-            // 整合所有路徑 (輪廓為封閉，填滿線條為開放)
             let allPaths = [];
-            finalContours.forEach(path => allPaths.push({ pts: path, isClosed: true }));
-            finalFillLines.forEach(line => allPaths.push({ pts: line, isClosed: false }));
+            finalContours.forEach(path => allPaths.push({ pts: path, isClosed: true, isHatch: false }));
+            finalFillLines.forEach(line => allPaths.push({ pts: line.pts, powers: line.powers, isClosed: false, isHatch: true }));
 
-            let cx = 0, cy = 0; // 當前噴頭/筆尖位置
+            let cx = 0, cy = 0; 
 
             while (allPaths.length > 0) {
                 let bestIdx = -1;
@@ -1252,12 +1464,10 @@
 
                 for (let i = 0; i < allPaths.length; i++) {
                     const p = allPaths[i].pts;
-                    // 檢查起點距離
                     const dStart = Math.pow(parseFloat(tx(p[0].x * scale)) - cx, 2) + Math.pow(parseFloat(ty(p[0].y)) - cy, 2);
                     if (dStart < minDist) {
                         minDist = dStart; bestIdx = i; reversePath = false;
                     }
-                    // 如果不是封閉曲線，檢查終點距離（可反向繪製以優化路徑）
                     if (!allPaths[i].isClosed) {
                         const dEnd = Math.pow(parseFloat(tx(p[p.length - 1].x * scale)) - cx, 2) + Math.pow(parseFloat(ty(p[p.length - 1].y)) - cy, 2);
                         if (dEnd < minDist) {
@@ -1268,25 +1478,29 @@
 
                 let target = allPaths.splice(bestIdx, 1)[0];
                 let pts = reversePath ? [...target.pts].reverse() : target.pts;
+                let powers = (target.isHatch && target.powers) ? (reversePath ? [...target.powers].reverse() : target.powers) : null;
 
-                // 移動到起點 (G0) -> 下刀 (M03)
                 g.push(`G0 X${tx(pts[0].x * scale)} Y${ty(pts[0].y)}`);
-                g.push("M03 S255");
 
-                // 繪製路徑 (G1)
-                for (let i = 1; i < pts.length; i++) {
-                    g.push(`G1 X${tx(pts[i].x * scale)} Y${ty(pts[i].y)}`);
+                if (target.isHatch && powers) {
+                    // 灰階動態功率漸變填滿
+                    g.push(`M03 S${powers[0]}`);
+                    for (let i = 1; i < pts.length; i++) {
+                        g.push(`G1 X${tx(pts[i].x * scale)} Y${ty(pts[i].y)} S${powers[i-1]}`);
+                    }
+                } else {
+                    // 標準向量邊緣（恆定功率輸出）
+                    g.push("M03 S255");
+                    for (let i = 1; i < pts.length; i++) {
+                        g.push(`G1 X${tx(pts[i].x * scale)} Y${ty(pts[i].y)}`);
+                    }
+                    if (target.isClosed) {
+                        g.push(`G1 X${tx(pts[0].x * scale)} Y${ty(pts[0].y)}`);
+                    }
                 }
 
-                // 若是輪廓則回到原點封閉路徑
-                if (target.isClosed) {
-                    g.push(`G1 X${tx(pts[0].x * scale)} Y${ty(pts[0].y)}`);
-                }
-
-                // 抬刀 (M05)
                 g.push("M05");
 
-                // 更新當前座標
                 cx = parseFloat(tx(pts[pts.length - 1].x * scale));
                 cy = parseFloat(ty(pts[pts.length - 1].y));
             }
@@ -1303,15 +1517,19 @@
             
             let svgStr = `<svg xmlns="http://www.w3.org/2000/svg" width="${mmW}mm" height="${mmH}mm" viewBox="0 0 ${mmW} ${mmH}">\n`;
             
-            // 輪廓路徑 (綠色)
             finalContours.forEach(path => {
                 const d = path.map((p, i) => `${i === 0 ? 'M' : 'L'} ${(p.x * scale).toFixed(3)} ${(p.y * scale).toFixed(3)}`).join(' ') + ' Z';
                 svgStr += `  <path d="${d}" fill="none" stroke="#10b981" stroke-width="0.2" />\n`;
             });
             
-            // 填滿線條 (藍色)
             finalFillLines.forEach(line => {
-                svgStr += `  <line x1="${(line[0].x * scale).toFixed(3)}" y1="${(line[0].y * scale).toFixed(3)}" x2="${(line[1].x * scale).toFixed(3)}" y2="${(line[1].y * scale).toFixed(3)}" stroke="#3b82f6" stroke-width="0.1" />\n`;
+                for (let i = 0; i < line.powers.length; i++) {
+                    const pStart = line.pts[i];
+                    const pEnd = line.pts[i+1];
+                    const power = line.powers[i];
+                    const alpha = (power / 255).toFixed(3);
+                    svgStr += `  <line x1="${(pStart.x * scale).toFixed(3)}" y1="${(pStart.y * scale).toFixed(3)}" x2="${(pEnd.x * scale).toFixed(3)}" y2="${(pEnd.y * scale).toFixed(3)}" stroke="#3b82f6" stroke-width="0.1" opacity="${alpha}" />\n`;
+                }
             });
             
             svgStr += `</svg>`;
@@ -1332,10 +1550,8 @@
         const resizeObserver = new ResizeObserver(() => {
             if (originalImage) resetView();
         });
-        // 觀察外框容器大小變化，確保響應式設計時能精確居中
         resizeObserver.observe(container);
 
-        // 使用標準 addEventListener 替代屬性指派，增加穩健性
         document.getElementById('lang-toggle').addEventListener('click', () => {
             currentLang = (currentLang === 'zh') ? 'en' : 'zh';
             updateUI();
@@ -1346,11 +1562,9 @@
             setTheme(isDark ? 'light' : 'dark');
         });
 
-        // 初始化語系、主題與 UI
         initTheme();
         updateUI();
     </script>
-    <!-- PWA Service Worker Registration -->
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
