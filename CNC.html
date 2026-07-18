@@ -13,7 +13,7 @@
     </script>
     <script>
         // 立即在網頁頂部設定主題，防範載入時的背景閃爍問題，預設初始化狀態為 dark
-        const savedTheme = localStorage.getItem('gordix_theme') || localStorage.getItem('theme') || 'dark';
+        const savedTheme = localStorage.getItem('gordix-theme') || 'dark';
         if (savedTheme === 'dark') {
             document.documentElement.classList.add('dark');
         } else {
@@ -282,14 +282,12 @@
                 document.documentElement.classList.add('dark');
                 // Sun 圖示 (點擊變亮)
                 themeIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m0-12.728l.707.707m12.728 12.728l.707.707M12 8a4 4 0 100 8 4 4 0 000-8z" />`;
-                localStorage.setItem('gordix_theme', 'dark');
-                localStorage.setItem('theme', 'dark');
+                localStorage.setItem('gordix-theme', 'dark');
             } else {
                 document.documentElement.classList.remove('dark');
                 // Moon 圖示 (點擊變暗)
                 themeIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />`;
-                localStorage.setItem('gordix_theme', 'light');
-                localStorage.setItem('theme', 'light');
+                localStorage.setItem('gordix-theme', 'light');
             }
             if (typeof renderer !== 'undefined' && renderer !== null) {
                 updateRendererBg();
@@ -659,7 +657,7 @@
         };
 
         // 讀取同步語系，預設繁中
-        let currentLang = localStorage.getItem('gordix_lang') || 'zh';
+        let currentLang = localStorage.getItem('gordix-lang') || 'zh';
 
         function updateLanguage() {
             document.querySelectorAll('[data-i18n]').forEach(el => {
@@ -671,7 +669,7 @@
 
         document.getElementById('lang-toggle').onclick = () => { 
             currentLang = currentLang === 'zh' ? 'en' : 'zh'; 
-            localStorage.setItem('gordix_lang', currentLang);
+            localStorage.setItem('gordix-lang', currentLang);
             updateLanguage(); 
         };
 
