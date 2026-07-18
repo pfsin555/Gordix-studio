@@ -363,6 +363,44 @@
                 notApplied: "未應用",
                 themeLight: "明亮模式",
                 themeDark: "深色模式"
+            },
+            en: {
+                appTitle: "V-Carving Tool",
+                step1: "Step 1: File & Parsing",
+                chooseFile: "Choose File",
+                noFile: "No file selected",
+                targetWidth: "Total Width (mm)",
+                threshold: "Threshold",
+                smoothness: "Resolution / Smoothness",
+                reprocess: "Reprocess File",
+                step2: "Step 2: Parts List",
+                selectAll: "Select All / Invert",
+                legendOriginal: "Unselected Contours",
+                legendSelected: "Selected Contours",
+                legendCarveArea: "V-Carve Area (Blue)",
+                legendToolpath: "Toolpath (Yellow)",
+                estTime: "Est. Total Machining Time",
+                downloadBtn: "Download File",
+                jobSettings: "Machining Parameters (mm)",
+                groupSize: "Selected Group Size",
+                width: "Width",
+                height: "Height",
+                resolution: "Resolution (mm)",
+                feedRate: "Feed Rate",
+                toolDia: "Tool Diameter",
+                totalDepth: "Machining Depth",
+                vbitAngle: "V-Bit Angle (deg)",
+                vcarveLayer: "V-Carve Region",
+                optVCarveEven: "Carve Cavity (Default Blue Fill)",
+                optVCarveOdd: "Carve Core (Inverted)",
+                updateBtn: "Update Toolpath",
+                selectionHint: "Please select a part from the left list<br>to configure parameters",
+                partName: "Part",
+                tagConvex: "Convex (No Machining)",
+                tagConcave: "Concave (Machining)",
+                notApplied: "Not Applied",
+                themeLight: "Light Mode",
+                themeDark: "Dark Mode"
             }
         };
 
@@ -935,7 +973,6 @@
                     el.innerHTML = i18n[currentLang][key];
                 }
             });
-            updateThemeButtonText();
             renderPartList();
         }
 
