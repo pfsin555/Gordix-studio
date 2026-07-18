@@ -6,6 +6,11 @@
     <title>G-code Editor & Viewer</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class'
+        }
+    </script>
     <style>
         :root {
             --primary-green: #10b981;
@@ -32,7 +37,7 @@
             --alert-text: #34d399;
         }
 
-        body.light-theme {
+        html:not(.dark) {
             /* 亮色主題 */
             --bg-color: #f3f4f6; 
             --panel-dark: #ffffff;
@@ -274,7 +279,7 @@
                         <span id="txt-legend-path">加工路徑</span>
                     </p>
                     <p class="flex items-center">
-                        <span class="w-3 h-3 bg-emerald-500/30 rounded-sm mr-2 flex-shrink-0 border border-emerald-500/50"></span>
+                        <span class="w-3 h-3 bg-orange-500/30 rounded-sm mr-2 flex-shrink-0 border border-orange-500/50"></span>
                         <span id="txt-legend-sweep">刀具經過範圍</span>
                     </p>
                     <p class="flex items-center">
@@ -370,9 +375,9 @@
                                     <input type="number" id="newToolDiaInput" value="3.175" min="0.1" step="0.1" class="w-full">
                                 </div>
                             </div>
-                            <!-- 顯示加工結果 -->
+                            <!-- 顯示加工結果 (預設為不勾選) -->
                             <div class="flex items-center gap-2 pt-1.5">
-                                <input type="checkbox" id="showWorkpiece" class="w-4 h-4 rounded text-emerald-500 bg-gray-700 border-gray-600 focus:ring-emerald-500 accent-emerald-500" checked>
+                                <input type="checkbox" id="showWorkpiece" class="w-4 h-4 rounded text-emerald-500 bg-gray-700 border-gray-600 focus:ring-emerald-500 accent-emerald-500">
                                 <label for="showWorkpiece" class="text-[11px] text-gray-300 font-semibold cursor-pointer select-none" id="txt-label-showwp">顯示加工結果</label>
                             </div>
                         </div>
@@ -551,6 +556,7 @@
     // --- 語言切換核心 ---
     function toggleLanguage() {
         currentLang = currentLang === 'zh' ? 'en' : 'zh';
+        localStorage.setItem('gordix-lang', currentLang);
         updateLanguage();
     }
 
@@ -628,11 +634,17 @@
 
     // --- 主題切換邏輯 ---
     function toggleTheme() {
-        document.body.classList.toggle('light-theme');
-        const isLight = document.body.classList.contains('light-theme');
-        const currentTheme = isLight ? 'light' : 'dark';
-        localStorage.setItem('gcode-editor-theme', currentTheme);
-        updateThemeIcon(currentTheme);
+        const isDark = document.documentElement.classList.contains('dark');
+        const nextTheme = isDark ? 'light' : 'dark';
+        
+        if (nextTheme === 'dark') {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+        
+        localStorage.setItem('gordix-theme', nextTheme);
+        updateThemeIcon(nextTheme);
         updateThreeGrid();
     }
 
@@ -650,7 +662,7 @@
     function updateThreeGrid() {
         if (!scene || !grid) return;
         scene.remove(grid);
-        const isLight = document.body.classList.contains('light-theme');
+        const isLight = !document.documentElement.classList.contains('dark');
         
         const gridColor = isLight ? 0xcccccc : 0x222222;
         const centerColor = isLight ? 0x059669 : 0x10b981;
@@ -2544,9 +2556,9 @@
                 const ribbonGeo = generateSweptRibbonGeometry(points, ribbonWidth);
                 if (ribbonGeo) {
                     const ribbonMat = new THREE.MeshBasicMaterial({
-                        color: 0x10b981,     
+                        color: 0xff5500,     // 調整為透明橘紅色 (Orange-Red)
                         transparent: true,
-                        opacity: 0.2,        
+                        opacity: 0.25,        
                         side: THREE.DoubleSide,
                         depthWrite: false    
                     });
@@ -2963,15 +2975,17 @@
     window.onload = () => {
         initThree();
         
-        const savedTheme = localStorage.getItem('gcode-editor-theme') || 'dark';
-        if (savedTheme === 'light') {
-            document.body.classList.add('light-theme');
+        const savedTheme = localStorage.getItem('gordix-theme') || 'dark';
+        if (savedTheme === 'dark') {
+            document.documentElement.classList.add('dark');
         } else {
-            document.body.classList.remove('light-theme');
+            document.documentElement.classList.remove('dark');
         }
         
         updateThemeIcon(savedTheme);
         updateThreeGrid();
+        
+        currentLang = localStorage.getItem('gordix-lang') || 'zh';
         updateLanguage(); 
     };
 </script>
