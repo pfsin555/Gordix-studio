@@ -228,6 +228,14 @@
                         <input type="checkbox" id="enable-fill" checked class="w-4 h-4 accent-blue-500 rounded">
                     </div>
                     <div id="fill-settings-group" class="space-y-3 transition-opacity">
+                        <!-- 點擊圖形提示與快速切換按鈕 -->
+                        <div class="flex items-center justify-between bg-blue-50/50 dark:bg-blue-900/20 p-2 rounded-lg border border-blue-200/50 dark:border-blue-500/20">
+                            <span id="i18n-label-fill-tip" class="text-[9px] text-blue-600 dark:text-blue-300 font-bold">💡 點選預覽圖形可個別開關填滿</span>
+                            <div class="flex gap-1">
+                                <button id="btn-select-all-fill" class="px-1.5 py-0.5 bg-blue-600 hover:bg-blue-500 text-white rounded text-[9px] font-bold transition">全選</button>
+                                <button id="btn-deselect-all-fill" class="px-1.5 py-0.5 bg-slate-300 dark:bg-slate-700 hover:bg-slate-400 text-slate-700 dark:text-slate-200 rounded text-[9px] font-bold transition">全清</button>
+                            </div>
+                        </div>
                         <div class="grid grid-cols-2 gap-3">
                             <div>
                                 <label id="i18n-label-angle" class="block text-[10px] text-slate-500 dark:text-slate-400 mb-1 none font-bold">填滿角度</label>
@@ -383,6 +391,9 @@
                 labelSmooth: "曲線平滑度",
                 labelResolution: "解析度 (線段長)",
                 labelFillTitle: "填滿設定 (Hatch)",
+                labelFillTip: "💡 點選預覽圖形可個別開關填滿",
+                btnSelectAll: "全選",
+                btnDeselectAll: "全清",
                 labelAngle: "填滿角度",
                 labelSpacing: "間隔 (mm)",
                 labelGrayFill: "灰階漸變填滿",
@@ -424,6 +435,9 @@
                 labelSmooth: "Path Smoothing",
                 labelResolution: "Resolution (Step)",
                 labelFillTitle: "Fill Settings (Hatch)",
+                labelFillTip: "💡 Click canvas objects to toggle fill",
+                btnSelectAll: "All",
+                btnDeselectAll: "None",
                 labelAngle: "Fill Angle",
                 labelSpacing: "Spacing (mm)",
                 labelGrayFill: "Grayscale Hatch",
@@ -505,6 +519,9 @@
             document.getElementById('i18n-label-smooth').innerText = data.labelSmooth;
             document.getElementById('i18n-label-resolution').innerText = data.labelResolution;
             document.getElementById('i18n-label-fill-title').innerText = data.labelFillTitle;
+            document.getElementById('i18n-label-fill-tip').innerText = data.labelFillTip;
+            document.getElementById('btn-select-all-fill').innerText = data.btnSelectAll;
+            document.getElementById('btn-deselect-all-fill').innerText = data.btnDeselectAll;
             document.getElementById('i18n-label-angle').innerText = data.labelAngle;
             document.getElementById('i18n-label-spacing').innerText = data.labelSpacing;
             document.getElementById('i18n-label-gray-fill').innerText = data.labelGrayFill;
@@ -622,6 +639,8 @@
         let showImage = true, showContour = true, showHatch = true;
         let isSvgSource = false; 
         let rawSvgPaths = [];    
+        let selectedContourIndices = new Set(); // 記錄選擇進行填滿的輪廓索引
+        let pointerDownPos = { x: 0, y: 0 };   // 記錄點擊初始位置以過濾拖曳
 
         let processDebounceTimeout;
         function triggerLiveProcess() {
@@ -671,10 +690,10 @@
             }
         };
 
-        widthInput.oninput = () => { if (originalImage) triggerLiveProcess(); };
-        feedInput.oninput = () => { if (originalImage) triggerLiveProcess(); };
-        fillAngleSelect.onchange = () => { if (originalImage) triggerLiveProcess(); };
-        fillSpacingInput.oninput = () => { if (originalImage) triggerLiveProcess(); };
+        widthInput.oninput = () => { if (originalImage) recomputeFillLines(); };
+        feedInput.oninput = () => { if (originalImage) updateStats(previewCanvas.width, previewCanvas.height); };
+        fillAngleSelect.onchange = () => { if (originalImage) recomputeFillLines(); };
+        fillSpacingInput.oninput = () => { if (originalImage) recomputeFillLines(); };
         
         function updateDualSlider() {
             let minVal = parseInt(minSPowerInput.value);
@@ -767,6 +786,7 @@
 
         container.addEventListener('pointerdown', (e) => {
             if (!originalImage) return;
+            pointerDownPos = { x: e.clientX, y: e.clientY };
             state.evCache.push(e);
             if (state.evCache.length === 1) {
                 state.isDragging = true;
@@ -776,19 +796,15 @@
             container.setPointerCapture(e.pointerId);
         });
 
-        window.addEventListener('pointermove', (e) => {
-            if (!originalImage) return;
+        function handlePointerMove(e) {
+            if (!state.isDragging) return;
+
             const index = state.evCache.findIndex((ev) => ev.pointerId === e.pointerId);
-            if (index > -1) state.evCache[index] = e;
+            if (index !== -1) {
+                state.evCache[index] = e;
+            }
 
             if (state.evCache.length === 2) {
-                state.isDragging = false;
-                const centerX = (state.evCache[0].clientX + state.evCache[1].clientX) / 2;
-                const centerY = (state.evCache[0].clientY + state.evCache[1].clientY) / 2;
-                const rect = container.getBoundingClientRect();
-                const viewCenterX = centerX - rect.left;
-                const viewCenterY = centerY - rect.top;
-
                 const curDiff = Math.hypot(
                     state.evCache[0].clientX - state.evCache[1].clientX,
                     state.evCache[0].clientY - state.evCache[1].clientY
@@ -797,37 +813,77 @@
                 if (state.prevDiff > 0) {
                     const factor = curDiff / state.prevDiff;
                     const newScale = Math.max(0.05, Math.min(state.scale * factor, 20));
-                    state.translateX = viewCenterX - (viewCenterX - state.translateX) * (newScale / state.scale);
-                    state.translateY = viewCenterY - (viewCenterY - state.translateY) * (newScale / state.scale);
+                    
+                    const rect = container.getBoundingClientRect();
+                    const midX = (state.evCache[0].clientX + state.evCache[1].clientX) / 2 - rect.left;
+                    const midY = (state.evCache[0].clientY + state.evCache[1].clientY) / 2 - rect.top;
+
+                    state.translateX = midX - (midX - state.translateX) * (newScale / state.scale);
+                    state.translateY = midY - (midY - state.translateY) * (newScale / state.scale);
                     state.scale = newScale;
                     updateTransform();
                 }
                 state.prevDiff = curDiff;
-            } 
-            else if (state.isDragging && state.evCache.length === 1) {
-                const dx = e.clientX - state.lastMouseX;
-                const dy = e.clientY - state.lastMouseY;
-                state.translateX += dx;
-                state.translateY += dy;
+            } else if (state.evCache.length === 1) {
+                const deltaX = e.clientX - state.lastMouseX;
+                const deltaY = e.clientY - state.lastMouseY;
+                state.translateX += deltaX;
+                state.translateY += deltaY;
                 state.lastMouseX = e.clientX;
                 state.lastMouseY = e.clientY;
                 updateTransform();
             }
-        });
+        }
 
-        const handlePointerUp = (e) => {
+        function handlePointerUp(e) {
             const index = state.evCache.findIndex((ev) => ev.pointerId === e.pointerId);
-            if (index > -1) state.evCache.splice(index, 1);
-            if (state.evCache.length < 2) state.prevDiff = -1;
+            if (index !== -1) {
+                state.evCache.splice(index, 1);
+            }
+
+            if (state.evCache.length < 2) {
+                state.prevDiff = -1;
+            }
+
             if (state.evCache.length === 0) {
                 state.isDragging = false;
             } else if (state.evCache.length === 1) {
-                state.isDragging = true;
                 state.lastMouseX = state.evCache[0].clientX;
                 state.lastMouseY = state.evCache[0].clientY;
             }
+
+            // 當放開點擊且位移極小 (點擊動作而非拖曳平移) 時，觸發個別圖形填滿開關
+            if (fillEnable.checked && pointerDownPos) {
+                const dist = Math.hypot(e.clientX - pointerDownPos.x, e.clientY - pointerDownPos.y);
+                if (dist < 5) {
+                    const elem = document.elementFromPoint(e.clientX, e.clientY);
+                    const pathEl = elem ? elem.closest('path[data-index]') : null;
+                    if (pathEl) {
+                        const idx = parseInt(pathEl.dataset.index, 10);
+                        if (!isNaN(idx)) {
+                            if (selectedContourIndices.has(idx)) {
+                                selectedContourIndices.delete(idx);
+                            } else {
+                                selectedContourIndices.add(idx);
+                            }
+                            recomputeFillLines();
+                        }
+                    }
+                }
+            }
+        }
+
+        document.getElementById('btn-select-all-fill').onclick = () => {
+            selectedContourIndices = new Set(finalContours.map((_, i) => i));
+            recomputeFillLines();
         };
 
+        document.getElementById('btn-deselect-all-fill').onclick = () => {
+            selectedContourIndices.clear();
+            recomputeFillLines();
+        };
+
+        container.addEventListener('pointermove', handlePointerMove);
         window.addEventListener('pointerup', handlePointerUp);
         window.addEventListener('pointercancel', handlePointerUp);
 
@@ -933,8 +989,7 @@
             
             return paths;
         }
-
-        fileInput.addEventListener('change', (e) => {
+            fileInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (!file) return;
 
@@ -945,6 +1000,7 @@
             
             finalContours = [];
             finalFillLines = [];
+            selectedContourIndices = new Set(); // 載入新檔案時重置選擇紀錄
             originalPixelData = null;
             
             document.getElementById('coord-range').innerText = currentLang === 'zh' ? '處理中...' : 'Processing...';
@@ -1385,11 +1441,6 @@
                 targetW_mm = 100.0; 
             }
 
-            let fillSpacing_mm = parseFloat(fillSpacingInput.value);
-            if (isNaN(fillSpacing_mm) || fillSpacing_mm <= 0.05) {
-                fillSpacing_mm = 1.0; 
-            }
-
             if (isSvgSource) {
                 let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
                 rawSvgPaths.forEach(pts => pts.forEach(p => {
@@ -1456,9 +1507,35 @@
                 }
             }
             
-            // 灰階漸變與填滿計算
+            // 保留使用者先前的點選選擇，如無選擇則預設全選
+            if (!selectedContourIndices || selectedContourIndices.size === 0) {
+                selectedContourIndices = new Set(finalContours.map((_, i) => i));
+            } else {
+                const validIndices = new Set();
+                selectedContourIndices.forEach(idx => {
+                    if (idx < finalContours.length) validIndices.add(idx);
+                });
+                selectedContourIndices = validIndices.size > 0 ? validIndices : new Set(finalContours.map((_, i) => i));
+            }
+
+            recomputeFillLines();
+            document.getElementById('loading-spinner').classList.add('hidden');
+        }
+
+        // 重新計算被選中圖形的填滿線條
+        function recomputeFillLines() {
+            let targetW_mm = parseFloat(widthInput.value);
+            if (isNaN(targetW_mm) || targetW_mm <= 1.0) targetW_mm = 100.0;
+
+            let fillSpacing_mm = parseFloat(fillSpacingInput.value);
+            if (isNaN(fillSpacing_mm) || fillSpacing_mm <= 0.05) fillSpacing_mm = 1.0;
+
             const currentScale = isSvgSource ? (1000 / targetW_mm) : (previewCanvas.width / targetW_mm);
-            const rawHatchLines = fillEnable.checked ? generateFillLines(finalContours, parseFloat(fillAngleSelect.value), fillSpacing_mm * currentScale) : [];
+            
+            // 僅篩選出使用者勾選/點選要填滿的輪廓
+            const activeContours = finalContours.filter((_, idx) => selectedContourIndices.has(idx));
+
+            const rawHatchLines = fillEnable.checked ? generateFillLines(activeContours, parseFloat(fillAngleSelect.value), fillSpacing_mm * currentScale) : [];
             
             finalFillLines = [];
             const segPx = parseFloat(segmentSlider.value) * currentScale;
@@ -1525,8 +1602,6 @@
                 downloadBtn.disabled = true;
                 downloadBtn.className = "w-full py-4 bg-slate-300 dark:bg-slate-800 text-slate-500 cursor-not-allowed font-black rounded-xl transition flex flex-col items-center justify-center leading-tight";
             }
-
-            document.getElementById('loading-spinner').classList.add('hidden');
         }
 
         function renderOverlay() {
@@ -1548,7 +1623,19 @@
                 }
             });
             hatchGroup.innerHTML = hatchHtml;
-            contourGroup.innerHTML = finalContours.map(p => `<path d="M ${p[0].x} ${p[0].y} ${p.slice(1).map(pt => `L ${pt.x} ${pt.y}`).join(' ')} Z" fill="none" stroke="#10b981" stroke-width="1.5" />`).join('');
+
+            // 渲染帶互動事件的向量輪廓圖案，所有輪廓皆保持實線（#10b981）以確保外框繪製
+            contourGroup.innerHTML = finalContours.map((p, idx) => {
+                const isSelected = selectedContourIndices.has(idx);
+                const strokeColor = "#10b981";
+                const fillColor = isSelected ? "rgba(16, 185, 129, 0.15)" : "rgba(0, 0, 0, 0.001)";
+                const pointerEvents = fillEnable.checked ? "all" : "none";
+                const cursor = fillEnable.checked ? "pointer" : "default";
+                const d = `M ${p[0].x} ${p[0].y} ${p.slice(1).map(pt => `L ${pt.x} ${pt.y}`).join(' ')} Z`;
+                
+                return `<path d="${d}" data-index="${idx}" fill="${fillColor}" stroke="${strokeColor}" stroke-width="${isSelected ? 1.8 : 1.2}" style="pointer-events: ${pointerEvents}; cursor: ${cursor}; transition: all 0.15s;" class="hover:stroke-amber-400 hover:stroke-2 hover:fill-amber-400/20" />`;
+            }).join('');
+
             updateLayerVisibility();
         }
 
