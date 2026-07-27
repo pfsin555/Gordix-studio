@@ -139,10 +139,14 @@
                             </div>
                         </div>
                         <div>
-                            <div class="flex justify-between items-center mb-2">
-                                <label class="text-[10px] text-slate-500 dark:text-slate-400 font-bold" data-i18n="smoothness">解析/平滑度</label>
+                            <div class="flex justify-between items-center mb-1">
+                                <label class="text-[10px] text-slate-500 dark:text-slate-400 font-bold" data-i18n="smoothness">平滑簡化度</label>
                             </div>
                             <input type="range" id="smooth-range" min="0.01" max="2.0" step="0.01" value="0.1" class="accent-orange-600">
+                            <div class="flex justify-between items-center text-[9px] text-slate-400 dark:text-slate-500 mt-1 font-medium">
+                                <span data-i18n="smoothLeft">← 貼近原圖 (高細節)</span>
+                                <span data-i18n="smoothRight">平滑簡化 (少節點) →</span>
+                            </div>
                         </div>
                         <button id="process-img-btn" class="w-full py-3 btn-orange rounded-lg font-bold text-sm shadow-lg" data-i18n="reprocess">重新解析檔案</button>
                     </div>
@@ -565,7 +569,9 @@
                 noFile: "尚未選擇任何檔案",
                 targetWidth: "整體寬",
                 threshold: "黑白門檻",
-                smoothness: "解析/平滑度",
+                smoothness: "簡化度",
+                smoothLeft: "← 高細節",
+                smoothRight: "少節點 →",
                 reprocess: "重新解析檔案",
                 step2: "第二步：零件清單",
                 selectAll: "全選 / 反選",
@@ -613,7 +619,9 @@
                 noFile: "No file chosen",
                 targetWidth: "Total Width (mm)",
                 threshold: "B/W Threshold",
-                smoothness: "Path Smoothness",
+                smoothness: "Simplification",
+                smoothLeft: "← High Detail",
+                smoothRight: "Smooth & Simple →",
                 reprocess: "Reprocess File",
                 step2: "Step 2: Parts List",
                 selectAll: "Select / Deselect All",
@@ -1653,7 +1661,30 @@
             const isDark = document.documentElement.classList.contains('dark');
             const gridColor1 = isDark ? 0x334155 : 0xcbd5e1;
             const gridColor2 = isDark ? 0x1e293b : 0xf1f5f9;
-            scene.add(new THREE.GridHelper(500, 50, gridColor1, gridColor2).rotateX(Math.PI/2));
+
+            // 計算當前顯示零件的整體邊界，動態調整格線範圍 (固定每一格 50mm)
+            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+            let hasVisibleParts = false;
+            parts.forEach(p => {
+                if(!p.visible) return;
+                p.rawPath.forEach(pt => {
+                    minX = Math.min(minX, pt.x); maxX = Math.max(maxX, pt.x);
+                    minY = Math.min(minY, pt.y); maxY = Math.max(maxY, pt.y);
+                    hasVisibleParts = true;
+                });
+            });
+
+            let gridSize = 300; // 預設未載入或無零件時的網格大小
+            if (hasVisibleParts) {
+                const maxDim = Math.max(maxX - minX, maxY - minY);
+                // 預留適當邊緣空間，並向上取整為 100 的倍數，確保 divisions (50mm一格) 恆為整數
+                gridSize = Math.max(100, Math.ceil((maxDim + 100) / 100) * 100);
+            }
+            const divisions = Math.round(gridSize / 50);
+
+            const grid = new THREE.GridHelper(gridSize, divisions, gridColor1, gridColor2);
+            grid.rotateX(Math.PI / 2);
+            scene.add(grid);
             
             parts.forEach((p, idx) => {
                 if(!p.visible) return;
