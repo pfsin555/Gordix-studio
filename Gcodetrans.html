@@ -78,7 +78,7 @@
             border: 2px solid var(--panel-border); 
             transition: background-color 0.3s, border-color 0.3s;
             margin: 0 auto;
-            touch-action: none; /* 防止行動端雙指縮放導致整頁跳動 */
+            touch-action: none;
         }
 
         /* 雙主題控制面板卡片 */
@@ -141,14 +141,13 @@
         input[type="number"]:focus {
             outline: none;
             border-color: var(--primary-green);
-            ring: 1px solid var(--primary-green);
         }
 
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-track { background: var(--bg-color); }
         ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 10px; }
     </style>
-        <!-- PWA Meta Tags -->
+    <!-- PWA Meta Tags -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0f172a">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -158,298 +157,293 @@
 <body class="bg-slate-50 dark:bg-slate-950 min-h-screen p-4 md:p-8 text-slate-800 dark:text-slate-200 font-sans transition-colors duration-300">
     <div class="max-w-7xl mx-auto bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800 transition-colors duration-300">
 
-
-<!-- 頂部導航 -->
-<div class="bg-gradient-to-r from-emerald-600 to-teal-950 p-5 text-white flex justify-between items-center border-b border-emerald-500/30 shadow-lg mb-4">
-    <div>
-        <h1 id="txt-header-title" class="text-2xl font-black tracking-tight">
-            Gcode 即時調整
-        </h1>
-    </div>
-    <div class="flex gap-3 items-center">
-        <!-- 返回上一頁按鈕 -->
-        <button onclick="if(window.history.length > 1) { window.history.back(); } else { window.location.href='index.html'; }" class="flex items-center justify-center text-slate-300 hover:text-orange-400 transition-colors font-bold bg-white/10 hover:bg-white/20 p-1.5 rounded-lg border border-white/20 cursor-pointer" title="返回上一頁 / Go Back">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <line x1="20" y1="12" x2="4" y2="12"></line>
-                <polyline points="10 18 4 12 10 6"></polyline>
-            </svg>
-        </button>
-        <!-- 明暗主題切換 -->
-        <button onclick="toggleTheme()" class="p-1.5 rounded-lg text-[11px] font-bold bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-all flex items-center justify-center" aria-label="Toggle Theme">
-            <svg id="theme-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <!-- 圖示由 JS 動態注入 -->
-            </svg>
-        </button>
-        <!-- 語系切換 -->
-        <button id="langBtn" onclick="toggleLanguage()" class="px-3 py-1.5 rounded-lg text-[11px] font-bold bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-all flex items-center gap-2">
-            EN
-        </button>
-        <!-- 書頁按鈕 (指向 params.html，取代 V2.8 顯示) -->
-        <a href="params.html" class="flex items-center justify-center text-slate-300 hover:text-emerald-400 transition-colors bg-white/10 hover:bg-white/20 p-1.5 rounded-lg border border-white/20 cursor-pointer" title="工藝參數建議 / Parameters Guide">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
-                <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
-            </svg>
-        </a>
-    </div>
-</div>
-
-<div class="container mx-auto px-4 max-w-7xl">
-    <!-- 主網格：行動端單欄，桌機端拆分為 3 - 6 - 3 三欄，並對齊頂部 -->
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
-        
-        <!-- 【左側控制面板】：1. 檔案上傳 與 2. 參數調整 (佔 3/12 寬度) -->
-        <div class="lg:col-span-3 space-y-4 order-2 lg:order-1">
-            
-            <!-- 1. 檔案上傳 -->
-            <div class="controls-card">
-                <h2 class="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-2 flex items-center">
-                    <span id="txt-sec-upload">1. 檔案上傳</span>
-                </h2>
-                <div class="flex flex-col gap-2">
-                    <button onclick="document.getElementById('fileInput').click()" class="btn-secondary w-full font-bold py-2 px-4 rounded transition text-sm flex items-center justify-center shadow-inner">
-                        <svg class="w-4 h-4 mr-2 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
-                        <span id="txt-btn-upload">選擇 G-code 檔案</span>
-                    </button>
-                    <input type="file" id="fileInput" accept=".gcode,.nc,.txt" class="hidden" />
-                    
-                    <!-- 檔案載入成功提示 -->
-                    <div id="fileInfo" class="p-2 alert-success rounded text-[10px] font-bold hidden truncate">
-                        <span id="txt-file-name">檔名</span>: <span id="fileNameDisplay" class="opacity-90">-</span>
-                    </div>
-
-                    <!-- G20 英制轉公制提示區 -->
-                    <div id="metricAlert" class="p-2 rounded text-[10px] font-bold hidden flex items-center gap-2" style="background-color: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.3); color: #f59e0b;">
-                        <svg class="w-4 h-4 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                        <span id="txt-metric-alert">Gcode已轉換為公制(G21)</span>
-                    </div>
-                </div>
+        <!-- 頂部導航 -->
+        <div class="bg-gradient-to-r from-emerald-600 to-teal-950 p-5 text-white flex justify-between items-center border-b border-emerald-500/30 shadow-lg mb-4">
+            <div>
+                <h1 id="txt-header-title" class="text-2xl font-black tracking-tight">
+                    Gcode 即時調整
+                </h1>
             </div>
-
-            <!-- 2. 參數調整 -->
-            <div class="controls-card">
-                <h2 class="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-3 flex items-center">
-                    <span id="txt-sec-params">2. 參數調整 (不影響 Z/F)</span>
-                </h2>
-                <div class="space-y-3">
-                    <div class="grid grid-cols-2 gap-2">
-                        <div class="col-span-2">
-                            <label class="label-text block mb-1" id="txt-label-scale">縮放比例 (僅限 XY)</label>
-                            <input type="number" id="scaleInput" value="1" step="0.1" class="w-full">
-                        </div>
-                        <div>
-                            <label class="label-text block mb-1" id="txt-label-ox">X 偏移</label>
-                            <input type="number" id="offsetX" value="0" step="1" class="w-full">
-                        </div>
-                        <div>
-                            <label class="label-text block mb-1" id="txt-label-oy">Y 偏移</label>
-                            <input type="number" id="offsetY" value="0" step="1" class="w-full">
-                        </div>
-                    </div>
-                    <div>
-                        <label class="label-text block mb-1" id="txt-label-rot">旋轉角度 (Z軸中心)</label>
-                        <input type="number" id="rotationInput" value="0" step="1" class="w-full">
-                    </div>
-                    <div>
-                        <label class="label-text block mb-1" id="txt-label-res">解析度 (最小 XY 位移 mm)</label>
-                        <input type="number" id="resInput" value="0.1" min="0.1" step="0.1" class="w-full">
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-2 pt-1">
-                        <button id="centerBtn" class="btn-secondary font-bold py-2 rounded transition text-xs">自動置中</button>
-                        <button id="applyBtn" class="btn-green font-bold py-2 rounded shadow-sm text-xs">更新預覽</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 【中央 3D 預覽面板】：獨立的正方形渲染區域 (佔 6/12 寬度) -->
-        <div class="lg:col-span-6 order-1 lg:order-2">
-            <div id="preview-container" class="shadow-2xl ring-1 ring-gray-700 select-none">
-                <div class="absolute top-3 right-3 z-10">
-                    <div class="bg-black/80 backdrop-blur-md text-emerald-400 px-3 py-1 rounded-full text-[9px] font-black border border-emerald-500/30 shadow-md" id="txt-preview-hint">
-                        3D REALTIME VIEW
-                    </div>
-                </div>
-                
-                <!-- 【簡化設計】：左上角精簡圖例 -->
-                <div class="absolute top-3 left-3 z-10 text-gray-300 text-[10px] space-y-1 bg-black/75 p-2.5 rounded-lg backdrop-blur-sm border border-white/10 shadow-lg max-w-[190px]">
-                    <p class="flex items-center">
-                        <span class="w-3 h-3 bg-emerald-500 rounded-sm mr-2 flex-shrink-0"></span>
-                        <span id="txt-legend-path">加工路徑</span>
-                    </p>
-                    <p class="flex items-center">
-                        <span class="w-3 h-3 bg-orange-500/30 rounded-sm mr-2 flex-shrink-0 border border-orange-500/50"></span>
-                        <span id="txt-legend-sweep">刀具經過範圍</span>
-                    </p>
-                    <p class="flex items-center">
-                        <span class="w-3 h-3 bg-none border-2 border-dashed border-gray-400 rounded-sm mr-2 flex-shrink-0"></span>
-                        <span id="txt-legend-result">理論加工結果</span>
-                    </p>
-                    <p class="flex items-center">
-                        <span class="w-3 h-3 bg-amber-500 rounded-sm mr-2 flex-shrink-0"></span>
-                        <span id="txt-legend-tab">加工橋位</span>
-                    </p>
-                </div>
-            </div>
-        </div>
-
-        <!-- 【右側控制面板】：3. 進階選項、4. 參考底圖 與 下載按鈕 (佔 3/12 寬度) -->
-        <div class="lg:col-span-3 space-y-4 order-3 lg:order-3">
-            
-            <!-- 3. 進階選項 -->
-            <div class="controls-card">
-                <h2 class="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-3 flex items-center">
-                    <span id="txt-sec-advanced">3. 進階選項 (僅切割路徑)</span>
-                </h2>
-                
-                <div class="space-y-4">
-                    <!-- 厚度與分層設定區塊 -->
-                    <div class="border-b border-gray-700/50 pb-3">
-                        <div class="flex items-center gap-2 mb-2">
-                            <input type="checkbox" id="thickEnable" class="w-4 h-4 rounded text-emerald-500 bg-gray-700 border-gray-600 focus:ring-emerald-500 accent-emerald-500">
-                            <label for="thickEnable" class="label-text cursor-pointer" id="txt-label-thick-enable">深度調整</label>
-                        </div>
-                        <div id="thickControls" class="space-y-2.5 hidden pl-6">
-                            <div>
-                                <label class="label-text block mb-1" id="txt-label-orig-thick">原加工總深度 (自動偵測 mm)</label>
-                                <input type="number" id="origThickInput" value="0" class="w-full bg-slate-800 border-slate-700 text-slate-400 cursor-not-allowed" readonly disabled>
-                            </div>
-                            <div>
-                                <label class="label-text block mb-1" id="txt-label-target-thick">目標加工總深度 (mm)</label>
-                                <input type="number" id="targetThickInput" value="18" min="0.1" step="0.1" class="w-full">
-                            </div>
-                            <div>
-                                <label class="label-text block mb-1" id="txt-label-target-layers">切削層數 (Layers)</label>
-                                <input type="number" id="targetLayersInput" value="12" min="1" step="1" class="w-full">
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 走速 F 調整區塊 -->
-                    <div class="border-b border-gray-700/50 pb-3">
-                        <div class="flex items-center gap-2 mb-2">
-                            <input type="checkbox" id="feedrateEnable" class="w-4 h-4 rounded text-emerald-500 bg-gray-700 border-gray-600 focus:ring-emerald-500 accent-emerald-500">
-                            <label for="feedrateEnable" class="label-text cursor-pointer" id="txt-label-feedrate-enable">走速調整(F)</label>
-                        </div>
-                        <div id="feedrateControls" class="space-y-2.5 hidden pl-6">
-                            <div>
-                                <label class="label-text block mb-1" id="txt-label-target-feedrate">XY 走速(mm/min)</label>
-                                <input type="number" id="targetFeedrateInput" value="1200" min="1" step="50" class="w-full">
-                            </div>
-                            <div>
-                                <label class="label-text block mb-1" id="txt-label-target-zfeedrate">Z 軸下刀速(mm/min)</label>
-                                <input type="number" id="targetZFeedrateInput" value="400" min="1" step="50" class="w-full">
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 抬刀高度調整區塊 -->
-                    <div class="border-b border-gray-700/50 pb-3">
-                        <div class="flex items-center gap-2 mb-2">
-                            <input type="checkbox" id="retractEnable" class="w-4 h-4 rounded text-emerald-500 bg-gray-700 border-gray-600 focus:ring-emerald-500 accent-emerald-500">
-                            <label for="retractEnable" class="label-text cursor-pointer" id="txt-label-retract-enable">抬刀高度調整 (Z > 0)</label>
-                        </div>
-                        <div id="retractControls" class="space-y-2.5 hidden pl-6">
-                            <div>
-                                <label class="label-text block mb-1" id="txt-label-target-retract">新抬刀高度 (0.1~5 mm)</label>
-                                <input type="number" id="retractHeightInput" value="3.0" min="0.1" max="5.0" step="0.1" class="w-full">
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 刀具直徑補償 (變換刀具) 調整區塊 -->
-                    <div class="border-b border-gray-700/50 pb-3">
-                        <div class="flex items-center gap-2 mb-2">
-                            <input type="checkbox" id="toolChangeEnable" class="w-4 h-4 rounded text-emerald-500 bg-gray-700 border-gray-600 focus:ring-emerald-500 accent-emerald-500">
-                            <label for="toolChangeEnable" class="label-text cursor-pointer" id="txt-label-toolchange-enable">變換刀具(不建議)</label>
-                        </div>
-                        <div id="toolChangeControls" class="space-y-2.5 pl-6 hidden">
-                            <div class="grid grid-cols-2 gap-2">
-                                <div>
-                                    <label class="label-text block mb-1" id="txt-label-orig-tooldia">原刀具直徑 (mm)</label>
-                                    <input type="number" id="origToolDiaInput" value="6.35" min="0.1" step="0.1" class="w-full">
-                                </div>
-                                <div>
-                                    <label class="label-text block mb-1" id="txt-label-new-tooldia">新刀具直徑 (mm)</label>
-                                    <input type="number" id="newToolDiaInput" value="3.175" min="0.1" step="0.1" class="w-full">
-                                </div>
-                            </div>
-                            <!-- 顯示加工結果 (預設為不勾選) -->
-                            <div class="flex items-center gap-2 pt-1.5">
-                                <input type="checkbox" id="showWorkpiece" class="w-4 h-4 rounded text-emerald-500 bg-gray-700 border-gray-600 focus:ring-emerald-500 accent-emerald-500">
-                                <label for="showWorkpiece" class="text-[11px] text-gray-300 font-semibold cursor-pointer select-none" id="txt-label-showwp">顯示加工結果</label>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 橋位 TAB 調整區塊 -->
-                    <div>
-                        <div class="flex items-center gap-2 mb-2">
-                            <input type="checkbox" id="tabEnable" class="w-4 h-4 rounded text-emerald-500 bg-gray-700 border-gray-600 focus:ring-emerald-500 accent-emerald-500">
-                            <label for="tabEnable" class="label-text cursor-pointer" id="txt-label-tab-enable">自動橋位</label>
-                        </div>
-                        <div id="tabControls" class="space-y-2.5 hidden pl-6">
-                            <div>
-                                <label class="label-text block mb-1" id="txt-label-tooldia">刀具直徑 (mm)</label>
-                                <input type="number" id="toolDiaInput" value="3.175" min="0.1" step="0.1" class="w-full">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 4. 參考底圖 -->
-            <div class="controls-card">
-                <h2 class="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-2 flex items-center">
-                    <span id="txt-sec-refimg">4. 參考底圖 (選填)</span>
-                </h2>
-                <div class="space-y-3">
-                    <button onclick="document.getElementById('imageInput').click()" class="btn-secondary w-full font-bold py-2 px-4 rounded transition text-xs flex items-center justify-center shadow-inner">
-                        <svg class="w-4 h-4 mr-2 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                        <span id="txt-btn-upload-img">選擇參考圖片</span>
-                    </button>
-                    <input type="file" id="imageInput" accept="image/*" class="hidden" />
-                    
-                    <div id="imgControls" class="space-y-2 hidden">
-                        <div>
-                            <label class="label-text block mb-1" id="txt-label-imgwidth">圖片實際寬度 (mm)</label>
-                            <input type="number" id="imgWidthInput" value="100" min="1" step="10" class="w-full">
-                        </div>
-                        <div>
-                            <div class="flex justify-between items-center mb-1">
-                                <label class="label-text" id="txt-label-imgopacity">不透明度</label>
-                                <span id="opacityVal" class="text-xs text-emerald-400 font-mono">0.5</span>
-                            </div>
-                            <input type="range" id="imgOpacityInput" min="0.1" max="1.0" step="0.05" value="0.5" class="w-full accent-emerald-500">
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 加工預估 & 下載 -->
-            <div class="info-card rounded-lg p-4 shadow-xl space-y-3 border-t-4 border-emerald-500">
-                <div class="flex justify-between items-end">
-                    <div>
-                        <p class="text-[9px] text-emerald-500 font-bold uppercase tracking-wider" id="txt-info-time">預估時間</p>
-                        <p class="text-sm font-mono font-bold text-emerald-400" id="timeEst">0 min 0 sec</p>
-                    </div>
-                    <div class="text-right">
-                        <p class="text-[9px] text-emerald-500 font-bold uppercase tracking-wider" id="txt-info-dist">路徑長度</p>
-                        <p class="text-sm font-mono font-bold" id="distContainer"><span id="distEst">0</span> <span class="text-[10px] text-gray-500">mm</span></p>
-                    </div>
-                </div>
-                <button id="downloadBtn" class="w-full bg-emerald-500 text-gray-900 py-3 rounded-lg font-black text-xs uppercase hover:bg-emerald-400 transition shadow-lg disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed" disabled>
-                    下載修改後的 G-code
+            <div class="flex gap-3 items-center">
+                <!-- 返回上一頁按鈕 -->
+                <button onclick="if(window.history.length > 1) { window.history.back(); } else { window.location.href='index.html'; }" class="flex items-center justify-center text-slate-300 hover:text-orange-400 transition-colors font-bold bg-white/10 hover:bg-white/20 p-1.5 rounded-lg border border-white/20 cursor-pointer" title="返回上一頁 / Go Back">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <line x1="20" y1="12" x2="4" y2="12"></line>
+                        <polyline points="10 18 4 12 10 6"></polyline>
+                    </svg>
                 </button>
+                <!-- 明暗主題切換 -->
+                <button onclick="toggleTheme()" class="p-1.5 rounded-lg text-[11px] font-bold bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-all flex items-center justify-center" aria-label="Toggle Theme">
+                    <svg id="theme-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    </svg>
+                </button>
+                <!-- 語系切換 -->
+                <button id="langBtn" onclick="toggleLanguage()" class="px-3 py-1.5 rounded-lg text-[11px] font-bold bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-all flex items-center gap-2">
+                    EN
+                </button>
+                <!-- 工藝參數建議 -->
+                <a href="params.html" class="flex items-center justify-center text-slate-300 hover:text-emerald-400 transition-colors bg-white/10 hover:bg-white/20 p-1.5 rounded-lg border border-white/20 cursor-pointer" title="工藝參數建議 / Parameters Guide">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+                        <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+                    </svg>
+                </a>
             </div>
         </div>
-        
+
+        <div class="container mx-auto px-4 max-w-7xl">
+            <!-- 主網格：行動端單欄，桌機端拆分為 3 - 6 - 3 三欄 -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+                
+                <!-- 【左側控制面板】：檔案上傳 與 參數調整 -->
+                <div class="lg:col-span-3 space-y-4 order-2 lg:order-1">
+                    
+                    <!-- 1. 檔案上傳 -->
+                    <div class="controls-card">
+                        <h2 class="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-2 flex items-center">
+                            <span id="txt-sec-upload">1. 檔案上傳</span>
+                        </h2>
+                        <div class="flex flex-col gap-2">
+                            <button onclick="document.getElementById('fileInput').click()" class="btn-secondary w-full font-bold py-2 px-4 rounded transition text-sm flex items-center justify-center shadow-inner">
+                                <svg class="w-4 h-4 mr-2 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                                <span id="txt-btn-upload">選擇 G-code 檔案</span>
+                            </button>
+                            <input type="file" id="fileInput" accept=".gcode,.nc,.txt" class="hidden" />
+                            
+                            <!-- 檔案載入成功提示 -->
+                            <div id="fileInfo" class="p-2 alert-success rounded text-[10px] font-bold hidden truncate">
+                                <span id="txt-file-name">檔名</span>: <span id="fileNameDisplay" class="opacity-90">-</span>
+                            </div>
+
+                            <!-- G20 英制轉公制提示區 -->
+                            <div id="metricAlert" class="p-2 rounded text-[10px] font-bold hidden flex items-center gap-2" style="background-color: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.3); color: #f59e0b;">
+                                <svg class="w-4 h-4 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                <span id="txt-metric-alert">Gcode已轉換為公制(G21)</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2. 參數調整 -->
+                    <div class="controls-card">
+                        <h2 class="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-3 flex items-center">
+                            <span id="txt-sec-params">2. 參數調整 (不影響 Z/F)</span>
+                        </h2>
+                        <div class="space-y-3">
+                            <div class="grid grid-cols-2 gap-2">
+                                <div class="col-span-2">
+                                    <label class="label-text block mb-1" id="txt-label-scale">縮放比例 (僅限 XY)</label>
+                                    <input type="number" id="scaleInput" value="1" step="0.1" class="w-full">
+                                </div>
+                                <div>
+                                    <label class="label-text block mb-1" id="txt-label-ox">X 偏移</label>
+                                    <input type="number" id="offsetX" value="0" step="1" class="w-full">
+                                </div>
+                                <div>
+                                    <label class="label-text block mb-1" id="txt-label-oy">Y 偏移</label>
+                                    <input type="number" id="offsetY" value="0" step="1" class="w-full">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="label-text block mb-1" id="txt-label-rot">旋轉角度 (Z軸中心)</label>
+                                <input type="number" id="rotationInput" value="0" step="1" class="w-full">
+                            </div>
+                            <div>
+                                <label class="label-text block mb-1" id="txt-label-res">解析度 (最小 XY 位移 mm)</label>
+                                <input type="number" id="resInput" value="0.1" min="0.1" step="0.1" class="w-full">
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-2 pt-1">
+                                <button id="centerBtn" class="btn-secondary font-bold py-2 rounded transition text-xs">自動置中</button>
+                                <button id="applyBtn" class="btn-green font-bold py-2 rounded shadow-sm text-xs">更新預覽</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 【中央 3D 預覽面板】 -->
+                <div class="lg:col-span-6 order-1 lg:order-2">
+                    <div id="preview-container" class="shadow-2xl ring-1 ring-gray-700 select-none">
+                        <div class="absolute top-3 right-3 z-10">
+                            <div class="bg-black/80 backdrop-blur-md text-emerald-400 px-3 py-1 rounded-full text-[9px] font-black border border-emerald-500/30 shadow-md" id="txt-preview-hint">
+                                3D REALTIME VIEW
+                            </div>
+                        </div>
+                        
+                        <div class="absolute top-3 left-3 z-10 text-gray-300 text-[10px] space-y-1 bg-black/75 p-2.5 rounded-lg backdrop-blur-sm border border-white/10 shadow-lg max-w-[190px]">
+                            <p class="flex items-center">
+                                <span class="w-3 h-3 bg-emerald-500 rounded-sm mr-2 flex-shrink-0"></span>
+                                <span id="txt-legend-path">加工路徑</span>
+                            </p>
+                            <p class="flex items-center">
+                                <span class="w-3 h-3 bg-orange-500/30 rounded-sm mr-2 flex-shrink-0 border border-orange-500/50"></span>
+                                <span id="txt-legend-sweep">刀具經過範圍</span>
+                            </p>
+                            <p class="flex items-center">
+                                <span class="w-3 h-3 bg-none border-2 border-dashed border-gray-400 rounded-sm mr-2 flex-shrink-0"></span>
+                                <span id="txt-legend-result">理論加工結果</span>
+                            </p>
+                            <p class="flex items-center">
+                                <span class="w-3 h-3 bg-amber-500 rounded-sm mr-2 flex-shrink-0"></span>
+                                <span id="txt-legend-tab">加工橋位</span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 【右側控制面板】：進階選項、參考底圖 與 下載按鈕 -->
+                <div class="lg:col-span-3 space-y-4 order-3 lg:order-3">
+                    
+                    <!-- 3. 進階選項 -->
+                    <div class="controls-card">
+                        <h2 class="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-3 flex items-center">
+                            <span id="txt-sec-advanced">3. 進階選項 (僅切割路徑)</span>
+                        </h2>
+                        
+                        <div class="space-y-4">
+                            <!-- 厚度與分層設定區塊 -->
+                            <div class="border-b border-gray-700/50 pb-3">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <input type="checkbox" id="thickEnable" class="w-4 h-4 rounded text-emerald-500 bg-gray-700 border-gray-600 focus:ring-emerald-500 accent-emerald-500">
+                                    <label for="thickEnable" class="label-text cursor-pointer" id="txt-label-thick-enable">深度調整</label>
+                                </div>
+                                <div id="thickControls" class="space-y-2.5 hidden pl-6">
+                                    <div>
+                                        <label class="label-text block mb-1" id="txt-label-orig-thick">原加工總深度 (自動偵測 mm)</label>
+                                        <input type="number" id="origThickInput" value="0" class="w-full bg-slate-800 border-slate-700 text-slate-400 cursor-not-allowed" readonly disabled>
+                                    </div>
+                                    <div>
+                                        <label class="label-text block mb-1" id="txt-label-target-thick">目標加工總深度 (mm)</label>
+                                        <input type="number" id="targetThickInput" value="18" min="0.1" step="0.1" class="w-full">
+                                    </div>
+                                    <div>
+                                        <label class="label-text block mb-1" id="txt-label-target-layers">切削層數 (Layers)</label>
+                                        <input type="number" id="targetLayersInput" value="12" min="1" step="1" class="w-full">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 走速 F 調整區塊 -->
+                            <div class="border-b border-gray-700/50 pb-3">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <input type="checkbox" id="feedrateEnable" class="w-4 h-4 rounded text-emerald-500 bg-gray-700 border-gray-600 focus:ring-emerald-500 accent-emerald-500">
+                                    <label for="feedrateEnable" class="label-text cursor-pointer" id="txt-label-feedrate-enable">走速調整(F)</label>
+                                </div>
+                                <div id="feedrateControls" class="space-y-2.5 hidden pl-6">
+                                    <div>
+                                        <label class="label-text block mb-1" id="txt-label-target-feedrate">XY 走速(mm/min)</label>
+                                        <input type="number" id="targetFeedrateInput" value="1200" min="1" step="50" class="w-full">
+                                    </div>
+                                    <div>
+                                        <label class="label-text block mb-1" id="txt-label-target-zfeedrate">Z 軸下刀速(mm/min)</label>
+                                        <input type="number" id="targetZFeedrateInput" value="400" min="1" step="50" class="w-full">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 抬刀高度調整區塊 -->
+                            <div class="border-b border-gray-700/50 pb-3">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <input type="checkbox" id="retractEnable" class="w-4 h-4 rounded text-emerald-500 bg-gray-700 border-gray-600 focus:ring-emerald-500 accent-emerald-500">
+                                    <label for="retractEnable" class="label-text cursor-pointer" id="txt-label-retract-enable">抬刀高度調整 (Z > 0)</label>
+                                </div>
+                                <div id="retractControls" class="space-y-2.5 hidden pl-6">
+                                    <div>
+                                        <label class="label-text block mb-1" id="txt-label-target-retract">新抬刀高度 (0.1~5 mm)</label>
+                                        <input type="number" id="retractHeightInput" value="3.0" min="0.1" max="5.0" step="0.1" class="w-full">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 刀具直徑補償 調整區塊 -->
+                            <div class="border-b border-gray-700/50 pb-3">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <input type="checkbox" id="toolChangeEnable" class="w-4 h-4 rounded text-emerald-500 bg-gray-700 border-gray-600 focus:ring-emerald-500 accent-emerald-500">
+                                    <label for="toolChangeEnable" class="label-text cursor-pointer" id="txt-label-toolchange-enable">變換刀具(不建議)</label>
+                                </div>
+                                <div id="toolChangeControls" class="space-y-2.5 pl-6 hidden">
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <div>
+                                            <label class="label-text block mb-1" id="txt-label-orig-tooldia">原刀具直徑 (mm)</label>
+                                            <input type="number" id="origToolDiaInput" value="6.35" min="0.1" step="0.1" class="w-full">
+                                        </div>
+                                        <div>
+                                            <label class="label-text block mb-1" id="txt-label-new-tooldia">新刀具直徑 (mm)</label>
+                                            <input type="number" id="newToolDiaInput" value="3.175" min="0.1" step="0.1" class="w-full">
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-2 pt-1.5">
+                                        <input type="checkbox" id="showWorkpiece" class="w-4 h-4 rounded text-emerald-500 bg-gray-700 border-gray-600 focus:ring-emerald-500 accent-emerald-500">
+                                        <label for="showWorkpiece" class="text-[11px] text-gray-300 font-semibold cursor-pointer select-none" id="txt-label-showwp">顯示加工結果</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 橋位 TAB 調整區塊 -->
+                            <div>
+                                <div class="flex items-center gap-2 mb-2">
+                                    <input type="checkbox" id="tabEnable" class="w-4 h-4 rounded text-emerald-500 bg-gray-700 border-gray-600 focus:ring-emerald-500 accent-emerald-500">
+                                    <label for="tabEnable" class="label-text cursor-pointer" id="txt-label-tab-enable">自動橋位</label>
+                                </div>
+                                <div id="tabControls" class="space-y-2.5 hidden pl-6">
+                                    <div>
+                                        <label class="label-text block mb-1" id="txt-label-tooldia">刀具直徑 (mm)</label>
+                                        <input type="number" id="toolDiaInput" value="3.175" min="0.1" step="0.1" class="w-full">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 4. 參考底圖 -->
+                    <div class="controls-card">
+                        <h2 class="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-2 flex items-center">
+                            <span id="txt-sec-refimg">4. 參考底圖 (選填)</span>
+                        </h2>
+                        <div class="space-y-3">
+                            <button onclick="document.getElementById('imageInput').click()" class="btn-secondary w-full font-bold py-2 px-4 rounded transition text-xs flex items-center justify-center shadow-inner">
+                                <svg class="w-4 h-4 mr-2 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                <span id="txt-btn-upload-img">選擇參考圖片</span>
+                            </button>
+                            <input type="file" id="imageInput" accept="image/*" class="hidden" />
+                            
+                            <div id="imgControls" class="space-y-2 hidden">
+                                <div>
+                                    <label class="label-text block mb-1" id="txt-label-imgwidth">圖片實際寬度 (mm)</label>
+                                    <input type="number" id="imgWidthInput" value="100" min="1" step="10" class="w-full">
+                                </div>
+                                <div>
+                                    <div class="flex justify-between items-center mb-1">
+                                        <label class="label-text" id="txt-label-imgopacity">不透明度</label>
+                                        <span id="opacityVal" class="text-xs text-emerald-400 font-mono">0.5</span>
+                                    </div>
+                                    <input type="range" id="imgOpacityInput" min="0.1" max="1.0" step="0.05" value="0.5" class="w-full accent-emerald-500">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 加工預估 & 下載 -->
+                    <div class="info-card rounded-lg p-4 shadow-xl space-y-3 border-t-4 border-emerald-500">
+                        <div class="flex justify-between items-end">
+                            <div>
+                                <p class="text-[9px] text-emerald-500 font-bold uppercase tracking-wider" id="txt-info-time">預估時間</p>
+                                <p class="text-sm font-mono font-bold text-emerald-400" id="timeEst">0 min 0 sec</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-[9px] text-emerald-500 font-bold uppercase tracking-wider" id="txt-info-dist">路徑長度</p>
+                                <p class="text-sm font-mono font-bold" id="distContainer"><span id="distEst">0</span> <span class="text-[10px] text-gray-500">mm</span></p>
+                            </div>
+                        </div>
+                        <button id="downloadBtn" class="w-full bg-emerald-500 text-gray-900 py-3 rounded-lg font-black text-xs uppercase hover:bg-emerald-400 transition shadow-lg disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed" disabled>
+                            下載修改後的 G-code
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-</div>
 
 <script>
-    // --- 多國語言配置 ---
     const i18n = {
         zh: {
             headerTitle: "Gcode 即時調整",
@@ -549,11 +543,15 @@
     let originalGcode = "";
     let originalFileName = "output";
 
-    // 參考圖片 Three.js 物件
+    // 格線動態尺寸與位置設定 (固定每格 50mm)
+    let currentGridSize = 200;
+    let currentGridDivisions = 4; // 200mm / 50mm = 4 格
+    let currentGridCenterX = 0;
+    let currentGridCenterY = 0;
+
     let refMesh = null;
     let refAspect = 1.0;
 
-    // --- 語言切換核心 ---
     function toggleLanguage() {
         currentLang = currentLang === 'zh' ? 'en' : 'zh';
         localStorage.setItem('gordix-lang', currentLang);
@@ -575,38 +573,31 @@
         document.getElementById('txt-label-res').innerText = lang.labelRes;
         document.getElementById('txt-label-showwp').innerText = lang.labelShowWp;
         
-        // 進階選項警示與分層
         document.getElementById('txt-sec-advanced').innerText = lang.secAdvanced;
         document.getElementById('txt-label-thick-enable').innerText = lang.thickEnable;
         document.getElementById('txt-label-orig-thick').innerText = lang.labelOrigThickness;
         document.getElementById('txt-label-target-thick').innerText = lang.labelTargetThickness;
         document.getElementById('txt-label-target-layers').innerText = lang.labelTargetLayers;
 
-        // 走速與 Z 軸走速
         document.getElementById('txt-label-feedrate-enable').innerText = lang.feedrateEnable;
         document.getElementById('txt-label-target-feedrate').innerText = lang.labelTargetFeedrate;
         document.getElementById('txt-label-target-zfeedrate').innerText = lang.labelTargetZFeedrate;
 
-        // 抬刀高度調整
         document.getElementById('txt-label-retract-enable').innerText = lang.retractEnable;
         document.getElementById('txt-label-target-retract').innerText = lang.labelTargetRetract;
 
-        // 刀具補償
         document.getElementById('txt-label-toolchange-enable').innerText = lang.toolChangeEnable;
         document.getElementById('txt-label-orig-tooldia').innerText = lang.labelOrigToolDia;
         document.getElementById('txt-label-new-tooldia').innerText = lang.labelNewToolDia;
 
-        // TAB 橋位設定
         document.getElementById('txt-label-tab-enable').innerText = lang.tabEnable;
         document.getElementById('txt-label-tooldia').innerText = lang.labelToolDia;
         
-        // 參考底圖
         document.getElementById('txt-sec-refimg').innerText = lang.secRefImg;
         document.getElementById('txt-btn-upload-img').innerText = lang.btnUploadImg;
         document.getElementById('txt-label-imgwidth').innerText = lang.labelImgWidth;
         document.getElementById('txt-label-imgopacity').innerText = lang.labelImgOpacity;
         
-        // 按鈕與資訊
         document.getElementById('centerBtn').innerText = lang.btnCenter;
         document.getElementById('applyBtn').innerText = lang.btnUpdate;
         document.getElementById('txt-info-time').innerText = lang.infoTime;
@@ -614,7 +605,6 @@
         document.getElementById('downloadBtn').innerText = lang.btnDownload;
         document.getElementById('txt-metric-alert').innerText = lang.metricAlert;
 
-        // 圖例文字更新
         document.getElementById('txt-legend-path').innerText = lang.legendPath;
         document.getElementById('txt-legend-result').innerText = lang.legendResult;
         document.getElementById('txt-legend-tab').innerText = lang.legendTab;
@@ -632,7 +622,6 @@
         document.getElementById('distEst').innerText = dist.toFixed(2);
     }
 
-    // --- 主題切換邏輯 ---
     function toggleTheme() {
         const isDark = document.documentElement.classList.contains('dark');
         const nextTheme = isDark ? 'light' : 'dark';
@@ -660,52 +649,23 @@
     }
 
     function updateThreeGrid() {
-        if (!scene || !grid) return;
-        scene.remove(grid);
+        if (!scene) return;
+        if (grid) scene.remove(grid);
         const isLight = !document.documentElement.classList.contains('dark');
         
         const gridColor = isLight ? 0xcccccc : 0x222222;
         const centerColor = isLight ? 0x059669 : 0x10b981;
         
-        grid = new THREE.GridHelper(2000, 40, centerColor, gridColor);
+        grid = new THREE.GridHelper(currentGridSize, currentGridDivisions, centerColor, gridColor);
         grid.rotation.x = Math.PI / 2;
+        grid.position.set(currentGridCenterX, currentGridCenterY, 0);
         scene.add(grid);
-    }
-
-    // --- 尋找標準幾何圓弧圓心 ---
-    function findArcCenter(p1, p2, I, J, R, isCW) {
-        if (I !== null && J !== null) {
-            return { x: p1.x + I, y: p1.y + J };
-        }
-        if (R !== null) {
-            const dx = p2.x - p1.x;
-            const dy = p2.y - p1.y;
-            const d = Math.sqrt(dx * dx + dy * dy);
-            if (d === 0) return { x: p1.x, y: p1.y };
-            
-            let r = Math.abs(R);
-            if (r < d / 2) {
-                r = d / 2 + 0.0001;
-            }
-            const h = Math.sqrt(r * r - (d / 2) * (d / 2));
-            const mx = (p1.x + p2.x) / 2;
-            const my = (p1.y + p2.y) / 2;
-            const nx = -dy / d;
-            const ny = dx / d;
-
-            let factor = (isCW ? 1 : -1) * (R < 0 ? -1 : 1);
-            return {
-                x: mx + factor * h * nx,
-                y: my + factor * h * ny
-            };
-        }
-        return null;
     }
 
     function initThree() {
         const container = document.getElementById('preview-container');
         scene = new THREE.Scene();
-        cameraTarget = new THREE.Vector3(0, 0, 0); // 初始化相機焦點
+        cameraTarget = new THREE.Vector3(0, 0, 0);
         camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 10000);
         
         renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -718,9 +678,7 @@
         light.position.set(200, 500, 300);
         scene.add(light);
 
-        grid = new THREE.GridHelper(2000, 40, 0x10b981, 0x222222);
-        grid.rotation.x = Math.PI / 2;
-        scene.add(grid);
+        updateThreeGrid();
 
         camera.position.set(200, -200, 200);
         camera.up.set(0, 0, 1);
@@ -729,13 +687,12 @@
         let isDragging = false;
         let previousMouse = { x: 0, y: 0 };
 
-        // 核心交互平移旋轉邏輯
         const handleMove = (x, y, buttons) => {
             if (!isDragging) return;
             const deltaX = x - previousMouse.x;
             const deltaY = y - previousMouse.y;
             
-            if (buttons === 1) { // 1. 旋轉 (繞著 cameraTarget)
+            if (buttons === 1) {
                 const offset = new THREE.Vector3().subVectors(camera.position, cameraTarget);
                 const radius = offset.length();
                 let phi = Math.atan2(offset.y, offset.x) - deltaX * 0.005;
@@ -745,7 +702,7 @@
                 camera.position.x = cameraTarget.x + radius * Math.sin(theta) * Math.cos(phi);
                 camera.position.y = cameraTarget.y + radius * Math.sin(theta) * Math.sin(phi);
                 camera.position.z = cameraTarget.z + radius * Math.cos(theta);
-            } else if (buttons === 2) { // 2. 右鍵平移 (基於當前相機姿態)
+            } else if (buttons === 2) {
                 const factor = 0.0015 * camera.position.distanceTo(cameraTarget);
                 const localRight = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
                 const localUp = new THREE.Vector3(0, 1, 0).applyQuaternion(camera.quaternion);
@@ -761,7 +718,6 @@
             previousMouse = { x, y };
         };
 
-        // --- 電腦滑鼠監聽 ---
         container.addEventListener('mousedown', e => { 
             isDragging = true; 
             previousMouse = { x: e.clientX, y: e.clientY }; 
@@ -779,7 +735,6 @@
         });
         container.oncontextmenu = e => { e.preventDefault(); };
 
-        // --- 手機/行動觸控端監聽 ---
         let initialPinchDist = 0;
         let initialCamRadius = 0;
 
@@ -841,7 +796,7 @@
             }
         }, { passive: true });
 
-        container.addEventListener('touchend', e => {
+        container.addEventListener('touchend', () => {
             isDragging = false;
             initialPinchDist = 0;
         });
@@ -851,7 +806,6 @@
 
     function animate() { requestAnimationFrame(animate); renderer.render(scene, camera); }
 
-    // --- 英制(G20) 轉換為 公制(G21) 處理函數 ---
     function convertInchToMetric(text) {
         const lines = text.split('\n');
         let isInchMode = false;
@@ -948,7 +902,35 @@
         return { firstMachiningIdx, lastMachiningIdx };
     }
 
-    // 三維圓弧分割生成點
+    function findArcCenter(p1, p2, I, J, R, isCW) {
+        if (I !== null && J !== null) {
+            return { x: p1.x + I, y: p1.y + J };
+        }
+        if (R !== null) {
+            const dx = p2.x - p1.x;
+            const dy = p2.y - p1.y;
+            const d = Math.sqrt(dx * dx + dy * dy);
+            if (d === 0) return { x: p1.x, y: p1.y };
+            
+            let r = Math.abs(R);
+            if (r < d / 2) {
+                r = d / 2 + 0.0001;
+            }
+            const h = Math.sqrt(r * r - (d / 2) * (d / 2));
+            const mx = (p1.x + p2.x) / 2;
+            const my = (p1.y + p2.y) / 2;
+            const nx = -dy / d;
+            const ny = dx / d;
+
+            let factor = (isCW ? 1 : -1) * (R < 0 ? -1 : 1);
+            return {
+                x: mx + factor * h * nx,
+                y: my + factor * h * ny
+            };
+        }
+        return null;
+    }
+
     function generateArcPoints(p1, p2, I, J, R, isCW) {
         const points = [];
         let cx, cy, r;
@@ -997,7 +979,6 @@
         return points;
     }
 
-    // --- 取得當前設定的安全抬刀高度 ---
     function getRetractHeight() {
         const retractEnable = document.getElementById('retractEnable') && document.getElementById('retractEnable').checked;
         if (retractEnable) {
@@ -1008,7 +989,6 @@
         return 3.0;
     }
 
-    // 模態記憶與起終點保護 Gcode 解析器
     function parseGcode(text) {
         const bounds = findMachiningBounds(text);
         const firstMachiningIdx = bounds.firstMachiningIdx;
@@ -1069,7 +1049,8 @@
                     J: words['J'] !== undefined ? words['J'] : null,
                     R: words['R'] !== undefined ? words['R'] : null,
                     isStartOrEndHome: isStartOrEndHome,
-                    lineIdx: index
+                    lineIdx: index,
+                    hasZ: words['Z'] !== undefined
                 });
 
                 currentPos.x = newX;
@@ -1082,7 +1063,6 @@
         return pathData;
     }
 
-    // --- 偵測原始加工最大深度 (Z軸最小值絕對值) ---
     function detectOriginalDepth(path) {
         let minZ = 0;
         path.forEach(seg => {
@@ -1094,7 +1074,6 @@
         return Math.abs(minZ);
     }
 
-    // --- 偵測第一個切削動作的走速 F ---
     function detectFirstFeedrate(path) {
         for (let seg of path) {
             if (seg.type !== 'G0' && !seg.isStartOrEndHome) {
@@ -1109,7 +1088,6 @@
         return 1200;
     }
 
-    // --- 偵測第一個垂直下刀切削動作的走速 F (Z 軸獨立走速) ---
     function detectFirstZFeedrate(path) {
         for (let seg of path) {
             if (seg.type === 'G1' && !seg.isStartOrEndHome) {
@@ -1125,7 +1103,6 @@
         return 400;
     }
 
-    // --- 自動偵測原始 G-code 的單次下刀 Stepdown 深度 ---
     function detectOriginalStepdown(path) {
         const zs = [];
         path.forEach(seg => {
@@ -1142,7 +1119,6 @@
         return 1.5;
     }
 
-    // --- 幾何多邊形面積與嵌套判定 ---
     function getPolygonSignedArea(poly) {
         let area = 0;
         const n = poly.length;
@@ -1166,7 +1142,6 @@
         return inside;
     }
 
-    // --- 核心幾何運算：點對直線投影器 (Point-to-Line Projection) ---
     function getPointLineProjection(pt, p1, p2) {
         const dx = p2.x - p1.x;
         const dy = p2.y - p1.y;
@@ -1179,7 +1154,6 @@
         };
     }
 
-    // --- 核心：高精度二維幾何求交點 (Analytical Edge-Intersection Solver) ---
     function getLineLineIntersection(L1_p1, L1_p2, L2_p1, L2_p2, P) {
         const A1 = L1_p2.y - L1_p1.y;
         const B1 = L1_p1.x - L1_p2.x;
@@ -1272,7 +1246,7 @@
             const vx = P.x - O2.x;
             const vy = P.y - O2.y;
             const len2 = Math.sqrt(vx*vx + vy*vy);
-            const p2 = len2 > 1e-5 ? { x: O2.x + (vx / len2) * R2, y: O2.x + (vx / len2) * R2 } : { x: O2.x + R2, y: O2.y };
+            const p2 = len2 > 1e-5 ? { x: O2.x + (vx / len2) * R2, y: O2.y + (vx / len2) * R2 } : { x: O2.x + R2, y: O2.y };
             
             return { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
         }
@@ -1322,7 +1296,6 @@
         return { x: P.x, y: P.y };
     }
 
-    // --- 核心：單一鏈單次等距偏置函數 ---
     function applySingleOffsetChain(chain, loop, dist) {
         const n = chain.length;
         if (n === 0) return;
@@ -1491,7 +1464,6 @@
         }
     }
 
-    // --- 核心：Z 軸斜下刀傳播修正 ---
     function propagateOffsets(origPath, modifiedPath) {
         for (let i = 0; i < modifiedPath.length; i++) {
             const hasFromOffset = Math.abs(modifiedPath[i].from.x - origPath[i].from.x) > 1e-6 || 
@@ -1566,7 +1538,6 @@
         }
     }
 
-    // --- 核心：升級雙步驟刀徑偏置補償演算法 ---
     function applyTwoStepCutterCompensation(pathData) {
         const toolChangeEnable = document.getElementById('toolChangeEnable') && document.getElementById('toolChangeEnable').checked;
         
@@ -1579,7 +1550,8 @@
             J: s.J,
             R: s.R,
             isStartOrEndHome: s.isStartOrEndHome,
-            lineIdx: s.lineIdx
+            lineIdx: s.lineIdx,
+            hasZ: s.hasZ
         }));
 
         if (!toolChangeEnable) {
@@ -1711,7 +1683,6 @@
         return { workpiecePath, newToolPath };
     }
 
-    // --- 實作自訂層數與總厚度調整 ---
     function applyThicknessAdjustment(pathData) {
         const thickEnable = document.getElementById('thickEnable') && document.getElementById('thickEnable').checked;
         if (!thickEnable) return pathData;
@@ -1777,12 +1748,11 @@
                         }
                         newZs.push(-targetDepth);
 
-                        const contourRebuilt = [];
                         let prevZ = block.segments[0].from.z;
 
                         newZs.forEach((targetZ) => {
                             profile.forEach((origSeg, segIdx) => {
-                                const newSeg = { ...origSeg };
+                                const newSeg = { ...origSeg, hasZ: true };
                                 if (segIdx === 0) {
                                     newSeg.from = { ...origSeg.from, z: prevZ };
                                     newSeg.to = { ...origSeg.to, z: targetZ };
@@ -1790,237 +1760,168 @@
                                     newSeg.from = { ...origSeg.from, z: targetZ };
                                     newSeg.to = { ...origSeg.to, z: targetZ };
                                 }
-                                contourRebuilt.push(newSeg);
+                                rebuiltSegments.push(newSeg);
                             });
                             prevZ = targetZ;
                         });
 
                         const lastOrigSeg = block.segments[block.segments.length - 1];
                         if (lastOrigSeg && lastOrigSeg.to.z > -0.001) {
-                            const finalLift = { ...lastOrigSeg };
+                            const finalLift = { ...lastOrigSeg, hasZ: true };
                             finalLift.from = { ...lastOrigSeg.from, z: prevZ };
                             finalLift.to = { ...lastOrigSeg.to };
-                            contourRebuilt.push(finalLift);
+                            rebuiltSegments.push(finalLift);
                         }
-
-                        rebuiltSegments.push(...contourRebuilt);
-                        return;
+                    } else {
+                        rebuiltSegments.push(...block.segments);
                     }
+                } else {
+                    rebuiltSegments.push(...block.segments);
                 }
+            } else {
+                rebuiltSegments.push(...block.segments);
             }
-            rebuiltSegments.push(...block.segments);
         });
 
         return rebuiltSegments;
     }
 
-    // --- 實作切削走速 F 調整 ---
-    function applyFeedrateAdjustment(path) {
+    function applyFeedrateAdjustment(pathData) {
         const feedrateEnable = document.getElementById('feedrateEnable') && document.getElementById('feedrateEnable').checked;
-        if (!feedrateEnable) return path;
+        if (!feedrateEnable) return pathData;
 
         const targetFeedrate = parseFloat(document.getElementById('targetFeedrateInput').value) || 1200;
         const targetZFeedrate = parseFloat(document.getElementById('targetZFeedrateInput').value) || 400;
 
-        path.forEach(seg => {
-            if (seg.isStartOrEndHome || seg.type === 'G0') {
-                return;
-            }
+        return pathData.map(seg => {
+            if (seg.type === 'G0') return seg;
             const dx = seg.to.x - seg.from.x;
             const dy = seg.to.y - seg.from.y;
             const dXY = Math.sqrt(dx * dx + dy * dy);
             const dZ = Math.abs(seg.to.z - seg.from.z);
 
-            const isXYMove = dXY > 1e-4 && (seg.type === 'G1' || seg.type === 'G2' || seg.type === 'G3');
-            const isPureZMove = dXY < 1e-4 && dZ > 1e-4 && seg.type === 'G1';
-
-            if (isXYMove) {
-                seg.f = targetFeedrate;
-            } else if (isPureZMove) {
-                seg.f = targetZFeedrate;
+            let newF = seg.f;
+            if (dXY > 1e-4) {
+                newF = targetFeedrate;
+            } else if (dZ > 1e-4) {
+                newF = targetZFeedrate;
             }
+            return { ...seg, f: newF };
         });
-
-        return path;
     }
 
-    // --- 計算任意 2D 點到圓弧段的最短歐幾里得距離 ---
     function getDistanceToArc(pt, arcSeg) {
-        const p1 = arcSeg.from;
-        const p2 = arcSeg.to;
-        
-        const distSq = (ax, ay, bx, by) => (ax - bx)**2 + (ay - by)**2;
-        const distP1 = Math.sqrt(distSq(pt.x, pt.y, p1.x, p1.y));
-        const distP2 = Math.sqrt(distSq(pt.x, pt.y, p2.x, p2.y));
-        const d_endpoints = Math.min(distP1, distP2);
-        
-        let cx, cy, r;
-        const isCW = arcSeg.type === 'G2';
-        
-        if (arcSeg.R !== null && arcSeg.R !== undefined) {
-            const dx = p2.x - p1.x;
-            const dy = p2.y - p1.y;
-            const d = Math.sqrt(dx * dx + dy * dy);
-            if (d === 0) return d_endpoints;
-            r = Math.abs(arcSeg.R);
-            if (r < d / 2) return d_endpoints; 
-            const h = Math.sqrt(r * r - (d / 2) * (d / 2));
-            const mx = (p1.x + p2.x) / 2;
-            const my = (p1.y + p2.y) / 2;
-            const nx = -dy / d;
-            const ny = dx / d;
-
-            let factor = (isCW ? 1 : -1) * (arcSeg.R < 0 ? -1 : 1);
-            cx = mx + factor * h * nx;
-            cy = my + factor * h * ny;
-        } else {
-            cx = p1.x + (arcSeg.I || 0);
-            cy = p1.y + (arcSeg.J || 0);
-            r = Math.sqrt((p1.x - cx)**2 + (p1.y - cy)**2);
-        }
-        
-        if (r === 0) return d_endpoints;
-        
-        const pAngle = Math.atan2(pt.y - cy, pt.x - cx);
-        const startAngle = Math.atan2(p1.y - cy, p1.x - cx);
-        const endAngle = Math.atan2(p2.y - cy, p2.x - cx);
-        
-        const TWO_PI = 2 * Math.PI;
-        const norm = (a) => ((a % TWO_PI) + TWO_PI) % TWO_PI;
-        
-        let s = norm(startAngle);
-        let e = norm(endAngle);
-        let t = norm(pAngle);
-        
-        let inside = false;
-        if (Math.sqrt(distSq(p1.x, p1.y, p2.x, p2.y)) < 1e-4) {
-            inside = true;
-        } else if (!isCW) { 
-            if (s <= e) inside = (t >= s && t <= e);
-            else inside = (t >= s || t <= e);
-        } else { 
-            if (e <= s) inside = (t >= e && t <= s);
-            else inside = (t >= e || t <= s);
-        }
-        
-        if (inside) {
-            const distToCenter = Math.sqrt(distSq(pt.x, pt.y, cx, cy));
-            const d_arc = Math.abs(distToCenter - r);
-            return Math.min(d_endpoints, d_arc);
-        }
-        
-        return d_endpoints;
+        if (!arcSeg) return Infinity;
+        const center = findArcCenter(arcSeg.from, arcSeg.to, arcSeg.I, arcSeg.J, arcSeg.R, arcSeg.type === 'G2');
+        if (!center) return Infinity;
+        const r = Math.sqrt((arcSeg.from.x - center.x)**2 + (arcSeg.from.y - center.y)**2);
+        const ptDistToCenter = Math.sqrt((pt.x - center.x)**2 + (pt.y - center.y)**2);
+        return Math.abs(ptDistToCenter - r);
     }
 
-    // --- 橋位 (TAB) 計算核心分割算法 ---
-    function splitSegmentWithTabs(seg, tabs, tabHeight, R, arcSegs) {
-        const tValues = [0, 1];
-        const p1 = seg.from;
-        const p2 = seg.to;
-        const dx = p2.x - p1.x;
-        const dy = p2.y - p1.y;
-        const lenSq = dx * dx + dy * dy;
-        const R_sq = R * R;
-        const activeTabIntervals = [];
+    function splitSegmentWithTabs(seg, tabs, stepdown, R, arcSegs) {
+        if (seg.type !== 'G1') return [seg];
 
-        if (lenSq > 1e-6) {
-            tabs.forEach(tab => {
-                const fx = p1.x - tab.x;
-                const fy = p1.y - tab.y;
+        const dx = seg.to.x - seg.from.x;
+        const dy = seg.to.y - seg.from.y;
+        const len = Math.sqrt(dx * dx + dy * dy);
+        if (len < 1e-4) return [seg];
 
-                const a = lenSq;
-                const b = 2 * (fx * dx + fy * dy);
-                const c = (fx * fx + fy * fy) - R_sq;
+        const ux = dx / len;
+        const uy = dy / len;
 
-                const disc = b * b - 4 * a * c;
-                if (disc > 0) {
-                    const sqrtDisc = Math.sqrt(disc);
-                    const t1 = (-b - sqrtDisc) / (2 * a);
-                    const t2 = (-b + sqrtDisc) / (2 * a);
-
-                    if (t1 > 0 && t1 < 1 && t2 > 0 && t2 < 1) {
-                        tValues.push(t1);
-                        tValues.push(t2);
-                        activeTabIntervals.push({ start: t1, end: t2 });
-                    }
+        const hitTabs = [];
+        tabs.forEach(tabPt => {
+            const projT = ((tabPt.x - seg.from.x) * ux + (tabPt.y - seg.from.y) * uy);
+            if (projT > R && projT < len - R) {
+                const projX = seg.from.x + projT * ux;
+                const projY = seg.from.y + projT * uy;
+                const distToLine = Math.sqrt((tabPt.x - projX)**2 + (tabPt.y - projY)**2);
+                if (distToLine < 1e-3) {
+                    hitTabs.push({
+                        startT: Math.max(0, projT - R),
+                        endT: Math.min(len, projT + R)
+                    });
                 }
-            });
-        }
-
-        tValues.sort((a, b) => a - b);
-        const filteredT = [];
-        tValues.forEach(t => {
-            if (filteredT.length === 0 || t - filteredT[filteredT.length - 1] > 1e-4) {
-                filteredT.push(t);
             }
         });
+
+        if (hitTabs.length === 0) return [seg];
+
+        hitTabs.sort((a, b) => a.startT - b.startT);
 
         const subSegs = [];
-        for (let i = 0; i < filteredT.length - 1; i++) {
-            const tStart = filteredT[i];
-            const tEnd = filteredT[i + 1];
-            const tMid = (tStart + tEnd) / 2;
+        let curT = 0;
+        const tabHeight = Math.min(1.5, stepdown * 0.8);
 
-            const fromPt = {
-                x: p1.x + tStart * dx,
-                y: p1.y + tStart * dy,
-                z: p1.z + tStart * (p2.z - p1.z)
-            };
-            const toPt = {
-                x: p1.x + tEnd * dx,
-                y: p1.y + tEnd * dy,
-                z: p1.z + tEnd * (p2.z - p1.z)
-            };
-
-            let inTab = false;
-            for (const interval of activeTabIntervals) {
-                if (tMid >= interval.start - 1e-4 && tMid <= interval.end + 1e-4) {
-                    inTab = true;
-                    break;
-                }
-            }
-
-            if (inTab) {
+        hitTabs.forEach(tab => {
+            if (tab.startT > curT + 1e-4) {
                 subSegs.push({
-                    from: { x: fromPt.x, y: fromPt.y, z: fromPt.z },
-                    to: { x: fromPt.x, y: fromPt.y, z: fromPt.z + tabHeight },
-                    f: seg.f,
-                    type: 'G1',
-                    isStartOrEndHome: false,
-                    isTab: true,
-                    lineIdx: seg.lineIdx
-                });
-
-                subSegs.push({
-                    from: { x: fromPt.x, y: fromPt.y, z: fromPt.z + tabHeight },
-                    to: { x: toPt.x, y: toPt.y, z: toPt.z + tabHeight },
-                    f: seg.f,
-                    type: 'G1',
-                    isStartOrEndHome: false,
-                    isTab: true,
-                    lineIdx: seg.lineIdx
-                });
-
-                subSegs.push({
-                    from: { x: toPt.x, y: toPt.y, z: toPt.z + tabHeight },
-                    to: { x: toPt.x, y: toPt.y, z: toPt.z },
-                    f: seg.f,
-                    type: 'G1',
-                    isStartOrEndHome: false,
-                    isTab: true,
-                    lineIdx: seg.lineIdx
-                });
-            } else {
-                subSegs.push({
-                    from: fromPt,
-                    to: toPt,
+                    from: { x: seg.from.x + curT * ux, y: seg.from.y + curT * uy, z: seg.from.z },
+                    to: { x: seg.from.x + tab.startT * ux, y: seg.from.y + tab.startT * uy, z: seg.to.z },
                     f: seg.f,
                     type: 'G1',
                     isStartOrEndHome: false,
                     isTab: false,
-                    lineIdx: seg.lineIdx
+                    lineIdx: seg.lineIdx,
+                    hasZ: seg.hasZ
                 });
             }
+
+            const tabFromX = seg.from.x + tab.startT * ux;
+            const tabFromY = seg.from.y + tab.startT * uy;
+            const tabToX = seg.from.x + tab.endT * ux;
+            const tabToY = seg.from.y + tab.endT * uy;
+            const baseZ = seg.to.z;
+            const bridgeZ = baseZ + tabHeight;
+
+            subSegs.push({
+                from: { x: tabFromX, y: tabFromY, z: baseZ },
+                to: { x: tabFromX, y: tabFromY, z: bridgeZ },
+                f: seg.f,
+                type: 'G1',
+                isStartOrEndHome: false,
+                isTab: true,
+                lineIdx: seg.lineIdx,
+                hasZ: true
+            });
+
+            subSegs.push({
+                from: { x: tabFromX, y: tabFromY, z: bridgeZ },
+                to: { x: tabToX, y: tabToY, z: bridgeZ },
+                f: seg.f,
+                type: 'G1',
+                isStartOrEndHome: false,
+                isTab: true,
+                lineIdx: seg.lineIdx,
+                hasZ: true
+            });
+
+            subSegs.push({
+                from: { x: tabToX, y: tabToY, z: bridgeZ },
+                to: { x: tabToX, y: tabToY, z: baseZ },
+                f: seg.f,
+                type: 'G1',
+                isStartOrEndHome: false,
+                isTab: true,
+                lineIdx: seg.lineIdx,
+                hasZ: true
+            });
+
+            curT = tab.endT;
+        });
+
+        if (curT < len - 1e-4) {
+            subSegs.push({
+                from: { x: seg.from.x + curT * ux, y: seg.from.y + curT * uy, z: seg.from.z },
+                to: { x: seg.to.x, y: seg.to.y, z: seg.to.z },
+                f: seg.f,
+                type: 'G1',
+                isStartOrEndHome: false,
+                isTab: false,
+                lineIdx: seg.lineIdx,
+                hasZ: seg.hasZ
+            });
         }
 
         return subSegs;
@@ -2208,8 +2109,17 @@
         return cleanResult;
     }
 
-    // --- 將處理後的 3D 線段編譯成 G-code 指令字串 ---
-    function compileSegmentsToGcode(segments) {
+    function compileSegmentsToGcode(segments, state) {
+        if (!state) {
+            state = {
+                lastX: null,
+                lastY: null,
+                lastZ: null,
+                activeFeedrate: null,
+                hasOutputXYFInCurrentCut: false
+            };
+        }
+
         const scale = parseFloat(document.getElementById('scaleInput').value) || 1;
         const offX = parseFloat(document.getElementById('offsetX').value) || 0;
         const offY = parseFloat(document.getElementById('offsetY').value) || 0;
@@ -2221,10 +2131,6 @@
         const targetZFeedrate = parseFloat(document.getElementById('targetZFeedrateInput').value) || 400;
 
         const gcodeLines = [];
-        let lastX = 0, lastY = 0, lastZ = null; 
-        let isFirstMove = true;
-        let activeFeedrate = null; 
-        let hasOutputXYFInCurrentCut = false; 
 
         segments.forEach((seg, idx) => {
             let fZ = seg.to.z;
@@ -2242,16 +2148,27 @@
                 fY = (seg.to.x * Math.sin(rotRad) + seg.to.y * Math.cos(rotRad)) * scale + offY;
             }
 
-            const dXY = Math.sqrt((fX - lastX)**2 + (fY - lastY)**2);
-            const zChanged = lastZ === null || Math.abs(fZ - lastZ) > 0.0001;
+            const dXY = state.lastX !== null ? Math.sqrt((fX - state.lastX)**2 + (fY - state.lastY)**2) : Infinity;
+            
+            let zChanged = false;
+            if (state.lastZ === null) {
+                if (seg.hasZ || Math.abs(fZ) > 1e-4) {
+                    zChanged = true;
+                }
+            } else {
+                if (Math.abs(fZ - state.lastZ) > 0.0001) {
+                    zChanged = true;
+                }
+            }
+
             const isLastMove = (idx === segments.length - 1);
 
-            if (!isFirstMove && seg.type === 'G1' && !seg.isTab && dXY < res && !zChanged && !isLastMove) {
+            if (state.lastX !== null && seg.type === 'G1' && !seg.isTab && dXY < res && !zChanged && !isLastMove) {
                 return; 
             }
 
             if (seg.type === 'G0') {
-                hasOutputXYFInCurrentCut = false;
+                state.hasOutputXYFInCurrentCut = false;
             }
 
             let fFromX = 0, fFromY = 0;
@@ -2259,10 +2176,10 @@
                 fFromX = 0; fFromY = 0;
             } else {
                 fFromX = (seg.from.x * Math.cos(rotRad) - seg.from.y * Math.sin(rotRad)) * scale + offX;
-                fFromY = (seg.from.x * Math.sin(rotRad) + seg.from.y * Math.cos(rotRad)) * scale + offY;
+                fFromY = (seg.from.y * Math.sin(rotRad) + seg.from.y * Math.cos(rotRad)) * scale + offY;
             }
 
-            const segmentPhysicalXYChanged = Math.sqrt((fX - fFromX)**2 + (fY - fFromY)**2) > 0.0001;
+            const segmentPhysicalXYChanged = state.lastX === null || Math.sqrt((fX - fFromX)**2 + (fY - fFromY)**2) > 0.0001;
             const isZOnlyMove = !segmentPhysicalXYChanged && zChanged;
 
             let newlineParts = [];
@@ -2297,22 +2214,22 @@
                 const isXYMove = !isZOnlyMove && (seg.type === 'G1' || seg.type === 'G2' || seg.type === 'G3');
                 
                 if (isXYMove) {
-                    if (!hasOutputXYFInCurrentCut) {
+                    if (!state.hasOutputXYFInCurrentCut) {
                         if (feedrateEnable) {
                             segF = targetFeedrate;
                         }
-                        hasOutputXYFInCurrentCut = true;
-                        if (activeFeedrate === null || Math.abs(segF - activeFeedrate) > 0.01) {
+                        state.hasOutputXYFInCurrentCut = true;
+                        if (state.activeFeedrate === null || Math.abs(segF - state.activeFeedrate) > 0.01) {
                             newlineParts.push('F' + segF.toFixed(2));
-                            activeFeedrate = segF;
+                            state.activeFeedrate = segF;
                         }
                     } else {
                         if (feedrateEnable) {
                             segF = targetFeedrate;
                         }
-                        if (activeFeedrate === null || Math.abs(segF - activeFeedrate) > 0.01) {
+                        if (state.activeFeedrate === null || Math.abs(segF - state.activeFeedrate) > 0.01) {
                             newlineParts.push('F' + segF.toFixed(2));
-                            activeFeedrate = segF;
+                            state.activeFeedrate = segF;
                         }
                     }
                 } else {
@@ -2320,24 +2237,31 @@
                         segF = targetZFeedrate;
                     }
                     if (segF) {
-                        if (activeFeedrate === null || Math.abs(segF - activeFeedrate) > 0.01) {
+                        if (state.activeFeedrate === null || Math.abs(segF - state.activeFeedrate) > 0.01) {
                             newlineParts.push('F' + segF.toFixed(2));
-                            activeFeedrate = segF;
+                            state.activeFeedrate = segF;
                         }
                     }
+                }
+            } else {
+                /* G0 快速移動時固定進給速度為 F2000 */
+                const g0Feedrate = 2000;
+                if (state.activeFeedrate === null || Math.abs(g0Feedrate - state.activeFeedrate) > 0.01) {
+                    newlineParts.push('F' + g0Feedrate.toFixed(2));
+                    state.activeFeedrate = g0Feedrate;
                 }
             }
 
             gcodeLines.push(newlineParts.join(' '));
             
-            lastX = fX; lastY = fY; lastZ = fZ;
-            isFirstMove = false;
+            state.lastX = fX; 
+            state.lastY = fY; 
+            state.lastZ = fZ;
         });
 
         return gcodeLines;
     }
 
-    // --- 取得當前加工啟用的刀具直徑 ---
     function getActiveToolDiameter() {
         const toolChangeEnable = document.getElementById('toolChangeEnable') && document.getElementById('toolChangeEnable').checked;
         const tabEnable = document.getElementById('tabEnable') && document.getElementById('tabEnable').checked;
@@ -2351,7 +2275,6 @@
         }
     }
 
-    // --- 高精度 3D 工具切削投影帶生成器 ---
     function generateSweptRibbonGeometry(points, width) {
         const vertices = [];
         const indices = [];
@@ -2419,7 +2342,6 @@
         return geometry;
     }
 
-    // --- 計算並顯示 3D 渲染與虛線預覽 ---
     function processAndPreview() {
         if (!originalGcode) return;
         const scale = parseFloat(document.getElementById('scaleInput').value) || 1;
@@ -2456,7 +2378,6 @@
 
         const showWorkpiece = document.getElementById('showWorkpiece') && document.getElementById('showWorkpiece').checked;
         if (workpiecePath && showWorkpiece) {
-            // 分析並找出最深的 Z 切削深度 (Z 最負值)
             let deepestZ = 0;
             workpiecePath.forEach(seg => {
                 if (seg.type !== 'G0' && !seg.isStartOrEndHome) {
@@ -2465,13 +2386,12 @@
             });
 
             let lastWpP = null;
-            workpiecePath.forEach((seg, idx) => {
+            workpiecePath.forEach((seg) => {
                 if (seg.type === 'G0' || seg.isStartOrEndHome) {
                     lastWpP = null;
                     return;
                 }
 
-                // 核心過濾：不論分層，僅將理論加工結果繪製在最深的一層
                 const isAtDeepest = (Math.abs(seg.to.z - deepestZ) < 0.01 && Math.abs(seg.from.z - deepestZ) < 0.01);
                 if (!isAtDeepest) {
                     lastWpP = null;
@@ -2497,7 +2417,7 @@
 
                 const geo = new THREE.BufferGeometry().setFromPoints(points);
                 const lineMat = new THREE.LineDashedMaterial({
-                    color: 0x9ca3af, // 淺灰色 (Tailwind gray-400)
+                    color: 0x9ca3af,
                     dashSize: 3,
                     gapSize: 3
                 });
@@ -2556,7 +2476,7 @@
                 const ribbonGeo = generateSweptRibbonGeometry(points, ribbonWidth);
                 if (ribbonGeo) {
                     const ribbonMat = new THREE.MeshBasicMaterial({
-                        color: 0xff5500,     // 調整為透明橘紅色 (Orange-Red)
+                        color: 0xff5500,
                         transparent: true,
                         opacity: 0.25,        
                         side: THREE.DoubleSide,
@@ -2570,12 +2490,37 @@
             lastP = { ...p2 }; isF = false;
         });
 
+        // 根據加工路徑範圍動態調整底面格線的大小與中心位置
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        pathData.forEach(seg => {
+            const p2 = trans(seg.to, seg.isStartOrEndHome);
+            const p1 = trans(seg.from, seg.isStartOrEndHome);
+            minX = Math.min(minX, p1.x, p2.x);
+            maxX = Math.max(maxX, p1.x, p2.x);
+            minY = Math.min(minY, p1.y, p2.y);
+            maxY = Math.max(maxY, p1.y, p2.y);
+        });
+
+        if (isFinite(minX) && isFinite(maxX) && isFinite(minY) && isFinite(maxY)) {
+            const spanX = maxX - minX;
+            const spanY = maxY - minY;
+            const maxSpan = Math.max(spanX, spanY, 50);
+            
+            const rawSize = maxSpan * 1.4;
+            // 確保總邊長為 100mm 的倍數，並將網格數量設定為 currentGridSize / 50，確保每一格精確為 50mm
+            currentGridSize = Math.max(200, Math.ceil(rawSize / 100) * 100);
+            currentGridDivisions = currentGridSize / 50;
+            currentGridCenterX = (minX + maxX) / 2;
+            currentGridCenterY = (minY + maxY) / 2;
+
+            updateThreeGrid();
+        }
+
         displayStats(totalTime, totalDist);
         scene.add(gcodeGroup);
         document.getElementById('downloadBtn').disabled = false;
     }
 
-    // --- 產生調整後並優化的 G-code 檔案 ---
     function generateGcode() {
         const lines = originalGcode.split('\n');
         let pathData = parseGcode(originalGcode);
@@ -2630,9 +2575,32 @@
         const output = [];
         let insertedHeader = false;
 
+        const compileState = {
+            lastX: null,
+            lastY: null,
+            lastZ: null,
+            activeFeedrate: null,
+            hasOutputXYFInCurrentCut: false
+        };
+
         for (let i = 0; i < lines.length; i++) {
             let line = lines[i];
             let cmd = line.trim();
+
+            let cleanCmd = cmd;
+            const semiIdx = cmd.indexOf(';');
+            if (semiIdx !== -1) {
+                cleanCmd = cmd.substring(0, semiIdx).trim();
+            }
+            let strippedCmd = cleanCmd.replace(/\([^)]*\)/g, '').trim();
+
+            if (/^(G0*20|G0*21|G0*90|G0*91)$/i.test(strippedCmd)) {
+                if (!insertedHeader) {
+                    output.push("G21", "G90");
+                    insertedHeader = true;
+                }
+                continue;
+            }
 
             if (cmd && !cmd.startsWith('(') && !cmd.startsWith(';')) {
                 if (!insertedHeader) {
@@ -2651,7 +2619,7 @@
 
             if (activeContour) {
                 if (i === activeContour.range.start) {
-                    const compiledLines = compileSegmentsToGcode(activeContour.segments);
+                    const compiledLines = compileSegmentsToGcode(activeContour.segments, compileState);
                     output.push(...compiledLines);
                 }
                 continue;
@@ -2661,7 +2629,7 @@
             if (isMovementCmd) {
                 const matches = nonContourSegments.filter(s => s.lineIdx === i);
                 if (matches.length > 0) {
-                    const compiled = compileSegmentsToGcode(matches);
+                    const compiled = compileSegmentsToGcode(matches, compileState);
                     output.push(...compiled);
                 } else {
                     output.push(line);
@@ -2670,19 +2638,17 @@
                 let cleanLine = line;
                 if (!cmd.startsWith('(') && !cmd.startsWith(';')) {
                     let commentSuffix = "";
-                    const semiIdx = cmd.indexOf(';');
                     if (semiIdx !== -1) {
                         commentSuffix = cmd.substring(semiIdx);
                     }
-                    let cleanCmd = cmd.split(';')[0].trim();
-                    let strippedCmd = cleanCmd.replace(/\bG0*20\b/gi, '')
-                                              .replace(/\bG0*21\b/gi, '')
-                                              .replace(/\bG0*90\b/gi, '')
-                                              .replace(/\bG0*91\b/gi, '')
-                                              .replace(/\s+/g, ' ')
-                                              .trim();
-                    if (strippedCmd) {
-                        cleanLine = strippedCmd + (commentSuffix ? ' ' + commentSuffix : '');
+                    let cleanedStr = strippedCmd.replace(/\bG0*20\b/gi, '')
+                                                 .replace(/\bG0*21\b/gi, '')
+                                                 .replace(/\bG0*90\b/gi, '')
+                                                 .replace(/\bG0*91\b/gi, '')
+                                                 .replace(/\s+/g, ' ')
+                                                 .trim();
+                    if (cleanedStr) {
+                        cleanLine = cleanedStr + (commentSuffix ? ' ' + commentSuffix : '');
                     } else if (commentSuffix) {
                         cleanLine = commentSuffix;
                     } else {
@@ -2722,7 +2688,6 @@
         return cleanOutput.join('\n');
     }
 
-    // --- 參考背景圖加載與處理 ---
     function handleImageLoad(event) {
         const file = event.target.files[0];
         if (!file) return;
@@ -2766,14 +2731,12 @@
         refMesh.scale.set(width, width * refAspect, 1);
     }
 
-    // --- 初始化與檔案讀取事件 ---
     document.getElementById('fileInput').addEventListener('change', e => {
         const file = e.target.files[0]; if (!file) return;
         originalFileName = file.name.split('.').slice(0, -1).join('.');
         document.getElementById('fileNameDisplay').innerText = file.name;
         document.getElementById('fileInfo').classList.remove('hidden');
         
-        // 每次加載新檔案時，自動重置 3D 視角焦點回到原點中心
         if (cameraTarget) cameraTarget.set(0, 0, 0);
         if (camera) camera.position.set(200, -200, 200);
         if (camera && cameraTarget) camera.lookAt(cameraTarget);
@@ -2842,13 +2805,8 @@
         processAndPreview(); 
     });
 
-    document.getElementById('targetThickInput').addEventListener('input', () => {
-        processAndPreview(); 
-    });
-
-    document.getElementById('targetLayersInput').addEventListener('input', () => {
-        processAndPreview(); 
-    });
+    document.getElementById('targetThickInput').addEventListener('input', processAndPreview);
+    document.getElementById('targetLayersInput').addEventListener('input', processAndPreview);
 
     document.getElementById('feedrateEnable').addEventListener('change', e => {
         const feedrateControls = document.getElementById('feedrateControls');
@@ -2860,13 +2818,8 @@
         processAndPreview(); 
     });
 
-    document.getElementById('targetFeedrateInput').addEventListener('input', () => {
-        processAndPreview(); 
-    });
-
-    document.getElementById('targetZFeedrateInput').addEventListener('input', () => {
-        processAndPreview(); 
-    });
+    document.getElementById('targetFeedrateInput').addEventListener('input', processAndPreview);
+    document.getElementById('targetZFeedrateInput').addEventListener('input', processAndPreview);
 
     document.getElementById('retractEnable').addEventListener('change', e => {
         const retractControls = document.getElementById('retractControls');
@@ -2878,9 +2831,7 @@
         processAndPreview(); 
     });
 
-    document.getElementById('retractHeightInput').addEventListener('input', () => {
-        processAndPreview(); 
-    });
+    document.getElementById('retractHeightInput').addEventListener('input', processAndPreview);
 
     document.getElementById('toolChangeEnable').addEventListener('change', e => {
         const toolChangeControls = document.getElementById('toolChangeControls');
@@ -2892,17 +2843,9 @@
         processAndPreview(); 
     });
 
-    document.getElementById('origToolDiaInput').addEventListener('input', () => {
-        processAndPreview(); 
-    });
-
-    document.getElementById('newToolDiaInput').addEventListener('input', () => {
-        processAndPreview(); 
-    });
-
-    document.getElementById('showWorkpiece').addEventListener('change', () => {
-        processAndPreview(); 
-    });
+    document.getElementById('origToolDiaInput').addEventListener('input', processAndPreview);
+    document.getElementById('newToolDiaInput').addEventListener('input', processAndPreview);
+    document.getElementById('showWorkpiece').addEventListener('change', processAndPreview);
 
     document.getElementById('newToolDiaInput').addEventListener('blur', e => {
         let val = parseFloat(e.target.value);
@@ -2922,10 +2865,7 @@
         processAndPreview(); 
     });
 
-    document.getElementById('toolDiaInput').addEventListener('input', () => {
-        processAndPreview(); 
-    });
-
+    document.getElementById('toolDiaInput').addEventListener('input', processAndPreview);
     document.getElementById('applyBtn').addEventListener('click', processAndPreview);
     
     document.getElementById('centerBtn').addEventListener('click', () => {
@@ -2951,7 +2891,6 @@
             document.getElementById('offsetX').value = (-( (minX+maxX)/2 * s)).toFixed(2);
             document.getElementById('offsetY').value = (-( (minY+maxY)/2 * s)).toFixed(2);
             
-            // 重置相機旋轉焦點回到對稱的原點中心
             if (cameraTarget) cameraTarget.set(0, 0, 0);
             if (camera) camera.position.set(200, -200, 200);
             if (camera && cameraTarget) camera.lookAt(cameraTarget);
@@ -2989,7 +2928,6 @@
         updateLanguage(); 
     };
 </script>
-        <!-- PWA Service Worker Registration -->
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
