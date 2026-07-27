@@ -1671,12 +1671,13 @@
                             const isContourPath = (cfg.type === 'outer' || cfg.type === 'inner' || (cfg.type === 'pocket' && p.pocketContourPaths && p.pocketContourPaths.includes(path)));
                             const useTabThisPass = (cfg.useTab && (i === passes - 1) && isContourPath);
                             if (useTabThisPass) {
+                                const tabLength = 6 + (cfg.d || 0); // TAB 移動長度 = 6mm + 刀具直徑
                                 const tabCenters = getTabPointsForPath(path);
                                 // 智慧型局部細分演算法：只細分鄰近 TAB 的地方，維持剩餘長路徑完整
-                                const subPath = insertTabsIntoPath(path, tabCenters, 6);
+                                const subPath = insertTabsIntoPath(path, tabCenters, tabLength);
                                 const tabZVal = Math.min(0, currentZ + cfg.step);
                                 const points3D = subPath.map(pt => {
-                                    const z = isPointInTab(pt, tabCenters, 6) ? tabZVal : currentZ;
+                                    const z = isPointInTab(pt, tabCenters, tabLength) ? tabZVal : currentZ;
                                     return new THREE.Vector3(pt.x, pt.y, z);
                                 });
                                 const geomTool = new THREE.BufferGeometry().setFromPoints(points3D);
@@ -1786,13 +1787,14 @@
                                 if (path.length < 2) return;
                                 
                                 const useTabThisPass = (!isLaser && cfg.useTab && i === passes && phase.isContour);
+                                const tabLength = 6 + (cfg.d || 0); // TAB 移動長度 = 6mm + 刀具直徑
                                 const tabCenters = useTabThisPass ? getTabPointsForPath(path) : [];
                                 // 採用智慧型局部細分
-                                const finalPath = useTabThisPass ? insertTabsIntoPath(path, tabCenters, 6) : path;
+                                const finalPath = useTabThisPass ? insertTabsIntoPath(path, tabCenters, tabLength) : path;
                                 const tabZVal = useTabThisPass ? Math.min(0, targetZ + cfg.step) : targetZ;
 
                                 const start = finalPath[0];
-                                const startZ = useTabThisPass && isPointInTab(start, tabCenters, 6) ? tabZVal : targetZ;
+                                const startZ = useTabThisPass && isPointInTab(start, tabCenters, tabLength) ? tabZVal : targetZ;
 
                                 let needRetract = true;
                                 if (i > 1 && pathIdx === 0 && lastPointOfPart) {
@@ -1835,7 +1837,7 @@
                                 let lastZ = startZ;
                                 for (let j = 1; j < finalPath.length; j++) {
                                     const pt = finalPath[j];
-                                    const ptZ = useTabThisPass && isPointInTab(pt, tabCenters, 6) ? tabZVal : targetZ;
+                                    const ptZ = useTabThisPass && isPointInTab(pt, tabCenters, tabLength) ? tabZVal : targetZ;
                                     const segmentDist = Math.sqrt(Math.pow(pt.x - finalPath[j - 1].x, 2) + Math.pow(pt.y - finalPath[j - 1].y, 2));
                                     const zDist = Math.abs(ptZ - lastZ);
                                     
@@ -1847,7 +1849,7 @@
                                 const lastPtInPath = finalPath[finalPath.length - 1];
                                 currentX = lastPtInPath.x;
                                 currentY = lastPtInPath.y;
-                                currentZ = useTabThisPass && isPointInTab(lastPtInPath, tabCenters, 6) ? tabZVal : targetZ;
+                                currentZ = useTabThisPass && isPointInTab(lastPtInPath, tabCenters, tabLength) ? tabZVal : targetZ;
 
                                 lastPtInLayer = lastPtInPath;
                                 lastPointOfPart = lastPtInPath;
@@ -1961,13 +1963,14 @@
                                 if (path.length < 2) return;
                                 
                                 const useTabThisPass = (!isLaser && cfg.useTab && i === passes && phase.isContour);
+                                const tabLength = 6 + (cfg.d || 0); // TAB 移動長度 = 6mm + 刀具直徑
                                 const tabCenters = useTabThisPass ? getTabPointsForPath(path) : [];
                                 // 智慧型局部細分演算法
-                                const finalPath = useTabThisPass ? insertTabsIntoPath(path, tabCenters, 6) : path;
+                                const finalPath = useTabThisPass ? insertTabsIntoPath(path, tabCenters, tabLength) : path;
                                 const tabZVal = useTabThisPass ? Math.min(0, targetZ + cfg.step) : targetZ;
 
                                 const start = finalPath[0];
-                                const startZ = useTabThisPass && isPointInTab(start, tabCenters, 6) ? tabZVal : targetZ;
+                                const startZ = useTabThisPass && isPointInTab(start, tabCenters, tabLength) ? tabZVal : targetZ;
 
                                 let needRetract = true;
                                 if (i > 1 && pathIdx === 0 && lastPointOfPart) {
@@ -2018,7 +2021,7 @@
                                 let lastZ = startZ;
                                 for (let j = 1; j < finalPath.length; j++) {
                                     const pt = finalPath[j];
-                                    const ptZ = useTabThisPass && isPointInTab(pt, tabCenters, 6) ? tabZVal : targetZ;
+                                    const ptZ = useTabThisPass && isPointInTab(pt, tabCenters, tabLength) ? tabZVal : targetZ;
                                     const fStr = (currentG1F !== cfg.f) ? ` F${cfg.f}` : "";
                                     
                                     if (Math.abs(ptZ - lastZ) > 0.001) {
@@ -2043,6 +2046,7 @@
                                 }
                                 lastPtInLayer = finalPath[finalPath.length - 1];
                                 lastPointOfPart = lastPtInLayer;
+                                currentZ = useTabThisPass && isPointInTab(lastPtInLayer, tabCenters, tabLength) ? tabZVal : targetZ;
                             });
                         }
                     });
