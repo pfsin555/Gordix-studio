@@ -207,9 +207,13 @@
                         </div>
                         <div>
                             <div class="flex justify-between items-center mb-2">
-                                <label class="text-[10px] text-slate-400 font-bold" data-i18n="smoothness">解析/平滑度</label>
+                                <label class="text-[10px] text-slate-400 font-bold" data-i18n="smoothness">簡化度</label>
                             </div>
-                            <input type="range" id="smooth-range" min="0.01" max="2.0" step="0.01" value="0.1" class="accent-red-600">
+                            <input type="range" id="smooth-range" min="0.01" max="2.0" step="0.01" value="0.1" class="accent-red-600 w-full">
+                            <div class="flex justify-between items-center text-[10px] text-slate-400 mt-1">
+                                <span data-i18n="highDetail">← 高細節</span>
+                                <span data-i18n="fewerNodes">少節點 →</span>
+                            </div>
                         </div>
                         <button id="process-img-btn" class="w-full py-3 btn-red rounded-lg font-bold text-sm shadow-lg" data-i18n="reprocess">重新解析檔案</button>
                     </div>
@@ -232,6 +236,7 @@
                         <div class="flex items-center gap-2"><span class="w-3 h-3 bg-green-500 rounded-full"></span><span class="text-[10px] font-bold" data-i18n="legendSelected">已選零件輪廓</span></div>
                         <div class="flex items-center gap-2"><span class="w-3 h-3 bg-blue-500 rounded-full"></span><span class="text-[10px] font-bold" data-i18n="legendCarveArea">V-Carve 削除區域 (藍色)</span></div>
                         <div class="flex items-center gap-2"><span class="w-3 h-3 bg-yellow-400 rounded-full"></span><span class="text-[10px] font-bold" data-i18n="legendToolpath">加工路徑 (黃色)</span></div>
+                        <div class="flex items-center gap-2"><span class="w-3 h-3 border border-slate-400 dark:border-slate-500 rounded-sm"></span><span class="text-[10px] font-bold" data-i18n="legendGrid">背景格線 (一格 50mm)</span></div>
                     </div>
                 </div>
                 
@@ -333,7 +338,9 @@
                 noFile: "尚未選擇任何檔案",
                 targetWidth: "整體寬 (mm)",
                 threshold: "黑白門檻",
-                smoothness: "解析/平滑度",
+                smoothness: "簡化度",
+                highDetail: "← 高細節",
+                fewerNodes: "少節點 →",
                 reprocess: "重新解析檔案",
                 step2: "第二步：零件清單",
                 selectAll: "全選 / 反選",
@@ -341,6 +348,7 @@
                 legendSelected: "已選零件輪廓",
                 legendCarveArea: "V-Carve 削除區域 (藍色)",
                 legendToolpath: "加工路徑 (黃色)",
+                legendGrid: "背景格線 (一格 50mm)",
                 estTime: "預估總加工時間",
                 downloadBtn: "下載檔案",
                 jobSettings: "加工參數設定(mm)",
@@ -371,7 +379,9 @@
                 noFile: "No file selected",
                 targetWidth: "Total Width (mm)",
                 threshold: "Threshold",
-                smoothness: "Resolution / Smoothness",
+                smoothness: "Simplification",
+                highDetail: "← High Detail",
+                fewerNodes: "Fewer Nodes →",
                 reprocess: "Reprocess File",
                 step2: "Step 2: Parts List",
                 selectAll: "Select All / Invert",
@@ -379,6 +389,7 @@
                 legendSelected: "Selected Contours",
                 legendCarveArea: "V-Carve Area (Blue)",
                 legendToolpath: "Toolpath (Yellow)",
+                legendGrid: "Grid (50mm / square)",
                 estTime: "Est. Total Machining Time",
                 downloadBtn: "Download File",
                 jobSettings: "Machining Parameters (mm)",
@@ -976,6 +987,46 @@
             renderPartList();
         }
 
+        // 動態計算格線，保持一格為固定 50mm，並隨零件邊界自動展延
+        function updateGridHelper() {
+            if (!scene) return;
+            const existingGrid = scene.getObjectByName("gridHelper");
+            if (existingGrid) scene.remove(existingGrid);
+
+            const GRID_STEP = 50; // 固定一格 50mm
+            let maxSpan = 200; // 預設最小邊界涵蓋範圍
+
+            if (parts && parts.length > 0) {
+                let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+                parts.forEach(p => {
+                    p.rawPath.forEach(pt => {
+                        minX = Math.min(minX, pt.x);
+                        maxX = Math.max(maxX, pt.x);
+                        minY = Math.min(minY, pt.y);
+                        maxY = Math.max(maxY, pt.y);
+                    });
+                });
+                if (isFinite(minX) && isFinite(maxX) && isFinite(minY) && isFinite(maxY)) {
+                    const spanX = Math.max(Math.abs(minX), Math.abs(maxX)) * 2;
+                    const spanY = Math.max(Math.abs(minY), Math.abs(maxY)) * 2;
+                    maxSpan = Math.max(maxSpan, spanX, spanY);
+                }
+            }
+
+            // 將格線數量四捨五入至偶數格，確保 (0,0) 恆定對齊格線中心
+            const numCells = Math.max(4, Math.ceil((maxSpan + GRID_STEP * 2) / (GRID_STEP * 2)) * 2);
+            const totalSize = numCells * GRID_STEP;
+
+            const isDark = document.documentElement.classList.contains('dark');
+            const gridColor = isDark ? 0x475569 : 0x94a3b8;
+            const gridSubColor = isDark ? 0x1e293b : 0xe2e8f0;
+
+            const grid = new THREE.GridHelper(totalSize, numCells, gridColor, gridSubColor);
+            grid.name = "gridHelper";
+            grid.rotateX(Math.PI / 2);
+            scene.add(grid);
+        }
+
         function toggleMillingOptions() {
             const elMill = document.getElementById('milling-opts');
             if (elMill) elMill.classList.remove('hidden');
@@ -1055,6 +1106,8 @@
             });
             toRemove.forEach(child => scene.remove(child));
             
+            updateGridHelper();
+
             const isDark = document.documentElement.classList.contains('dark');
 
             parts.forEach((p, idx) => {
@@ -1871,10 +1924,7 @@
             controls = new THREE.OrbitControls(camera, renderer.domElement);
             camera.position.set(0, 0, 200);
             
-            const grid = new THREE.GridHelper(500, 50, 0x334155, 0x1e293b);
-            grid.name = "gridHelper";
-            grid.rotateX(Math.PI / 2);
-            scene.add(grid);
+            updateGridHelper();
 
             window.addEventListener('resize', () => {
                 if (!container || !camera || !renderer) return;
@@ -1924,16 +1974,7 @@
             const clearColor = isDark ? 0x020617 : 0xf1f5f9;
             renderer.setClearColor(clearColor);
 
-            const existingGrid = scene.getObjectByName("gridHelper");
-            if (existingGrid) scene.remove(existingGrid);
-
-            const gridColor = isDark ? 0x334155 : 0x94a3b8;
-            const gridSubColor = isDark ? 0x1e293b : 0xe2e8f0;
-            const grid = new THREE.GridHelper(500, 50, gridColor, gridSubColor);
-            grid.name = "gridHelper";
-            grid.rotateX(Math.PI / 2);
-            scene.add(grid);
-
+            updateGridHelper();
             update3D(); 
         }
 
