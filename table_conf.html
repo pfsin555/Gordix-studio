@@ -369,7 +369,7 @@
 
                 <div class="space-y-4">
                     <div class="p-3 md:p-4 range-box rounded-lg border">
-                        <p id="ui-range-label" class="font-bold text-xs text-muted-custom mb-2">加工範圍 (±X, ±Y) mm：</p>
+                        <p id="ui-range-label" class="font-bold text-xs text-muted-custom mb-2">加工座標範圍 (±X, ±Y) mm：</p>
                         <div id="wa-info" class="text-center font-bold text-lg md:text-xl text-custom bg-input-custom p-3 rounded-lg shadow-inner border border-input-custom"></div>
                     </div>
                     
@@ -712,6 +712,28 @@
             ctx.rect(centerX + pxLeft, centerY - pxUp, pxRight - pxLeft, pxUp - pxDown);
             ctx.fill();
             ctx.stroke();
+
+            // 在加工範圍方框內上方標註長與寬尺寸 (例如: 2280x1038)
+            const waWidth = xDisp * 2;
+            const waHeight = yDisp * 2;
+            const dimText = `${waWidth}x${waHeight}`;
+            
+            ctx.font = "bold 20px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
+            const textWidth = ctx.measureText(dimText).width;
+            const textX = centerX;
+            const textY = centerY - pxUp + 6;
+
+            // 半透明底塊，確保文字清楚不被背景圖案遮擋
+            ctx.fillStyle = canvasBg;
+            ctx.globalAlpha = 0.65;
+            ctx.fillRect(textX - textWidth / 2 - 4, textY - 1, textWidth + 8, 15);
+            ctx.globalAlpha = 1.0;
+
+            ctx.fillStyle = canvasTextFill;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "top";
+            ctx.fillText(dimText, textX, textY);
+
             ctx.restore();
 
             document.getElementById('wa-info').innerText = `(±${xDisp}, ±${yDisp})`;
