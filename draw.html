@@ -225,9 +225,9 @@
                 <section class="p-4 bg-slate-100 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 space-y-4 transition-colors duration-300">
                     <div class="flex items-center justify-between">
                         <label id="i18n-label-fill-title" class="text-[10px] font-black text-slate-500 dark:text-slate-400 none tracking-widest">填滿設定 (Hatch)</label>
-                        <input type="checkbox" id="enable-fill" checked class="w-4 h-4 accent-blue-500 rounded">
+                        <input type="checkbox" id="enable-fill" class="w-4 h-4 accent-blue-500 rounded">
                     </div>
-                    <div id="fill-settings-group" class="space-y-3 transition-opacity">
+                    <div id="fill-settings-group" class="space-y-3 transition-opacity opacity-30 pointer-events-none">
                         <!-- 點擊圖形提示與快速切換按鈕 -->
                         <div class="flex items-center justify-between bg-blue-50/50 dark:bg-blue-900/20 p-2 rounded-lg border border-blue-200/50 dark:border-blue-500/20">
                             <span id="i18n-label-fill-tip" class="text-[9px] text-blue-600 dark:text-blue-300 font-bold">💡 點選預覽圖形可個別開關填滿</span>
@@ -267,7 +267,7 @@
                             <span class="w-3 h-3 bg-emerald-500 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span>
                             <span id="i18n-legend-contour" class="text-[10px] font-bold text-slate-500 dark:text-slate-400 none">向量輪廓</span>
                         </div>
-                        <div class="flex items-center gap-2" id="legend-fill-box">
+                        <div class="flex items-center gap-2" id="legend-fill-box" style="display: none;">
                             <span class="w-3 h-3 bg-blue-500 rounded-full shadow-[0_0_8px_rgba(59,130,246,0.5)]"></span>
                             <span id="i18n-legend-fill" class="text-[10px] font-bold text-slate-500 dark:text-slate-400 none">填滿區塊</span>
                         </div>
@@ -1628,12 +1628,13 @@
             contourGroup.innerHTML = finalContours.map((p, idx) => {
                 const isSelected = selectedContourIndices.has(idx);
                 const strokeColor = "#10b981";
-                const fillColor = isSelected ? "rgba(16, 185, 129, 0.15)" : "rgba(0, 0, 0, 0.001)";
+                const showFillBg = fillEnable.checked && isSelected;
+                const fillColor = showFillBg ? "rgba(16, 185, 129, 0.15)" : "rgba(0, 0, 0, 0.001)";
                 const pointerEvents = fillEnable.checked ? "all" : "none";
                 const cursor = fillEnable.checked ? "pointer" : "default";
                 const d = `M ${p[0].x} ${p[0].y} ${p.slice(1).map(pt => `L ${pt.x} ${pt.y}`).join(' ')} Z`;
                 
-                return `<path d="${d}" data-index="${idx}" fill="${fillColor}" stroke="${strokeColor}" stroke-width="${isSelected ? 1.8 : 1.2}" style="pointer-events: ${pointerEvents}; cursor: ${cursor}; transition: all 0.15s;" class="hover:stroke-amber-400 hover:stroke-2 hover:fill-amber-400/20" />`;
+                return `<path d="${d}" data-index="${idx}" fill="${fillColor}" stroke="${strokeColor}" stroke-width="${showFillBg ? 1.8 : 1.2}" style="pointer-events: ${pointerEvents}; cursor: ${cursor}; transition: all 0.15s;" class="hover:stroke-amber-400 hover:stroke-2 hover:fill-amber-400/20" />`;
             }).join('');
 
             updateLayerVisibility();
@@ -1811,6 +1812,7 @@
         updateDualSlider();
         updateUI();
         toggleGrayscalePowerUI();
+        updateDownloadFileName();
     </script>
     <script>
         if ('serviceWorker' in navigator) {
