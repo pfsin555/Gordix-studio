@@ -164,7 +164,7 @@
                             <select id="group-by" class="text-[11px] py-1 px-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 rounded flex-grow">
                                 <option value="none" data-i18n="groupNone">不分組</option>
                                 <option value="layer" data-i18n="groupLayerOpt">依圖層分組</option>
-                                <option value="method" data-i18n="groupMethodOpt">依加工方式分組</option>
+                                <option value="method" id="group-method-opt" style="display: none;" data-i18n="groupMethodOpt">依加工方式分組</option>
                                 <option value="containment" selected data-i18n="groupContainmentOpt">依內外關係分組</option>
                             </select>
                         </div>
@@ -1246,7 +1246,28 @@
         }
 
         // --- UI 控制與零件清單渲染 ---
+        function updateGroupByDropdown() {
+            const groupBySelect = document.getElementById('group-by');
+            const methodOption = document.getElementById('group-method-opt');
+            if (methodOption) {
+                const hasAppliedMethod = parts.some(p => !!p.appliedMethod);
+                if (hasAppliedMethod) {
+                    methodOption.style.display = '';
+                    methodOption.disabled = false;
+                } else {
+                    methodOption.style.display = 'none';
+                    methodOption.disabled = true;
+                    // 若當前停留在依加工方式分組，但沒有零件具備加工方式時，自動切回依內外關係分組
+                    if (groupByMode === 'method') {
+                        groupByMode = 'containment';
+                        if (groupBySelect) groupBySelect.value = 'containment';
+                    }
+                }
+            }
+        }
+
         function renderPartList(){
+            updateGroupByDropdown();
             const list = document.getElementById('part-list');
             list.innerHTML = '';
 
