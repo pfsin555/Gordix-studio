@@ -195,15 +195,19 @@
                             <input type="file" id="file-input" accept="image/*,.svg,.dxf">
                             <p id="file-name-display" class="text-[10px] text-slate-500 mt-2 truncate text-center" data-i18n="noFile">尚未選擇任何檔案</p>
                         </div>
-                        <div class="grid grid-cols-2 gap-4">
+                        <div class="grid grid-cols-2 gap-4 items-end">
                             <div>
                                 <label class="block text-[10px] text-slate-400 font-bold mb-1" data-i18n="targetWidth">整體寬 (mm)</label>
                                 <input type="number" id="target-width" value="100">
                             </div>
-                            <div id="threshold-container" class="hidden">
-                                <label class="block text-[10px] text-slate-400 font-bold mb-1" data-i18n="threshold">黑白門檻</label>
-                                <input type="number" id="threshold" value="128" min="0" max="255">
+                            <div class="flex items-center gap-2 pb-2.5">
+                                <input type="checkbox" id="line-vcarve-check" class="w-4 h-4 accent-red-600 rounded cursor-pointer">
+                                <label for="line-vcarve-check" class="text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer select-none" data-i18n="lineVCarve">路線V雕刻</label>
                             </div>
+                        </div>
+                        <div id="threshold-container" class="hidden">
+                            <label class="block text-[10px] text-slate-400 font-bold mb-1" data-i18n="threshold">黑白門檻</label>
+                            <input type="number" id="threshold" value="128" min="0" max="255">
                         </div>
                         <div>
                             <div class="flex justify-between items-center mb-2">
@@ -215,6 +219,7 @@
                                 <span data-i18n="fewerNodes">少節點 →</span>
                             </div>
                         </div>
+
                         <button id="process-img-btn" class="w-full py-3 btn-red rounded-lg font-bold text-sm shadow-lg" data-i18n="reprocess">重新解析檔案</button>
                     </div>
                 </div>
@@ -301,7 +306,7 @@
                                     </label>
                                     <input type="number" id="mill-depth" value="3.0" step="0.1">
                                 </div>
-                                <div>
+                                <div id="vcarve-layer-container">
                                     <label class="block text-[10px] text-slate-500 dark:text-slate-400 font-bold mb-1" data-i18n="vcarveLayer">V-Carve 雕刻區域選擇</label>
                                     <select id="vcarve-layer-select" class="w-full">
                                         <option value="even" selected data-i18n="optVCarveEven">雕刻凹部 (預設藍色填滿)</option>
@@ -340,6 +345,7 @@
                 smoothness: "簡化度",
                 highDetail: "← 高細節",
                 fewerNodes: "少節點 →",
+                lineVCarve: "路線V雕刻",
                 reprocess: "重新解析檔案",
                 step2: "第二步：零件清單",
                 selectAll: "全選 / 反選",
@@ -366,6 +372,7 @@
                 partName: "零件",
                 tagConvex: "凸 (不加工)",
                 tagConcave: "凹 (加工)",
+                tagLine: "線條加工",
                 notApplied: "未應用",
                 themeLight: "明亮模式",
                 themeDark: "深色模式"
@@ -380,6 +387,7 @@
                 smoothness: "Simplification",
                 highDetail: "← High Detail",
                 fewerNodes: "Smooth & Simple →",
+                lineVCarve: "Line V-Carve",
                 reprocess: "Reprocess File",
                 step2: "Step 2: Parts List",
                 selectAll: "Select All / Invert",
@@ -406,6 +414,7 @@
                 partName: "Part",
                 tagConvex: "Convex (No Machining)",
                 tagConcave: "Concave (Machining)",
+                tagLine: "Line Path",
                 notApplied: "Not Applied",
                 themeLight: "Light Mode",
                 themeDark: "Dark Mode"
@@ -1033,6 +1042,9 @@
             const existingMesh = scene.getObjectByName("vcarveOverlay");
             if (existingMesh) scene.remove(existingMesh);
 
+            const isLineVCarve = document.getElementById('line-vcarve-check')?.checked;
+            if (isLineVCarve) return; // 路線 V 雕刻模式下隱藏區域填滿預覽
+
             const jobType = document.getElementById('job-type').value;
             if (jobType === 'vcarve' && selectedIndices.size > 0) {
                 const targetLayer = document.getElementById('vcarve-layer-select')?.value || 'even';
@@ -1265,6 +1277,7 @@
             if (!list) return;
             list.innerHTML = '';
             
+            const isLineVCarve = document.getElementById('line-vcarve-check')?.checked;
             const topo = computePartNestingTopology();
             const depths = topo.depths;
             const targetLayer = document.getElementById('vcarve-layer-select')?.value || 'even';
@@ -1273,10 +1286,18 @@
                 const isSelected = selectedIndices.has(i);
                 const depth = depths[i] || 1;
                 
-                const isCarved = (targetLayer === 'even' && depth % 2 === 0) || (targetLayer === 'odd' && depth % 2 !== 0);
-                
-                let tagText = isCarved ? i18n[currentLang].tagConcave : i18n[currentLang].tagConvex;
-                let badgeClass = isCarved ? "bg-blue-100 text-blue-600 border border-blue-200 dark:bg-blue-900/40 dark:text-blue-400 dark:border-blue-800/60" : "bg-slate-100 text-slate-600 border border-slate-200 dark:bg-slate-900/60 dark:text-slate-400 dark:border-slate-700/50";
+                let tagText = "";
+                let badgeClass = "";
+
+                if (isLineVCarve) {
+                    // 勾選「路線V雕刻」時不區分凹凸，統一顯示為線條加工
+                    tagText = i18n[currentLang].tagLine;
+                    badgeClass = "bg-emerald-100 text-emerald-700 border border-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-400 dark:border-emerald-800/60";
+                } else {
+                    const isCarved = (targetLayer === 'even' && depth % 2 === 0) || (targetLayer === 'odd' && depth % 2 !== 0);
+                    tagText = isCarved ? i18n[currentLang].tagConcave : i18n[currentLang].tagConvex;
+                    badgeClass = isCarved ? "bg-blue-100 text-blue-600 border border-blue-200 dark:bg-blue-900/40 dark:text-blue-400 dark:border-blue-800/60" : "bg-slate-100 text-slate-600 border border-slate-200 dark:bg-slate-900/60 dark:text-slate-400 dark:border-slate-700/50";
+                }
 
                 const div = document.createElement('div');
                 div.className = `p-4 border border-slate-200 dark:border-slate-700 rounded-xl flex flex-col transition-all cursor-pointer ${isSelected ? 'active-part shadow-lg' : 'hover:bg-slate-100 dark:hover:bg-slate-850'}`;
@@ -1336,6 +1357,17 @@
         function updateJobUI(){
             const panel = document.getElementById('job-panel'), hint = document.getElementById('no-selection-hint');
             if (!panel || !hint) return;
+
+            const isLineVCarve = document.getElementById('line-vcarve-check')?.checked;
+            const vcarveLayerContainer = document.getElementById('vcarve-layer-container');
+            if (vcarveLayerContainer) {
+                if (isLineVCarve) {
+                    vcarveLayerContainer.classList.add('hidden');
+                } else {
+                    vcarveLayerContainer.classList.remove('hidden');
+                }
+            }
+
             if(selectedIndices.size > 0){
                 panel.classList.remove('hidden'); hint.classList.add('hidden');
                 let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
@@ -1365,6 +1397,30 @@
         function calculateAllVCarvePaths(groupScale) {
             const selectedArr = Array.from(selectedIndices);
             if (selectedArr.length === 0) return;
+
+            const isLineVCarve = document.getElementById('line-vcarve-check')?.checked;
+
+            // 如果勾選「路線V雕刻」，直接沿已選零件的輪廓線進行直走加工
+            if (isLineVCarve) {
+                parts.forEach((p, idx) => {
+                    if (selectedIndices.has(idx) && p.visible) {
+                        const depth = p.jobConfig.depth || 3.0;
+                        const linePath = p.rawPath.map(pt => ({
+                            x: pt.x * groupScale,
+                            y: pt.y * groupScale,
+                            z: -depth
+                        }));
+                        if (linePath.length > 2 && (linePath[0].x !== linePath[linePath.length-1].x || linePath[0].y !== linePath[linePath.length-1].y)) {
+                            linePath.push({ ...linePath[0] });
+                        }
+                        p.toolpath = [cleanPath(linePath, p.jobConfig.resolution)];
+                        p.appliedMethod = 'line_vcarve';
+                    } else {
+                        p.toolpath = [];
+                    }
+                });
+                return;
+            }
 
             const targetLayer = document.getElementById('vcarve-layer-select')?.value || 'even';
             
@@ -2068,6 +2124,18 @@
                 update3D();
             };
 
+            // 路線 V 雕刻勾選變更監聽
+            document.getElementById('line-vcarve-check').onchange = () => {
+                renderPartList();
+                updateJobUI();
+                if (selectedIndices.size > 0 && parts.length > 0) {
+                    document.getElementById('apply-job-btn').click();
+                } else {
+                    update3D();
+                    updateStats();
+                }
+            };
+
             // 監聽刀徑及角度變更，以即時限制與警示深度
             document.getElementById('mill-d').addEventListener('input', updateDepthLimit);
             document.getElementById('vbit-angle').addEventListener('input', updateDepthLimit);
@@ -2230,7 +2298,12 @@
                     let isFirstMoveOfPass = true;
                     for (let j = 1; j < path.length; j++) {
                         const pt = path[j];
-                        const ptZ = (pt.z !== undefined) ? ` Z${pt.z.toFixed(3)}` : "";
+                        const targetZ = (pt.z !== undefined) ? pt.z : (currentZ !== null ? currentZ : 0);
+                        let ptZ = "";
+                        if (currentZ === null || Math.abs(targetZ - currentZ) > 1e-4) {
+                            ptZ = ` Z${targetZ.toFixed(3)}`;
+                            currentZ = targetZ;
+                        }
                         const fStr = isFirstMoveOfPass ? ` F${cfg.f}` : "";
                         gc.push(`G1 X${pt.x.toFixed(3)} Y${pt.y.toFixed(3)}${ptZ}${fStr}`);
                         isFirstMoveOfPass = false;
@@ -2239,7 +2312,9 @@
                     const lastPt = path[path.length - 1];
                     currentX = lastPt.x;
                     currentY = lastPt.y;
-                    currentZ = (lastPt.z !== undefined) ? lastPt.z : 0;
+                    if (lastPt.z !== undefined) {
+                        currentZ = lastPt.z;
+                    }
                 });
 
                 if (currentZ === null || currentZ < SAFE_Z_VAL) {
