@@ -275,14 +275,6 @@
                                 <span id="txt-legend-path">加工路徑</span>
                             </p>
                             <p class="flex items-center">
-                                <span class="w-3 h-3 bg-orange-500/30 rounded-sm mr-2 flex-shrink-0 border border-orange-500/50"></span>
-                                <span id="txt-legend-sweep">刀具經過範圍</span>
-                            </p>
-                            <p class="flex items-center">
-                                <span class="w-3 h-3 bg-none border-2 border-dashed border-gray-400 rounded-sm mr-2 flex-shrink-0"></span>
-                                <span id="txt-legend-result">理論加工結果</span>
-                            </p>
-                            <p class="flex items-center">
                                 <span class="w-3 h-3 bg-amber-500 rounded-sm mr-2 flex-shrink-0"></span>
                                 <span id="txt-legend-tab">加工橋位</span>
                             </p>
@@ -350,30 +342,6 @@
                                     <div>
                                         <label class="label-text block mb-1" id="txt-label-target-retract">新抬刀高度 (0.1~5 mm)</label>
                                         <input type="number" id="retractHeightInput" value="3.0" min="0.1" max="5.0" step="0.1" class="w-full">
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- 刀具直徑補償 調整區塊 -->
-                            <div class="border-b border-gray-700/50 pb-3">
-                                <div class="flex items-center gap-2 mb-2">
-                                    <input type="checkbox" id="toolChangeEnable" class="w-4 h-4 rounded text-emerald-500 bg-gray-700 border-gray-600 focus:ring-emerald-500 accent-emerald-500">
-                                    <label for="toolChangeEnable" class="label-text cursor-pointer" id="txt-label-toolchange-enable">變換刀具(不建議)</label>
-                                </div>
-                                <div id="toolChangeControls" class="space-y-2.5 pl-6 hidden">
-                                    <div class="grid grid-cols-2 gap-2">
-                                        <div>
-                                            <label class="label-text block mb-1" id="txt-label-orig-tooldia">原刀具直徑 (mm)</label>
-                                            <input type="number" id="origToolDiaInput" value="6.35" min="0.1" step="0.1" class="w-full">
-                                        </div>
-                                        <div>
-                                            <label class="label-text block mb-1" id="txt-label-new-tooldia">新刀具直徑 (mm)</label>
-                                            <input type="number" id="newToolDiaInput" value="3.175" min="0.1" step="0.1" class="w-full">
-                                        </div>
-                                    </div>
-                                    <div class="flex items-center gap-2 pt-1.5">
-                                        <input type="checkbox" id="showWorkpiece" class="w-4 h-4 rounded text-emerald-500 bg-gray-700 border-gray-600 focus:ring-emerald-500 accent-emerald-500">
-                                        <label for="showWorkpiece" class="text-[11px] text-gray-300 font-semibold cursor-pointer select-none" id="txt-label-showwp">顯示加工結果</label>
                                     </div>
                                 </div>
                             </div>
@@ -457,7 +425,6 @@
             labelOY: "Y 偏移 (mm)",
             labelRot: "旋轉角度 (Z軸中心)",
             labelRes: "解析度 (最小 XY 位移 mm)",
-            labelShowWp: "顯示加工結果",
             secAdvanced: "3. 進階選項 (僅切割路徑)",
             thickEnable: "深度調整",
             labelOrigThickness: "原加工總深度 (自動偵測 mm)",
@@ -468,9 +435,6 @@
             labelTargetZFeedrate: "Z 軸下刀速(mm/min)",
             retractEnable: "抬刀高度調整 (Z > 0)",
             labelTargetRetract: "新抬刀高度 (0.1~5 mm)",
-            toolChangeEnable: "變換刀具(不建議)",
-            labelOrigToolDia: "原刀具直徑 (mm)",
-            labelNewToolDia: "新刀具直徑 (mm)",
             tabEnable: "自動橋位",
             labelToolDia: "刀具直徑 (mm)",
             secRefImg: "4. 參考底圖 (選填)",
@@ -486,9 +450,7 @@
             unitSec: "秒",
             metricAlert: "Gcode已轉換為公制(G21)",
             legendPath: "加工路徑",
-            legendResult: "理論加工結果",
-            legendTab: "追加橋位",
-            legendSweep: "刀具經過範圍"
+            legendTab: "追加橋位"
         },
         en: {
             headerTitle: "Gcode Adjuster",
@@ -502,7 +464,6 @@
             labelOY: "Y Offset",
             labelRot: "Rotation (Z-Axis)",
             labelRes: "Resolution (Min XY mm)",
-            labelShowWp: "Show workpiece result",
             secAdvanced: "3. Advanced Options (Cut only)",
             thickEnable: "Change Depth",
             labelOrigThickness: "Ori. Depth (mm)",
@@ -513,9 +474,6 @@
             labelTargetZFeedrate: "Z Feedrate (mm/min)",
             retractEnable: "Change Retract Height",
             labelTargetRetract: "New Retract Height (0.1~5 mm)",
-            toolChangeEnable: "Change Tool(Not recommended)",
-            labelOrigToolDia: "Ori Tool Dia (mm)",
-            labelNewToolDia: "New Tool Dia (mm)",
             tabEnable: "Auto Tabs",
             labelToolDia: "Tool Diameter (mm)",
             secRefImg: "4. Reference Image (Optional)",
@@ -531,9 +489,7 @@
             unitSec: "sec",
             metricAlert: "G-code converted to metric (G21)",
             legendPath: "Tool Path",
-            legendResult: "Workpiece Result",
-            legendTab: "New Tabs",
-            legendSweep: "Tool Swept Area"
+            legendTab: "New Tabs"
         }
     };
 
@@ -571,7 +527,6 @@
         document.getElementById('txt-label-oy').innerText = lang.labelOY;
         document.getElementById('txt-label-rot').innerText = lang.labelRot;
         document.getElementById('txt-label-res').innerText = lang.labelRes;
-        document.getElementById('txt-label-showwp').innerText = lang.labelShowWp;
         
         document.getElementById('txt-sec-advanced').innerText = lang.secAdvanced;
         document.getElementById('txt-label-thick-enable').innerText = lang.thickEnable;
@@ -585,10 +540,6 @@
 
         document.getElementById('txt-label-retract-enable').innerText = lang.retractEnable;
         document.getElementById('txt-label-target-retract').innerText = lang.labelTargetRetract;
-
-        document.getElementById('txt-label-toolchange-enable').innerText = lang.toolChangeEnable;
-        document.getElementById('txt-label-orig-tooldia').innerText = lang.labelOrigToolDia;
-        document.getElementById('txt-label-new-tooldia').innerText = lang.labelNewToolDia;
 
         document.getElementById('txt-label-tab-enable').innerText = lang.tabEnable;
         document.getElementById('txt-label-tooldia').innerText = lang.labelToolDia;
@@ -606,9 +557,7 @@
         document.getElementById('txt-metric-alert').innerText = lang.metricAlert;
 
         document.getElementById('txt-legend-path').innerText = lang.legendPath;
-        document.getElementById('txt-legend-result').innerText = lang.legendResult;
         document.getElementById('txt-legend-tab').innerText = lang.legendTab;
-        document.getElementById('txt-legend-sweep').innerText = lang.legendSweep;
 
         displayStats(lastTimeSec, lastDistance);
     }
@@ -2351,10 +2300,6 @@
         const res = parseFloat(document.getElementById('resInput').value) || 0.1;
 
         let pathData = parseGcode(originalGcode);
-        
-        const compResults = applyTwoStepCutterCompensation(pathData);
-        const workpiecePath = compResults.workpiecePath;
-        pathData = compResults.newToolPath; 
 
         pathData = applyThicknessAdjustment(pathData);
         pathData = applyFeedrateAdjustment(pathData);
@@ -2375,59 +2320,6 @@
                 z: p.z
             };
         };
-
-        const showWorkpiece = document.getElementById('showWorkpiece') && document.getElementById('showWorkpiece').checked;
-        if (workpiecePath && showWorkpiece) {
-            let deepestZ = 0;
-            workpiecePath.forEach(seg => {
-                if (seg.type !== 'G0' && !seg.isStartOrEndHome) {
-                    deepestZ = Math.min(deepestZ, seg.to.z, seg.from.z);
-                }
-            });
-
-            let lastWpP = null;
-            workpiecePath.forEach((seg) => {
-                if (seg.type === 'G0' || seg.isStartOrEndHome) {
-                    lastWpP = null;
-                    return;
-                }
-
-                const isAtDeepest = (Math.abs(seg.to.z - deepestZ) < 0.01 && Math.abs(seg.from.z - deepestZ) < 0.01);
-                if (!isAtDeepest) {
-                    lastWpP = null;
-                    return;
-                }
-
-                const p2 = trans(seg.to, seg.isStartOrEndHome);
-                const p1 = lastWpP ? lastWpP : trans(seg.from, false);
-
-                let points = [];
-                if (seg.type === 'G2' || seg.type === 'G3') {
-                    let transI = null, transJ = null;
-                    if (seg.I !== null || seg.J !== null) {
-                        const rawI = seg.I || 0, rawJ = seg.J || 0;
-                        transI = (rawI * Math.cos(rotRad) - rawJ * Math.sin(rotRad)) * scale;
-                        transJ = (rawI * Math.sin(rotRad) + rawJ * Math.cos(rotRad)) * scale;
-                    }
-                    const transR = seg.R !== null ? seg.R * scale : null;
-                    points = generateArcPoints(p1, p2, transI, transJ, transR, seg.type === 'G2');
-                } else {
-                    points = [new THREE.Vector3(p1.x, p1.y, p1.z), new THREE.Vector3(p2.x, p2.y, p2.z)];
-                }
-
-                const geo = new THREE.BufferGeometry().setFromPoints(points);
-                const lineMat = new THREE.LineDashedMaterial({
-                    color: 0x9ca3af,
-                    dashSize: 3,
-                    gapSize: 3
-                });
-                const meshLine = new THREE.Line(geo, lineMat);
-                meshLine.computeLineDistances(); 
-                gcodeGroup.add(meshLine);
-
-                lastWpP = { ...p2 };
-            });
-        }
 
         pathData.forEach((seg, idx) => {
             const p2 = trans(seg.to, seg.isStartOrEndHome);
@@ -2469,23 +2361,6 @@
             const geo = new THREE.BufferGeometry().setFromPoints(points);
             const lineMat = new THREE.LineBasicMaterial({ color: color, linewidth: seg.isTab ? 3 : 1 });
             gcodeGroup.add(new THREE.Line(geo, lineMat));
-
-            if (showWorkpiece && seg.type !== 'G0' && !seg.isStartOrEndHome) {
-                const activeToolDia = getActiveToolDiameter();
-                const ribbonWidth = activeToolDia * scale;
-                const ribbonGeo = generateSweptRibbonGeometry(points, ribbonWidth);
-                if (ribbonGeo) {
-                    const ribbonMat = new THREE.MeshBasicMaterial({
-                        color: 0xff5500,
-                        transparent: true,
-                        opacity: 0.25,        
-                        side: THREE.DoubleSide,
-                        depthWrite: false    
-                    });
-                    const ribbonMesh = new THREE.Mesh(ribbonGeo, ribbonMat);
-                    gcodeGroup.add(ribbonMesh);
-                }
-            }
 
             lastP = { ...p2 }; isF = false;
         });
@@ -2542,9 +2417,6 @@
                 currentRange = null;
             }
         });
-
-        const compResults = applyTwoStepCutterCompensation(pathData);
-        pathData = compResults.newToolPath;
 
         pathData = applyThicknessAdjustment(pathData);
         pathData = applyFeedrateAdjustment(pathData);
@@ -2832,28 +2704,6 @@
     });
 
     document.getElementById('retractHeightInput').addEventListener('input', processAndPreview);
-
-    document.getElementById('toolChangeEnable').addEventListener('change', e => {
-        const toolChangeControls = document.getElementById('toolChangeControls');
-        if (e.target.checked) {
-            toolChangeControls.classList.remove('hidden');
-        } else {
-            toolChangeControls.classList.add('hidden');
-        }
-        processAndPreview(); 
-    });
-
-    document.getElementById('origToolDiaInput').addEventListener('input', processAndPreview);
-    document.getElementById('newToolDiaInput').addEventListener('input', processAndPreview);
-    document.getElementById('showWorkpiece').addEventListener('change', processAndPreview);
-
-    document.getElementById('newToolDiaInput').addEventListener('blur', e => {
-        let val = parseFloat(e.target.value);
-        if (isNaN(val) || val < 0.1) {
-            e.target.value = 0.1;
-            processAndPreview();
-        }
-    });
 
     document.getElementById('tabEnable').addEventListener('change', e => {
         const tabControls = document.getElementById('tabControls');
