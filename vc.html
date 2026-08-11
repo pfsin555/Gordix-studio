@@ -845,52 +845,139 @@
             });
         }
 
+        /**
+         * 修正後的 SVG 解析器：
+         * 支援 CTM (Current Transformation Matrix) 矩陣平移/旋轉/縮放運算與 <use> 標籤展開，
+         * 完美解決零件重疊問題，呈現正確的水平或佈局排版。
+         */
         function parseSVG(svgString, smoothTol) {
             const parser = new DOMParser();
             const doc = parser.parseFromString(svgString, 'image/svg+xml');
             const svgEl = doc.querySelector('svg');
             if (!svgEl) return [];
 
+            // 1. 建立隱藏容器並掛載到 DOM，讓瀏覽器得以計算真實 CTM 轉置矩陣
+            let container = document.getElementById('svg-temp-parser');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'svg-temp-parser';
+                container.style.cssText = 'position:absolute;left:-9999px;top:-9999px;width:3000px;height:3000px;opacity:0;pointer-events:none;overflow:hidden;';
+                document.body.appendChild(container);
+            }
+            container.innerHTML = '';
+            container.appendChild(svgEl);
+
+            // 2. 展開所有 <use> 引用標籤為包含矩陣 Transform 的獨立實體節點
+            const useElements = Array.from(svgEl.querySelectorAll('use'));
+            useElements.forEach(useEl => {
+                const href = useEl.getAttribute('href') || useEl.getAttribute('xlink:href');
+                if (href && href.startsWith('#')) {
+                    const target = svgEl.querySelector(href);
+                    if (target) {
+                        const clone = target.cloneNode(true);
+                        const x = parseFloat(useEl.getAttribute('x') || 0);
+                        const y = parseFloat(useEl.getAttribute('y') || 0);
+                        const transform = useEl.getAttribute('transform') || '';
+                        let newTransform = `translate(${x}, ${y}) ${transform}`.trim();
+                        if (newTransform) {
+                            const existingTransform = clone.getAttribute('transform') || '';
+                            clone.setAttribute('transform', `${newTransform} ${existingTransform}`.trim());
+                        }
+                        if (clone.id) clone.removeAttribute('id');
+                        if (useEl.parentNode) {
+                            useEl.parentNode.replaceChild(clone, useEl);
+                        }
+                    }
+                }
+            });
+
             const paths = [];
-            const elements = doc.querySelectorAll('path, rect, circle, ellipse, line, polyline, polygon');
+            const elements = svgEl.querySelectorAll('path, rect, circle, ellipse, line, polyline, polygon');
             
             elements.forEach(el => {
+                // 忽略位於 <defs> 區塊內的未渲染樣板
+                if (el.closest && el.closest('defs')) return;
+
                 let pts = [];
                 const type = el.tagName.toLowerCase();
 
+                // 獲取該元素的絕對 CTM 轉換矩陣
+                let ctm = null;
+                try {
+                    ctm = el.getCTM();
+                } catch(e) {
+                    ctm = null;
+                }
+
+                // 將本地座標系點經 CTM 轉換後，轉換至 CNC 平面 (Y軸反轉)
+                function getPt(x, y) {
+                    if (ctm) {
+                        const tx = x * ctm.a + y * ctm.c + ctm.e;
+                        const ty = x * ctm.b + y * ctm.d + ctm.f;
+                        return { x: tx, y: -ty };
+                    }
+                    return { x: x, y: -y };
+                }
+
                 if (type === 'path') {
-                    const tempPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
-                    tempPath.setAttribute("d", el.getAttribute("d"));
-                    const len = tempPath.getTotalLength();
-                    const segments = Math.max(10, Math.ceil(len / (smoothTol * 5))); 
-                    for(let i=0; i<=segments; i++) {
-                        const p = tempPath.getPointAtLength(i * len / segments);
-                        pts.push({ x: p.x, y: -p.y }); 
+                    let len = 0;
+                    try {
+                        len = el.getTotalLength();
+                    } catch(e) {
+                        len = 0;
+                    }
+                    if (len > 0) {
+                        const segments = Math.max(10, Math.ceil(len / (smoothTol * 5))); 
+                        for(let i = 0; i <= segments; i++) {
+                            const p = el.getPointAtLength(i * len / segments);
+                            pts.push(getPt(p.x, p.y)); 
+                        }
                     }
                 } else if (type === 'rect') {
-                    const x = parseFloat(el.getAttribute('x')||0), y = parseFloat(el.getAttribute('y')||0);
-                    const w = parseFloat(el.getAttribute('width')), h = parseFloat(el.getAttribute('height'));
-                    pts = [{x,y:-y}, {x:x+w,y:-y}, {x:x+w,y:-(y+h)}, {x,y:-(y+h)}, {x,y:-y}];
+                    const x = parseFloat(el.getAttribute('x') || 0);
+                    const y = parseFloat(el.getAttribute('y') || 0);
+                    const w = parseFloat(el.getAttribute('width') || 0);
+                    const h = parseFloat(el.getAttribute('height') || 0);
+                    if (w > 0 && h > 0) {
+                        const rawPts = [{x, y}, {x: x + w, y}, {x: x + w, y: y + h}, {x, y: y + h}, {x, y}];
+                        pts = rawPts.map(p => getPt(p.x, p.y));
+                    }
                 } else if (type === 'circle' || type === 'ellipse') {
-                    const cx = parseFloat(el.getAttribute('cx')||0), cy = parseFloat(el.getAttribute('cy')||0);
-                    const rx = type === 'circle' ? parseFloat(el.getAttribute('r')) : parseFloat(el.getAttribute('rx'));
-                    const ry = type === 'circle' ? rx : parseFloat(el.getAttribute('ry'));
-                    for(let i=0; i<=64; i++) {
-                        const a = (i/64) * Math.PI * 2;
-                        pts.push({ x: cx + Math.cos(a)*rx, y: -(cy + Math.sin(a)*ry) });
+                    const cx = parseFloat(el.getAttribute('cx') || 0);
+                    const cy = parseFloat(el.getAttribute('cy') || 0);
+                    const rx = type === 'circle' ? parseFloat(el.getAttribute('r') || 0) : parseFloat(el.getAttribute('rx') || 0);
+                    const ry = type === 'circle' ? rx : parseFloat(el.getAttribute('ry') || 0);
+                    if (rx > 0 && ry > 0) {
+                        for(let i = 0; i <= 64; i++) {
+                            const a = (i / 64) * Math.PI * 2;
+                            pts.push(getPt(cx + Math.cos(a) * rx, cy + Math.sin(a) * ry));
+                        }
                     }
                 } else if (type === 'line') {
-                    pts = [{x:parseFloat(el.getAttribute('x1')), y:-parseFloat(el.getAttribute('y1'))}, {x:parseFloat(el.getAttribute('x2')), y:-parseFloat(el.getAttribute('y2'))}];
+                    const x1 = parseFloat(el.getAttribute('x1') || 0);
+                    const y1 = parseFloat(el.getAttribute('y1') || 0);
+                    const x2 = parseFloat(el.getAttribute('x2') || 0);
+                    const y2 = parseFloat(el.getAttribute('y2') || 0);
+                    pts = [getPt(x1, y1), getPt(x2, y2)];
                 } else if (type === 'polyline' || type === 'polygon') {
-                    const pstr = el.getAttribute('points').trim().split(/[\s,]+/);
-                    for(let i=0; i<pstr.length; i+=2) pts.push({ x: parseFloat(pstr[i]), y: -parseFloat(pstr[i+1]) });
-                    if(type === 'polygon' && pts.length > 0) pts.push(pts[0]);
+                    const pstr = (el.getAttribute('points') || '').trim().split(/[\s,]+/);
+                    const rawPts = [];
+                    for(let i = 0; i < pstr.length - 1; i += 2) {
+                        const px = parseFloat(pstr[i]);
+                        const py = parseFloat(pstr[i + 1]);
+                        if (!isNaN(px) && !isNaN(py)) rawPts.push({ x: px, y: py });
+                    }
+                    if (type === 'polygon' && rawPts.length > 0) rawPts.push(rawPts[0]);
+                    pts = rawPts.map(p => getPt(p.x, p.y));
                 }
 
                 if (pts.length > 1) {
                     paths.push(simplifyPath(pts, smoothTol));
                 }
             });
+
+            // 清理暫存節點
+            container.innerHTML = '';
 
             return paths;
         }
