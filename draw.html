@@ -989,7 +989,8 @@
             
             return paths;
         }
-            fileInput.addEventListener('change', (e) => {
+
+        fileInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (!file) return;
 
@@ -1176,46 +1177,122 @@
             const svg = doc.querySelector("svg");
             if (!svg) return [];
 
+            // 展開 <use> 標籤以支援引用圖形與其 transform 屬性
+            const useElements = Array.from(svg.querySelectorAll("use"));
+            useElements.forEach(useEl => {
+                const href = useEl.getAttribute("href") || useEl.getAttribute("xlink:href");
+                if (!href) return;
+                const targetId = href.replace(/^#/, '');
+                const targetEl = doc.getElementById(targetId);
+                if (!targetEl) return;
+                
+                const clone = targetEl.cloneNode(true);
+                clone.removeAttribute("id");
+                
+                const g = doc.createElementNS("http://www.w3.org/2000/svg", "g");
+                const x = useEl.getAttribute("x");
+                const y = useEl.getAttribute("y");
+                const transform = useEl.getAttribute("transform");
+                
+                let transformAttr = "";
+                if (x || y) transformAttr += `translate(${x || 0}, ${y || 0}) `;
+                if (transform) transformAttr += transform;
+                if (transformAttr) g.setAttribute("transform", transformAttr);
+                
+                g.appendChild(clone);
+                if (useEl.parentNode) {
+                    useEl.parentNode.replaceChild(g, useEl);
+                }
+            });
+
             const container = document.createElement("div");
             container.style.cssText = "position:absolute;visibility:hidden;width:0;height:0;overflow:hidden;";
             document.body.appendChild(container);
             container.appendChild(svg);
 
-            const shapes = svg.querySelectorAll("path, polyline, polygon, m, rect, circle, ellipse");
+            const shapes = svg.querySelectorAll("path, polyline, polygon, line, rect, circle, ellipse");
             const pathsPoints = [];
 
             shapes.forEach(el => {
+                // 排除 <defs> 或 <symbol> 內的未引用模板圖案
+                if (el.closest('defs') || el.closest('symbol')) return;
+
                 let pathEl;
+                let isTemp = false;
+
                 if (el.tagName.toLowerCase() === 'path') {
                     pathEl = el;
                 } else {
                     pathEl = document.createElementNS("http://www.w3.org/2000/svg", "path");
                     let d = "";
-                    if (el.tagName === 'rect') {
+                    const tag = el.tagName.toLowerCase();
+                    if (tag === 'rect') {
                         const x = parseFloat(el.getAttribute('x')||0), y = parseFloat(el.getAttribute('y')||0);
                         const w = parseFloat(el.getAttribute('width')||0), h = parseFloat(el.getAttribute('height')||0);
                         d = `M${x},${y} L${x+w},${y} L${x+w},${y+h} L${x},${y+h} Z`;
-                    } else if (el.tagName === 'circle') {
+                    } else if (tag === 'circle') {
                         const cx = parseFloat(el.getAttribute('cx')||0), cy = parseFloat(el.getAttribute('cy')||0), r = parseFloat(el.getAttribute('r')||0);
                         d = `M${cx-r},${cy} A${r},${r} 0 1,0 ${cx+r},${cy} A${r},${r} 0 1,0 ${cx-r},${cy} Z`;
-                    } else if (el.tagName === 'line') {
-                        d = `M${el.getAttribute('x1')},${el.getAttribute('y1')} L${el.getAttribute('x2')},${el.getAttribute('y2')}`;
-                    } else if (el.tagName === 'polyline' || el.tagName === 'polygon') {
-                        d = `M${el.getAttribute('points')}` + (el.tagName === 'polygon' ? " Z" : "");
+                    } else if (tag === 'ellipse') {
+                        const cx = parseFloat(el.getAttribute('cx')||0), cy = parseFloat(el.getAttribute('cy')||0);
+                        const rx = parseFloat(el.getAttribute('rx')||0), ry = parseFloat(el.getAttribute('ry')||0);
+                        d = `M${cx-rx},${cy} A${rx},${ry} 0 1,0 ${cx+rx},${cy} A${rx},${ry} 0 1,0 ${cx-rx},${cy} Z`;
+                    } else if (tag === 'line') {
+                        d = `M${el.getAttribute('x1')||0},${el.getAttribute('y1')||0} L${el.getAttribute('x2')||0},${el.getAttribute('y2')||0}`;
+                    } else if (tag === 'polyline' || tag === 'polygon') {
+                        d = `M${el.getAttribute('points')}` + (tag === 'polygon' ? " Z" : "");
                     }
                     pathEl.setAttribute('d', d);
+                    if (el.parentNode) {
+                        el.parentNode.appendChild(pathEl);
+                        isTemp = true;
+                    }
                 }
 
                 try {
                     const len = pathEl.getTotalLength();
-                    if (len <= 0) return;
-                    const pts = [];
-                    for (let s = 0; s <= len; s += 0.5) {
-                        const p = pathEl.getPointAtLength(s);
-                        pts.push({ x: p.x, y: p.y });
+                    if (len <= 0) {
+                        if (isTemp && pathEl.parentNode) pathEl.parentNode.removeChild(pathEl);
+                        return;
                     }
-                    pathsPoints.push(pts);
-                } catch(e) {}
+
+                    // 取得 CTM 轉換矩陣以套用所有群組 (<g>) 的 transform (平移、旋轉、縮放)
+                    let ctm = null;
+                    try {
+                        ctm = pathEl.getCTM();
+                    } catch(e) {}
+
+                    const pts = [];
+                    const step = Math.max(0.2, Math.min(1.0, len / 1000));
+                    for (let s = 0; s <= len; s += step) {
+                        const p = pathEl.getPointAtLength(s);
+                        let x = p.x, y = p.y;
+                        if (ctm) {
+                            x = p.x * ctm.a + p.y * ctm.c + ctm.e;
+                            y = p.x * ctm.b + p.y * ctm.d + ctm.f;
+                        }
+                        pts.push({ x, y });
+                    }
+
+                    // 確保包含終點
+                    const endP = pathEl.getPointAtLength(len);
+                    let endX = endP.x, endY = endP.y;
+                    if (ctm) {
+                        endX = endP.x * ctm.a + endP.y * ctm.c + ctm.e;
+                        endY = endP.x * ctm.b + endP.y * ctm.d + ctm.f;
+                    }
+                    if (pts.length === 0 || Math.hypot(endX - pts[pts.length-1].x, endY - pts[pts.length-1].y) > 0.001) {
+                        pts.push({ x: endX, y: endY });
+                    }
+
+                    if (pts.length > 1) {
+                        pathsPoints.push(pts);
+                    }
+                } catch(e) {} finally {
+                    if (isTemp && pathEl.parentNode) {
+                        pathEl.parentNode.removeChild(pathEl);
+                    }
+                }
             });
 
             document.body.removeChild(container);
