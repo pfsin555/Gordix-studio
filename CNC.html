@@ -226,9 +226,9 @@
                             <label class="block text-[10px] text-slate-500 dark:text-slate-400 font-bold mb-1" data-i18n="mode">加工模式</label>
                             <select id="job-type">
                                 <option value="laser" data-i18n="optLaser">雷射切割</option>
-                                <option value="outer" data-i18n="optOuter">CNC 外輪廓</option>
+                                <option value="outer" selected data-i18n="optOuter">CNC 外輪廓</option>
                                 <option value="inner" data-i18n="optInner">CNC 內輪廓</option>
-                                <option value="pocket" selected data-i18n="optPocket">CNC 槽加工</option>
+                                <option value="pocket" data-i18n="optPocket">CNC 槽加工</option>
                             </select>
                         </div>
 
@@ -244,7 +244,7 @@
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
                                     <label class="block text-[10px] text-slate-500 dark:text-slate-400 font-bold mb-1" data-i18n="toolDia">刀具直徑</label>
-                                    <input type="number" id="mill-d" value="3.175" step="0.001">
+                                    <input type="number" id="mill-d" value="6.35" step="0.001">
                                 </div>
                                 <div>
                                     <label class="block text-[10px] text-slate-500 dark:text-slate-400 font-bold mb-1" data-i18n="totalDepth">加工深度</label>
@@ -838,8 +838,17 @@
             const svgEl = doc.querySelector('svg');
             if (!svgEl) return [];
 
+            // 建立隱藏 DOM 容器以讓瀏覽器 SVG 引擎計算 transform/CTM 與 getPointAtLength
+            const tempContainer = document.createElement('div');
+            tempContainer.style.position = 'absolute';
+            tempContainer.style.left = '-9999px';
+            tempContainer.style.top = '-9999px';
+            tempContainer.style.visibility = 'hidden';
+            document.body.appendChild(tempContainer);
+            tempContainer.appendChild(svgEl);
+
             const paths = [];
-            const elements = doc.querySelectorAll('path, rect, circle, ellipse, line, polyline, polygon');
+            const elements = svgEl.querySelectorAll('path, rect, circle, ellipse, line, polyline, polygon');
             
             function getSVGLayer(el) {
                 let parent = el.parentElement;
@@ -854,45 +863,95 @@
             }
 
             elements.forEach(el => {
-                let pts = [];
                 const type = el.tagName.toLowerCase();
+                let ctm = null;
+                try {
+                    ctm = el.getCTM();
+                } catch(e) {
+                    ctm = null;
+                }
+
+                function transformPoint(px, py) {
+                    if (ctm) {
+                        const wx = ctm.a * px + ctm.c * py + ctm.e;
+                        const wy = ctm.b * px + ctm.d * py + ctm.f;
+                        return { x: wx, y: -wy };
+                    }
+                    return { x: px, y: -py };
+                }
+
+                const layerName = getSVGLayer(el);
 
                 if (type === 'path') {
-                    const tempPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
-                    tempPath.setAttribute("d", el.getAttribute("d"));
-                    const len = tempPath.getTotalLength();
-                    const segments = Math.max(10, Math.ceil(len / (smoothTol * 5))); 
-                    for(let i=0; i<=segments; i++) {
-                        const p = tempPath.getPointAtLength(i * len / segments);
-                        pts.push({ x: p.x, y: -p.y });
+                    const dAttr = el.getAttribute('d');
+                    if (dAttr) {
+                        // 將包含多個子路徑 (M/m) 的 path 拆分獨立解析，避免過渡拉線與重疊
+                        const subpaths = dAttr.match(/([Mm][^Mm]+)/g) || [dAttr];
+                        subpaths.forEach(subD => {
+                            const tempPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                            tempPath.setAttribute("d", subD);
+                            svgEl.appendChild(tempPath);
+                            let len = 0;
+                            try { len = tempPath.getTotalLength(); } catch(e) { len = 0; }
+                            
+                            if (len > 0) {
+                                const segments = Math.max(10, Math.ceil(len / (smoothTol * 5)));
+                                const pts = [];
+                                for (let i = 0; i <= segments; i++) {
+                                    const p = tempPath.getPointAtLength(i * len / segments);
+                                    pts.push(transformPoint(p.x, p.y));
+                                }
+                                if (pts.length > 1) {
+                                    paths.push({
+                                        points: simplifyPath(pts, smoothTol),
+                                        layer: layerName
+                                    });
+                                }
+                            }
+                            svgEl.removeChild(tempPath);
+                        });
                     }
-                } else if (type === 'rect') {
-                    const x = parseFloat(el.getAttribute('x')||0), y = parseFloat(el.getAttribute('y')||0);
-                    const w = parseFloat(el.getAttribute('width')), h = parseFloat(el.getAttribute('height'));
-                    pts = [{x,y:-y}, {x:x+w,y:-y}, {x:x+w,y:-(y+h)}, {x,y:-(y+h)}, {x,y:-y}];
-                } else if (type === 'circle' || type === 'ellipse') {
-                    const cx = parseFloat(el.getAttribute('cx')||0), cy = parseFloat(el.getAttribute('cy')||0);
-                    const rx = type === 'circle' ? parseFloat(el.getAttribute('r')) : parseFloat(el.getAttribute('rx'));
-                    const ry = type === 'circle' ? rx : parseFloat(el.getAttribute('ry'));
-                    for(let i=0; i<=64; i++) {
-                        const a = (i/64) * Math.PI * 2;
-                        pts.push({ x: cx + Math.cos(a)*rx, y: -(cy + Math.sin(a)*ry) });
+                } else {
+                    let pts = [];
+                    if (type === 'rect') {
+                        const x = parseFloat(el.getAttribute('x')||0), y = parseFloat(el.getAttribute('y')||0);
+                        const w = parseFloat(el.getAttribute('width')||0), h = parseFloat(el.getAttribute('height')||0);
+                        const rawPts = [{x, y}, {x: x+w, y}, {x: x+w, y: y+h}, {x, y: y+h}, {x, y}];
+                        pts = rawPts.map(pt => transformPoint(pt.x, pt.y));
+                    } else if (type === 'circle' || type === 'ellipse') {
+                        const cx = parseFloat(el.getAttribute('cx')||0), cy = parseFloat(el.getAttribute('cy')||0);
+                        const rx = type === 'circle' ? parseFloat(el.getAttribute('r')||0) : parseFloat(el.getAttribute('rx')||0);
+                        const ry = type === 'circle' ? rx : parseFloat(el.getAttribute('ry')||0);
+                        for (let i = 0; i <= 64; i++) {
+                            const a = (i / 64) * Math.PI * 2;
+                            pts.push(transformPoint(cx + Math.cos(a) * rx, cy + Math.sin(a) * ry));
+                        }
+                    } else if (type === 'line') {
+                        const x1 = parseFloat(el.getAttribute('x1')||0), y1 = parseFloat(el.getAttribute('y1')||0);
+                        const x2 = parseFloat(el.getAttribute('x2')||0), y2 = parseFloat(el.getAttribute('y2')||0);
+                        pts = [transformPoint(x1, y1), transformPoint(x2, y2)];
+                    } else if (type === 'polyline' || type === 'polygon') {
+                        const pstr = (el.getAttribute('points') || '').trim().split(/[\s,]+/);
+                        for (let i = 0; i < pstr.length - 1; i += 2) {
+                            const px = parseFloat(pstr[i]), py = parseFloat(pstr[i+1]);
+                            if (!isNaN(px) && !isNaN(py)) {
+                                pts.push(transformPoint(px, py));
+                            }
+                        }
+                        if (type === 'polygon' && pts.length > 0) pts.push(pts[0]);
                     }
-                } else if (type === 'line') {
-                    pts = [{x:parseFloat(el.getAttribute('x1')), y:-parseFloat(el.getAttribute('y1'))}, {x:parseFloat(el.getAttribute('x2')), y:-parseFloat(el.getAttribute('y2'))}];
-                } else if (type === 'polyline' || type === 'polygon') {
-                    const pstr = el.getAttribute('points').trim().split(/[\s,]+/);
-                    for(let i=0; i<pstr.length; i+=2) pts.push({ x: parseFloat(pstr[i]), y: -parseFloat(pstr[i+1]) });
-                    if(type === 'polygon' && pts.length > 0) pts.push(pts[0]);
-                }
 
-                if (pts.length > 1) {
-                    paths.push({
-                        points: simplifyPath(pts, smoothTol),
-                        layer: getSVGLayer(el)
-                    });
+                    if (pts.length > 1) {
+                        paths.push({
+                            points: simplifyPath(pts, smoothTol),
+                            layer: layerName
+                        });
+                    }
                 }
             });
+
+            // 移除臨時 DOM 容器
+            document.body.removeChild(tempContainer);
 
             return scaleVectorPaths(paths, targetW);
         }
@@ -1012,7 +1071,7 @@
                     originalDim: { w: pMaxX-pMinX, h: pMaxY-pMinY }, 
                     currentDim: { w: pMaxX-pMinX, h: pMaxY-pMinY }, 
                     visible: true, 
-                    jobConfig: { type: 'pocket', f: 1000, d: 3.175, depth: 3.0, step: 1.0, overlap: 0.5, resolution: 0.1, useTab: false }, 
+                    jobConfig: { type: 'outer', f: 1000, d: 6.35, depth: 3.0, step: 1.0, overlap: 0.5, resolution: 0.1, useTab: false }, 
                     toolpath: null, appliedMethod: null,
                     pocketContourPaths: null, pocketScanPaths: null
                 };
@@ -1107,7 +1166,7 @@
         function applyBatchMethodToGroup(indices, method) {
             const newRes = Math.max(0.1, parseFloat(document.getElementById('resolution').value) || 0.1);
             const newF = parseFloat(document.getElementById('job-f').value) || 1000;
-            const newD = parseFloat(document.getElementById('mill-d').value) || 3.175;
+            const newD = parseFloat(document.getElementById('mill-d').value) || 6.35;
             const newDepth = parseFloat(document.getElementById('mill-depth').value) || 3.0;
             const newStep = parseFloat(document.getElementById('mill-step').value) || 1.0;
             const newOverlap = Math.max(0.1, Math.min(0.9, parseFloat(document.getElementById('mill-overlap').value) || 0.5));
