@@ -846,9 +846,190 @@
         }
 
         /**
+         * 將 SVG path d 屬性字串拆分為獨立的子路徑 (Sub-paths)，
+         * 防止包含多個 M/z 封閉曲線的 path 產生跨越連接線。
+         */
+        function splitSVGPathD(d) {
+            if (!d) return [];
+            const tokenRegex = /([a-df-zA-DF-Z])|([-+]?(?:\d+\.\d+|\d+|\.\d+)(?:[eE][-+]?\d+)?)/g;
+            const tokens = [];
+            let match;
+            while ((match = tokenRegex.exec(d)) !== null) {
+                if (match[1]) {
+                    tokens.push({ type: 'cmd', val: match[1] });
+                } else if (match[2]) {
+                    tokens.push({ type: 'num', val: parseFloat(match[2]) });
+                }
+            }
+
+            const subpaths = [];
+            let currentSubpathTokens = [];
+            let cx = 0, cy = 0;
+            let startX = 0, startY = 0;
+            let i = 0;
+
+            function pushSubpath() {
+                if (currentSubpathTokens.length > 0) {
+                    subpaths.push(currentSubpathTokens.join(' '));
+                    currentSubpathTokens = [];
+                }
+            }
+
+            function getNum() {
+                if (i < tokens.length && tokens[i].type === 'num') {
+                    return tokens[i++].val;
+                }
+                return 0;
+            }
+
+            let lastCmd = '';
+
+            while (i < tokens.length) {
+                let token = tokens[i];
+                let cmd = token.type === 'cmd' ? token.val : lastCmd;
+                if (token.type === 'cmd') {
+                    i++;
+                }
+
+                if (!cmd) break;
+
+                const isRel = cmd === cmd.toLowerCase();
+                const upperCmd = cmd.toUpperCase();
+
+                if (upperCmd === 'M') {
+                    pushSubpath();
+
+                    let x = getNum();
+                    let y = getNum();
+
+                    if (isRel && subpaths.length > 0) {
+                        x += cx;
+                        y += cy;
+                    }
+
+                    cx = x;
+                    cy = y;
+                    startX = x;
+                    startY = y;
+
+                    currentSubpathTokens.push(`M ${cx} ${cy}`);
+
+                    while (i < tokens.length && tokens[i].type === 'num') {
+                        let lx = getNum();
+                        let ly = getNum();
+                        if (isRel) {
+                            lx += cx;
+                            ly += cy;
+                        }
+                        cx = lx;
+                        cy = ly;
+                        currentSubpathTokens.push(`L ${cx} ${cy}`);
+                    }
+                    lastCmd = isRel ? 'l' : 'L';
+                } else if (upperCmd === 'Z') {
+                    currentSubpathTokens.push('Z');
+                    cx = startX;
+                    cy = startY;
+                    pushSubpath();
+                    lastCmd = 'Z';
+                } else if (upperCmd === 'L') {
+                    while (i < tokens.length && tokens[i].type === 'num') {
+                        let x = getNum();
+                        let y = getNum();
+                        if (isRel) { x += cx; y += cy; }
+                        cx = x; cy = y;
+                        currentSubpathTokens.push(`L ${cx} ${cy}`);
+                    }
+                    lastCmd = cmd;
+                } else if (upperCmd === 'H') {
+                    while (i < tokens.length && tokens[i].type === 'num') {
+                        let x = getNum();
+                        if (isRel) x += cx;
+                        cx = x;
+                        currentSubpathTokens.push(`H ${cx}`);
+                    }
+                    lastCmd = cmd;
+                } else if (upperCmd === 'V') {
+                    while (i < tokens.length && tokens[i].type === 'num') {
+                        let y = getNum();
+                        if (isRel) y += cy;
+                        cy = y;
+                        currentSubpathTokens.push(`V ${cy}`);
+                    }
+                    lastCmd = cmd;
+                } else if (upperCmd === 'C') {
+                    while (i < tokens.length && tokens[i].type === 'num') {
+                        let x1 = getNum(), y1 = getNum();
+                        let x2 = getNum(), y2 = getNum();
+                        let x = getNum(), y = getNum();
+                        if (isRel) {
+                            x1 += cx; y1 += cy;
+                            x2 += cx; y2 += cy;
+                            x += cx; y += cy;
+                        }
+                        cx = x; cy = y;
+                        currentSubpathTokens.push(`C ${x1} ${y1}, ${x2} ${y2}, ${cx} ${cy}`);
+                    }
+                    lastCmd = cmd;
+                } else if (upperCmd === 'S') {
+                    while (i < tokens.length && tokens[i].type === 'num') {
+                        let x2 = getNum(), y2 = getNum();
+                        let x = getNum(), y = getNum();
+                        if (isRel) {
+                            x2 += cx; y2 += cy;
+                            x += cx; y += cy;
+                        }
+                        cx = x; cy = y;
+                        currentSubpathTokens.push(`S ${x2} ${y2}, ${cx} ${cy}`);
+                    }
+                    lastCmd = cmd;
+                } else if (upperCmd === 'Q') {
+                    while (i < tokens.length && tokens[i].type === 'num') {
+                        let x1 = getNum(), y1 = getNum();
+                        let x = getNum(), y = getNum();
+                        if (isRel) {
+                            x1 += cx; y1 += cy;
+                            x += cx; y += cy;
+                        }
+                        cx = x; cy = y;
+                        currentSubpathTokens.push(`Q ${x1} ${y1}, ${cx} ${cy}`);
+                    }
+                    lastCmd = cmd;
+                } else if (upperCmd === 'T') {
+                    while (i < tokens.length && tokens[i].type === 'num') {
+                        let x = getNum(), y = getNum();
+                        if (isRel) {
+                            x += cx; y += cy;
+                        }
+                        cx = x; cy = y;
+                        currentSubpathTokens.push(`T ${cx} ${cy}`);
+                    }
+                    lastCmd = cmd;
+                } else if (upperCmd === 'A') {
+                    while (i < tokens.length && tokens[i].type === 'num') {
+                        let rx = getNum(), ry = getNum();
+                        let rot = getNum(), large = getNum(), sweep = getNum();
+                        let x = getNum(), y = getNum();
+                        if (isRel) {
+                            x += cx; y += cy;
+                        }
+                        cx = x; cy = y;
+                        currentSubpathTokens.push(`A ${rx} ${ry} ${rot} ${large} ${sweep} ${cx} ${cy}`);
+                    }
+                    lastCmd = cmd;
+                } else {
+                    i++;
+                }
+            }
+            pushSubpath();
+
+            return subpaths;
+        }
+
+        /**
          * 修正後的 SVG 解析器：
-         * 支援 CTM (Current Transformation Matrix) 矩陣平移/旋轉/縮放運算與 <use> 標籤展開，
-         * 完美解決零件重疊問題，呈現正確的水平或佈局排版。
+         * 支援 CTM 矩陣平移/旋轉/縮放、<use> 標籤展開與 Path 子路徑拆解，
+         * 完美消除多餘連接線，正確呈現佈局排版。
          */
         function parseSVG(svgString, smoothTol) {
             const parser = new DOMParser();
@@ -920,17 +1101,55 @@
                 }
 
                 if (type === 'path') {
-                    let len = 0;
-                    try {
-                        len = el.getTotalLength();
-                    } catch(e) {
-                        len = 0;
-                    }
-                    if (len > 0) {
-                        const segments = Math.max(10, Math.ceil(len / (smoothTol * 5))); 
-                        for(let i = 0; i <= segments; i++) {
-                            const p = el.getPointAtLength(i * len / segments);
-                            pts.push(getPt(p.x, p.y)); 
+                    const dAttr = el.getAttribute('d') || '';
+                    const subpaths = splitSVGPathD(dAttr);
+
+                    if (subpaths.length > 0) {
+                        subpaths.forEach(subD => {
+                            const tempPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                            tempPath.setAttribute('d', subD);
+                            const parent = el.parentNode || svgEl;
+                            parent.appendChild(tempPath);
+
+                            let len = 0;
+                            try {
+                                len = tempPath.getTotalLength();
+                            } catch(e) {
+                                len = 0;
+                            }
+
+                            if (len > 0) {
+                                const subPts = [];
+                                const segments = Math.max(10, Math.ceil(len / (smoothTol * 5)));
+                                for (let i = 0; i <= segments; i++) {
+                                    const p = tempPath.getPointAtLength(i * len / segments);
+                                    subPts.push(getPt(p.x, p.y));
+                                }
+                                if (subPts.length > 1) {
+                                    paths.push(simplifyPath(subPts, smoothTol));
+                                }
+                            }
+
+                            if (tempPath.parentNode) {
+                                tempPath.parentNode.removeChild(tempPath);
+                            }
+                        });
+                    } else {
+                        let len = 0;
+                        try {
+                            len = el.getTotalLength();
+                        } catch(e) {
+                            len = 0;
+                        }
+                        if (len > 0) {
+                            const segments = Math.max(10, Math.ceil(len / (smoothTol * 5))); 
+                            for(let i = 0; i <= segments; i++) {
+                                const p = el.getPointAtLength(i * len / segments);
+                                pts.push(getPt(p.x, p.y)); 
+                            }
+                            if (pts.length > 1) {
+                                paths.push(simplifyPath(pts, smoothTol));
+                            }
                         }
                     }
                 } else if (type === 'rect') {
@@ -942,6 +1161,7 @@
                         const rawPts = [{x, y}, {x: x + w, y}, {x: x + w, y: y + h}, {x, y: y + h}, {x, y}];
                         pts = rawPts.map(p => getPt(p.x, p.y));
                     }
+                    if (pts.length > 1) paths.push(simplifyPath(pts, smoothTol));
                 } else if (type === 'circle' || type === 'ellipse') {
                     const cx = parseFloat(el.getAttribute('cx') || 0);
                     const cy = parseFloat(el.getAttribute('cy') || 0);
@@ -953,12 +1173,14 @@
                             pts.push(getPt(cx + Math.cos(a) * rx, cy + Math.sin(a) * ry));
                         }
                     }
+                    if (pts.length > 1) paths.push(simplifyPath(pts, smoothTol));
                 } else if (type === 'line') {
                     const x1 = parseFloat(el.getAttribute('x1') || 0);
                     const y1 = parseFloat(el.getAttribute('y1') || 0);
                     const x2 = parseFloat(el.getAttribute('x2') || 0);
                     const y2 = parseFloat(el.getAttribute('y2') || 0);
                     pts = [getPt(x1, y1), getPt(x2, y2)];
+                    if (pts.length > 1) paths.push(simplifyPath(pts, smoothTol));
                 } else if (type === 'polyline' || type === 'polygon') {
                     const pstr = (el.getAttribute('points') || '').trim().split(/[\s,]+/);
                     const rawPts = [];
@@ -969,10 +1191,7 @@
                     }
                     if (type === 'polygon' && rawPts.length > 0) rawPts.push(rawPts[0]);
                     pts = rawPts.map(p => getPt(p.x, p.y));
-                }
-
-                if (pts.length > 1) {
-                    paths.push(simplifyPath(pts, smoothTol));
+                    if (pts.length > 1) paths.push(simplifyPath(pts, smoothTol));
                 }
             });
 
