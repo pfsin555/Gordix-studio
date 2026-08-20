@@ -1171,6 +1171,111 @@
             }
         });
 
+        // 將含多組 M/m ... Z/z 的複合 path d 屬性精準拆解成獨立子路徑字串陣列
+        function splitSvgPathDToSubpaths(d, svg) {
+            if (!d) return [];
+
+            const tokenRegex = /([a-df-z])|([-+]?(?:\d*\.\d+|\d+)(?:[eE][-+]?\d+)?)/gi;
+            const tokens = [];
+            let match;
+            while ((match = tokenRegex.exec(d)) !== null) {
+                if (match[1]) {
+                    tokens.push({ type: 'cmd', val: match[1] });
+                } else if (match[2]) {
+                    tokens.push({ type: 'num', val: parseFloat(match[2]) });
+                }
+            }
+
+            const subpathChunks = [];
+            let currentChunk = null;
+
+            for (let i = 0; i < tokens.length; i++) {
+                const t = tokens[i];
+                if (t.type === 'cmd' && (t.val === 'M' || t.val === 'm')) {
+                    if (currentChunk && currentChunk.length > 0) {
+                        subpathChunks.push(currentChunk);
+                    }
+                    currentChunk = [t];
+                } else {
+                    if (currentChunk) {
+                        currentChunk.push(t);
+                    }
+                }
+            }
+            if (currentChunk && currentChunk.length > 0) {
+                subpathChunks.push(currentChunk);
+            }
+
+            if (subpathChunks.length === 0) return [];
+
+            const subpathDStrings = [];
+            let lastStart = { x: 0, y: 0 };
+            let lastEnd = { x: 0, y: 0 };
+            let lastClosed = false;
+
+            for (let i = 0; i < subpathChunks.length; i++) {
+                const chunk = subpathChunks[i];
+                if (chunk.length < 3 || chunk[1].type !== 'num' || chunk[2].type !== 'num') continue;
+
+                const origCmd = chunk[0].val;
+                const origX = chunk[1].val;
+                const origY = chunk[2].val;
+
+                let absX = origX;
+                let absY = origY;
+
+                if (origCmd === 'm') {
+                    if (i === 0) {
+                        absX = origX;
+                        absY = origY;
+                    } else {
+                        if (lastClosed) {
+                            absX = lastStart.x + origX;
+                            absY = lastStart.y + origY;
+                        } else {
+                            absX = lastEnd.x + origX;
+                            absY = lastEnd.y + origY;
+                        }
+                    }
+                }
+
+                let subD = `M ${absX} ${absY}`;
+
+                let restIndex = 3;
+                if (restIndex < chunk.length && chunk[restIndex].type === 'num') {
+                    subD += (origCmd === 'm' ? ' l' : ' L');
+                }
+
+                for (let k = restIndex; k < chunk.length; k++) {
+                    const tk = chunk[k];
+                    subD += ` ${tk.val}`;
+                }
+
+                subpathDStrings.push(subD);
+
+                const tempPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                tempPath.setAttribute('d', subD);
+                svg.appendChild(tempPath);
+
+                try {
+                    const totalLen = tempPath.getTotalLength();
+                    if (totalLen >= 0) {
+                        const p0 = tempPath.getPointAtLength(0);
+                        const pLen = tempPath.getPointAtLength(totalLen);
+                        lastStart = { x: p0.x, y: p0.y };
+                        lastEnd = { x: pLen.x, y: pLen.y };
+                        lastClosed = /z\s*$/i.test(subD.trim());
+                    }
+                } catch(e) {} finally {
+                    if (tempPath.parentNode) {
+                        tempPath.parentNode.removeChild(tempPath);
+                    }
+                }
+            }
+
+            return subpathDStrings;
+        }
+
         async function extractPointsFromSvg(svgText) {
             const parser = new DOMParser();
             const doc = parser.parseFromString(svgText, "image/svg+xml");
@@ -1217,82 +1322,82 @@
                 // 排除 <defs> 或 <symbol> 內的未引用模板圖案
                 if (el.closest('defs') || el.closest('symbol')) return;
 
-                let pathEl;
-                let isTemp = false;
-
-                if (el.tagName.toLowerCase() === 'path') {
-                    pathEl = el;
-                } else {
-                    pathEl = document.createElementNS("http://www.w3.org/2000/svg", "path");
-                    let d = "";
-                    const tag = el.tagName.toLowerCase();
-                    if (tag === 'rect') {
-                        const x = parseFloat(el.getAttribute('x')||0), y = parseFloat(el.getAttribute('y')||0);
-                        const w = parseFloat(el.getAttribute('width')||0), h = parseFloat(el.getAttribute('height')||0);
-                        d = `M${x},${y} L${x+w},${y} L${x+w},${y+h} L${x},${y+h} Z`;
-                    } else if (tag === 'circle') {
-                        const cx = parseFloat(el.getAttribute('cx')||0), cy = parseFloat(el.getAttribute('cy')||0), r = parseFloat(el.getAttribute('r')||0);
-                        d = `M${cx-r},${cy} A${r},${r} 0 1,0 ${cx+r},${cy} A${r},${r} 0 1,0 ${cx-r},${cy} Z`;
-                    } else if (tag === 'ellipse') {
-                        const cx = parseFloat(el.getAttribute('cx')||0), cy = parseFloat(el.getAttribute('cy')||0);
-                        const rx = parseFloat(el.getAttribute('rx')||0), ry = parseFloat(el.getAttribute('ry')||0);
-                        d = `M${cx-rx},${cy} A${rx},${ry} 0 1,0 ${cx+rx},${cy} A${rx},${ry} 0 1,0 ${cx-rx},${cy} Z`;
-                    } else if (tag === 'line') {
-                        d = `M${el.getAttribute('x1')||0},${el.getAttribute('y1')||0} L${el.getAttribute('x2')||0},${el.getAttribute('y2')||0}`;
-                    } else if (tag === 'polyline' || tag === 'polygon') {
-                        d = `M${el.getAttribute('points')}` + (tag === 'polygon' ? " Z" : "");
-                    }
-                    pathEl.setAttribute('d', d);
-                    if (el.parentNode) {
-                        el.parentNode.appendChild(pathEl);
-                        isTemp = true;
-                    }
+                let d = "";
+                const tag = el.tagName.toLowerCase();
+                if (tag === 'path') {
+                    d = el.getAttribute('d') || "";
+                } else if (tag === 'rect') {
+                    const x = parseFloat(el.getAttribute('x')||0), y = parseFloat(el.getAttribute('y')||0);
+                    const w = parseFloat(el.getAttribute('width')||0), h = parseFloat(el.getAttribute('height')||0);
+                    d = `M${x},${y} L${x+w},${y} L${x+w},${y+h} L${x},${y+h} Z`;
+                } else if (tag === 'circle') {
+                    const cx = parseFloat(el.getAttribute('cx')||0), cy = parseFloat(el.getAttribute('cy')||0), r = parseFloat(el.getAttribute('r')||0);
+                    d = `M${cx-r},${cy} A${r},${r} 0 1,0 ${cx+r},${cy} A${r},${r} 0 1,0 ${cx-r},${cy} Z`;
+                } else if (tag === 'ellipse') {
+                    const cx = parseFloat(el.getAttribute('cx')||0), cy = parseFloat(el.getAttribute('cy')||0);
+                    const rx = parseFloat(el.getAttribute('rx')||0), ry = parseFloat(el.getAttribute('ry')||0);
+                    d = `M${cx-rx},${cy} A${rx},${ry} 0 1,0 ${cx+rx},${cy} A${rx},${ry} 0 1,0 ${cx-rx},${cy} Z`;
+                } else if (tag === 'line') {
+                    d = `M${el.getAttribute('x1')||0},${el.getAttribute('y1')||0} L${el.getAttribute('x2')||0},${el.getAttribute('y2')||0}`;
+                } else if (tag === 'polyline' || tag === 'polygon') {
+                    d = `M${el.getAttribute('points')}` + (tag === 'polygon' ? " Z" : "");
                 }
 
+                if (!d.trim()) return;
+
+                // 取得 CTM 轉換矩陣以套用所有群組 (<g>) 的 transform (平移、旋轉、縮放)
+                let ctm = null;
                 try {
-                    const len = pathEl.getTotalLength();
-                    if (len <= 0) {
-                        if (isTemp && pathEl.parentNode) pathEl.parentNode.removeChild(pathEl);
-                        return;
-                    }
+                    ctm = el.getCTM();
+                } catch(e) {}
 
-                    // 取得 CTM 轉換矩陣以套用所有群組 (<g>) 的 transform (平移、旋轉、縮放)
-                    let ctm = null;
+                // 將包含多個子路徑 (Subpaths) 的 d 拆解為獨立的單一子路徑 d 陣列
+                const subpathStrings = splitSvgPathDToSubpaths(d, svg);
+
+                subpathStrings.forEach(subD => {
+                    const tempPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                    tempPath.setAttribute('d', subD);
+                    svg.appendChild(tempPath);
+
                     try {
-                        ctm = pathEl.getCTM();
-                    } catch(e) {}
-
-                    const pts = [];
-                    const step = Math.max(0.2, Math.min(1.0, len / 1000));
-                    for (let s = 0; s <= len; s += step) {
-                        const p = pathEl.getPointAtLength(s);
-                        let x = p.x, y = p.y;
-                        if (ctm) {
-                            x = p.x * ctm.a + p.y * ctm.c + ctm.e;
-                            y = p.x * ctm.b + p.y * ctm.d + ctm.f;
+                        const len = tempPath.getTotalLength();
+                        if (len <= 0) {
+                            if (tempPath.parentNode) tempPath.parentNode.removeChild(tempPath);
+                            return;
                         }
-                        pts.push({ x, y });
-                    }
 
-                    // 確保包含終點
-                    const endP = pathEl.getPointAtLength(len);
-                    let endX = endP.x, endY = endP.y;
-                    if (ctm) {
-                        endX = endP.x * ctm.a + endP.y * ctm.c + ctm.e;
-                        endY = endP.x * ctm.b + endP.y * ctm.d + ctm.f;
-                    }
-                    if (pts.length === 0 || Math.hypot(endX - pts[pts.length-1].x, endY - pts[pts.length-1].y) > 0.001) {
-                        pts.push({ x: endX, y: endY });
-                    }
+                        const pts = [];
+                        const step = Math.max(0.2, Math.min(1.0, len / 1000));
+                        for (let s = 0; s <= len; s += step) {
+                            const p = tempPath.getPointAtLength(s);
+                            let x = p.x, y = p.y;
+                            if (ctm) {
+                                x = p.x * ctm.a + p.y * ctm.c + ctm.e;
+                                y = p.x * ctm.b + p.y * ctm.d + ctm.f;
+                            }
+                            pts.push({ x, y });
+                        }
 
-                    if (pts.length > 1) {
-                        pathsPoints.push(pts);
+                        // 確保包含終點
+                        const endP = tempPath.getPointAtLength(len);
+                        let endX = endP.x, endY = endP.y;
+                        if (ctm) {
+                            endX = endP.x * ctm.a + endP.y * ctm.c + ctm.e;
+                            endY = endP.x * ctm.b + endP.y * ctm.d + ctm.f;
+                        }
+                        if (pts.length === 0 || Math.hypot(endX - pts[pts.length-1].x, endY - pts[pts.length-1].y) > 0.001) {
+                            pts.push({ x: endX, y: endY });
+                        }
+
+                        if (pts.length > 1) {
+                            pathsPoints.push(pts);
+                        }
+                    } catch(e) {} finally {
+                        if (tempPath.parentNode) {
+                            tempPath.parentNode.removeChild(tempPath);
+                        }
                     }
-                } catch(e) {} finally {
-                    if (isTemp && pathEl.parentNode) {
-                        pathEl.parentNode.removeChild(pathEl);
-                    }
-                }
+                });
             });
 
             document.body.removeChild(container);
