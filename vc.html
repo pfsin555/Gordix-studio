@@ -198,7 +198,7 @@
                         <div class="grid grid-cols-2 gap-4 items-end">
                             <div>
                                 <label class="block text-[10px] text-slate-400 font-bold mb-1" data-i18n="targetWidth">整體寬 (mm)</label>
-                                <input type="number" id="target-width" value="100">
+                                <input type="number" id="target-width" value="100" step="0.001">
                             </div>
                             <div class="flex items-center gap-2 pb-2.5">
                                 <input type="checkbox" id="line-vcarve-check" class="w-4 h-4 accent-red-600 rounded cursor-pointer">
@@ -427,6 +427,7 @@
         let originalFileName = "cnc_work";
         let parts = []; 
         let selectedIndices = new Set();
+        let isNewFileLoad = false;
         const SAFE_Z = "1.000";
 
         // Three.js 相關變數
@@ -1027,9 +1028,45 @@
         }
 
         /**
+         * 計算 SVG userUnit (或 px) 到 mm 的實體單位縮放比
+         */
+        function getSVGToMMScale(svgEl) {
+            const widthAttr = svgEl.getAttribute('width');
+            let physicalWidthMM = null;
+
+            if (widthAttr) {
+                const wStr = widthAttr.trim();
+                const num = parseFloat(wStr);
+                if (!isNaN(num) && num > 0) {
+                    if (wStr.endsWith('mm')) physicalWidthMM = num;
+                    else if (wStr.endsWith('cm')) physicalWidthMM = num * 10;
+                    else if (wStr.endsWith('in')) physicalWidthMM = num * 25.4;
+                    else if (wStr.endsWith('pt')) physicalWidthMM = num * (25.4 / 72);
+                    else if (wStr.endsWith('pc')) physicalWidthMM = num * (25.4 / 6);
+                    else if (wStr.endsWith('px')) physicalWidthMM = num * (25.4 / 96);
+                    else physicalWidthMM = num * (25.4 / 96);
+                }
+            }
+
+            let svgPixelWidth = null;
+            try {
+                const rect = svgEl.getBoundingClientRect();
+                if (rect && rect.width > 0) {
+                    svgPixelWidth = rect.width;
+                }
+            } catch(e) {}
+
+            if (physicalWidthMM !== null && svgPixelWidth !== null && svgPixelWidth > 0) {
+                return physicalWidthMM / svgPixelWidth;
+            }
+
+            return 25.4 / 96;
+        }
+
+        /**
          * 修正後的 SVG 解析器：
          * 支援 CTM 矩陣平移/旋轉/縮放、<use> 標籤展開與 Path 子路徑拆解，
-         * 完美消除多餘連接線，正確呈現佈局排版。
+         * 並且精準套用 SVG 單位縮放比 (mm)，完美呈現原始尺寸。
          */
         function parseSVG(svgString, smoothTol) {
             const parser = new DOMParser();
@@ -1042,11 +1079,13 @@
             if (!container) {
                 container = document.createElement('div');
                 container.id = 'svg-temp-parser';
-                container.style.cssText = 'position:absolute;left:-9999px;top:-9999px;width:3000px;height:3000px;opacity:0;pointer-events:none;overflow:hidden;';
+                container.style.cssText = 'position:absolute;left:-9999px;top:-9999px;width:20000px;height:20000px;opacity:0;pointer-events:none;overflow:visible;';
                 document.body.appendChild(container);
             }
             container.innerHTML = '';
             container.appendChild(svgEl);
+
+            const svgScale = getSVGToMMScale(svgEl);
 
             // 2. 展開所有 <use> 引用標籤為包含矩陣 Transform 的獨立實體節點
             const useElements = Array.from(svgEl.querySelectorAll('use'));
@@ -1090,14 +1129,14 @@
                     ctm = null;
                 }
 
-                // 將本地座標系點經 CTM 轉換後，轉換至 CNC 平面 (Y軸反轉)
+                // 將本地座標系點經 CTM 轉換與 svgScale 轉換後，轉換至 CNC 平面 (Y軸反轉，單位為 mm)
                 function getPt(x, y) {
                     if (ctm) {
                         const tx = x * ctm.a + y * ctm.c + ctm.e;
                         const ty = x * ctm.b + y * ctm.d + ctm.f;
-                        return { x: tx, y: -ty };
+                        return { x: tx * svgScale, y: -ty * svgScale };
                     }
-                    return { x: x, y: -y };
+                    return { x: x * svgScale, y: -y * svgScale };
                 }
 
                 if (type === 'path') {
@@ -2353,6 +2392,7 @@
                 originalFileName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
                 fileExtension = file.name.split('.').pop().toLowerCase();
                 fileNameDisplay.innerText = file.name;
+                isNewFileLoad = true;
                 
                 const r = new FileReader();
                 r.onload = (event) => {
@@ -2378,7 +2418,8 @@
             document.getElementById('process-img-btn').onclick = async () => {
                 if(!rawFileData) return;
                 
-                const targetW = parseFloat(document.getElementById('target-width').value) || 100;
+                let targetWInput = document.getElementById('target-width');
+                let targetW = parseFloat(targetWInput.value) || 100;
                 const smoothTol = parseFloat(document.getElementById('smooth-range').value);
                 
                 let vectorPaths = []; 
@@ -2387,11 +2428,27 @@
                     vectorPaths = await parseBitmap(rawFileData, targetW, smoothTol);
                 } else if (fileExtension === 'svg') {
                     const rawPaths = parseSVG(rawFileData, smoothTol);
+                    if (isNewFileLoad) {
+                        const origW = getPathsWidth(rawPaths);
+                        if (origW > 0) {
+                            targetW = parseFloat(origW.toFixed(3));
+                            targetWInput.value = targetW;
+                        }
+                    }
                     vectorPaths = scaleVectorPaths(rawPaths, targetW);
                 } else if (fileExtension === 'dxf') {
                     const rawPaths = parseDXF(rawFileData, smoothTol);
+                    if (isNewFileLoad) {
+                        const origW = getPathsWidth(rawPaths);
+                        if (origW > 0) {
+                            targetW = parseFloat(origW.toFixed(3));
+                            targetWInput.value = targetW;
+                        }
+                    }
                     vectorPaths = scaleVectorPaths(rawPaths, targetW);
                 }
+
+                isNewFileLoad = false;
 
                 if (vectorPaths.length > 0) {
                     processVectorIntoParts(vectorPaths);
