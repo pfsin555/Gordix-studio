@@ -74,7 +74,7 @@
             </svg>
             <div>
                 <h4 class="font-bold text-orange-600 dark:text-orange-500 text-sm md:text-base" data-i18n="warning-title">安全與免責聲明</h4>
-                <p class="text-sm text-slate-600 dark:text-slate-400 mt-1 transition-colors leading-relaxed" data-i18n="warning-desc">本參數已根據 Gordix 8皮帶懸掛式剛性實測優化。配合 Makita RT0700 修邊機使用時，手冊建議盡量不要在低於刻度 3 (15,000 RPM) 的狀況下長時間運轉（除鋁合金切削等必要低速工藝外），以確保主軸內部散熱充足。實際加工效果仍取決於皮帶張緊度與刀具狀況。</p>
+                <p class="text-sm text-slate-600 dark:text-slate-400 mt-1 transition-colors leading-relaxed" data-i18n="warning-desc">配合 Makita RT0700 修邊機使用時，手冊建議盡量不要在低於刻度 3 (15,000 RPM) 的狀況下長時間運轉（除鋁合金切削等必要低速工藝外），以確保主軸內部散熱充足。實際加工效果仍取決於皮帶張緊度與刀具狀況。</p>
             </div>
         </div>
 
@@ -194,7 +194,7 @@
                                 <span id="cutter-type-badge" class="px-2.5 py-0.5 rounded text-sm font-bold bg-orange-500/20 text-orange-600 dark:text-orange-400 border border-orange-500/30">下旋螺旋銑刀 (Down-cut) 模式已啟用</span>
                             </div>
                             <p class="text-sm text-slate-600 leading-relaxed dark:text-slate-300 font-medium" id="out-tip-desc">
-                                針對 3.175mm 雙刃刀具切削層板：依實測優化，走速約 F700~1200 搭配下刀 3.0mm 可完美兼顧切削力與排屑散熱。
+                                針對 3.175mm 雙刃刀具切削層板：走速約 F700~1200 搭配下刀 3.0mm 可兼顧切削力與排屑散熱。
                             </p>
                             <div id="out-limit-warning" class="hidden mt-2 px-3 py-1.5 bg-orange-500/10 border border-orange-500/30 rounded text-sm text-orange-500 dark:text-orange-400 font-bold animate-pulse">
                                 ⚠️ 已自動限制在 Gordix 最大安全走速 F2000 內！
@@ -242,14 +242,14 @@
                                 <td class="p-3 md:p-4 font-semibold text-slate-700 dark:text-slate-300" id="cell-softwood-speed" data-rpm="20,000 ~ 24,000" data-dial="4 ~ 5">20,000 ~ 24,000</td>
                                 <td class="p-3 md:p-4 font-mono text-emerald-600 dark:text-emerald-400 font-bold">1200 ~ 1600</td>
                                 <td class="p-3 md:p-4 font-mono font-medium text-slate-800 dark:text-slate-200">3.0 ~ 4.0</td>
-                                <td class="p-3 md:p-4 text-slate-600 dark:text-slate-400 leading-relaxed" data-i18n="note-softwood">排屑快速、阻力低。依實測基準建議單次下刀至 3.0 ~ 4.0mm，保持適中走速可防止排屑積熱導致工件燒焦。</td>
+                                <td class="p-3 md:p-4 text-slate-600 dark:text-slate-400 leading-relaxed" data-i18n="note-softwood">排屑快速、阻力低。建議單次下刀至 3.0 ~ 4.0mm，保持適中走速可防止排屑積熱導致工件燒焦。</td>
                             </tr>
                             <tr class="hover:bg-slate-50 transition-colors dark:hover:bg-slate-800/50 bg-orange-500/5">
                                 <td class="p-3 md:p-4 font-bold text-orange-600 dark:text-orange-500" data-i18n="mat-plywood">層板 / 膠合板 (Plywood)</td>
                                 <td class="p-3 md:p-4 font-semibold text-slate-700 dark:text-slate-300" id="cell-plywood-speed" data-rpm="18,000 ~ 22,000" data-dial="3 ~ 4">18,000 ~ 22,000</td>
                                 <td class="p-3 md:p-4 font-mono text-emerald-600 dark:text-emerald-400 font-bold">1000 ~ 1200</td>
                                 <td class="p-3 md:p-4 font-mono font-bold text-orange-600 dark:text-orange-500">3.0</td>
-                                <td class="p-3 md:p-4 text-slate-600 dark:text-slate-400 leading-relaxed" data-i18n="note-plywood">⚠️ 依實測優化：層板推薦走速 F1000~1200 搭配建議下刀 3.0mm，在此剛性下具有最佳排屑與加工效率。採用順銑加工可有效減少木層撕裂。</td>
+                                <td class="p-3 md:p-4 text-slate-600 dark:text-slate-400 leading-relaxed" data-i18n="note-plywood">層板建議走速 F1000~1200 搭配建議下刀 3.0mm，具有良好的排屑與加工效率。採用順銑加工可有效減少木層撕裂。</td>
                             </tr>
                             <tr class="hover:bg-slate-50 transition-colors dark:hover:bg-slate-800/50">
                                 <td class="p-3 md:p-4 font-bold text-slate-800 dark:text-slate-200" data-i18n="mat-hardwood">硬木 (櫸木 / 胡桃木)</td>
@@ -270,7 +270,7 @@
                                 <td class="p-3 md:p-4 font-semibold text-slate-700 dark:text-slate-300" id="cell-acrylic-speed" data-rpm="15,000 ~ 17,000" data-dial="3">15,000 ~ 17,000</td>
                                 <td class="p-3 md:p-4 font-mono text-emerald-600 dark:text-emerald-400 font-bold">800 ~ 1000</td>
                                 <td class="p-3 md:p-4 font-mono font-medium text-slate-800 dark:text-slate-200">1.0 ~ 1.5</td>
-                                <td class="p-3 md:p-4 text-slate-600 dark:text-slate-400 leading-relaxed" data-i18n="note-acrylic">⚠️ 主軸保護設定：為確保 Makita RT0700 雕刻機散熱無虞，本機限制最低運作刻度為刻度 3 (15,000 RPM). 建議下刀深度 1.0~1.5mm，配合走速 F800~1000 快速排屑帶走熱量，防止塑料高溫熔化黏刀。</td>
+                                <td class="p-3 md:p-4 text-slate-600 dark:text-slate-400 leading-relaxed" data-i18n="note-acrylic">⚠️ 主軸保護設定：為確保 Makita RT0700 雕刻機散熱無虞，本機限制最低運作刻度為刻度 3 (15,000 RPM)。建議下刀深度 1.0~1.5mm，配合走速 F800~1000 快速排屑帶走熱量，防止塑料高溫熔化黏刀。</td>
                             </tr>
                             <tr class="hover:bg-slate-50 transition-colors dark:hover:bg-slate-800/50">
                                 <td class="p-3 md:p-4 font-bold text-slate-800 dark:text-slate-200" data-i18n="mat-doublecolor">雕刻雙色板 / ABS塑料</td>
@@ -409,7 +409,7 @@
             'zh': {
                 'nav-subtitle': '參數指南',
                 'warning-title': '安全與免責聲明',
-                'warning-desc': '本參數已根據 Gordix 8皮帶懸掛式剛性實測優化。配合 Makita RT0700 修邊機使用時，手冊建議盡量不要在低於刻度 3 (15,000 RPM) 的狀況下長時間運轉（除鋁合金切削等必要低速工藝外），以確保主軸內部散熱充足。實際加工效果仍取決於皮帶張緊度與刀具狀況。首次加工新材質時，強烈建議從保守參數開始測試。',
+                'warning-desc': '配合 Makita RT0700 修邊機使用時，手冊建議盡量不要在低於刻度 3 (15,000 RPM) 的狀況下長時間運轉（除鋁合金切削等必要低速工藝外），以確保主軸內部散熱充足。實際加工效果仍取決於皮帶張緊度與刀具狀況。首次加工新材質時，強烈建議從保守參數開始測試。',
                 'tab-cnc-text': 'CNC 銑削與雕刻參數',
                 'tab-laser-text': '雷射加工與切割參數',
                 'dial-num': '刻度',
@@ -421,9 +421,9 @@
                 'th-doc': '建議下刀深度(DOC, mm)',
                 'th-notes': '工藝備註與技巧',
                 'mat-softwood': '軟木 / 密集板 (MDF)',
-                'note-softwood': '排屑快速、阻力低。依實測基準建議單次下刀至 3.0 ~ 4.0mm，保持適中走速可防止排屑積熱導致工件燒焦。',
+                'note-softwood': '排屑快速、阻力低。建議單次下刀至 3.0 ~ 4.0mm，保持適中走速可防止排屑積熱導致工件燒焦。',
                 'mat-plywood': '層板 / 膠合板 (Plywood)',
-                'note-plywood': '⚠️ 依實測優化：層板推薦走速 F1000~1200 搭配建議下刀 3.0mm，在此剛性下具有最佳排屑與加工效率。採用順銑加工可有效減少木層撕裂。',
+                'note-plywood': '層板建議走速 F1000~1200 搭配建議下刀 3.0mm，具有良好的排屑與加工效率。採用順銑加工可有效減少木層撕裂。',
                 'mat-hardwood': '硬木 (櫸木 / 胡桃木)',
                 'note-hardwood': '材質緊密。建議下刀保守設定為 1.5 ~ 2.0mm，適度降低走速至 F800~1000 以避免皮帶受剪力過度拉伸，防止銑刀折斷。',
                 'mat-toolingboard': '代木 / 建模高密度樹脂 (Tooling Board)',
@@ -474,7 +474,7 @@
             'en': {
                 'nav-subtitle': 'Parameters Guide',
                 'warning-title': 'Safety & Disclaimer',
-                'warning-desc': 'Parameters optimized for Gordix 8-belt rigidity. Per Makita RT0700 manual, avoid running below Dial 3 (15,000 RPM) for long periods to ensure sufficient heat dissipation (except for necessary low-speed tasks like aluminum). Actual results depend on belt tension.',
+                'warning-desc': 'Per Makita RT0700 manual, avoid running below Dial 3 (15,000 RPM) for long periods to ensure sufficient heat dissipation (except for necessary low-speed tasks like aluminum). Actual results depend on belt tension.',
                 'tab-cnc-text': 'CNC Milling & Carving',
                 'tab-laser-text': 'Laser Engraving & Cutting',
                 'dial-num': 'Dial',
@@ -486,9 +486,9 @@
                 'th-doc': 'Recommended DOC (mm)',
                 'th-notes': 'Pro Tips & Notes',
                 'mat-softwood': 'Softwood / MDF',
-                'note-softwood': 'Fast chip evacuation, low resistance. Based on testing, DOC is adjusted up to 3.0 ~ 4.0mm. Keep moderate feed to prevent heat-buildup burning.',
+                'note-softwood': 'Fast chip evacuation, low resistance. Recommended DOC is 3.0 ~ 4.0mm. Keep moderate feed to prevent heat-buildup burning.',
                 'mat-plywood': 'Plywood',
-                'note-plywood': '⚠️ Optimized via tests: Recommend feed rate F1000~1200 with 3.0mm DOC, balancing rigidity, chip evacuation, and speed. Climb milling reduces tearing.',
+                'note-plywood': 'Recommend feed rate F1000~1200 with 3.0mm DOC, balancing chip evacuation and processing efficiency. Climb milling reduces tearing.',
                 'mat-hardwood': 'Hardwood (Beech / Walnut)',
                 'note-hardwood': 'Dense wood. DOC set conservatively to 1.5 ~ 2.0mm, and feed rate reduced to F800~1000 to prevent excess tension on belts and avoid tool breakage.',
                 'mat-toolingboard': 'Tooling Board / High Density Resin',
@@ -805,7 +805,7 @@
             
             document.getElementById('calc-diameter-val').innerText = `${diameter.toFixed(3)} mm`;
 
-            // 理論基礎參數設置 (基於 Gordix 皮帶懸掛實測剛性優化)
+            // 理論基礎參數設置
             let surfaceSpeed = 150; // Vc (m/min)
             let baseChipLoad = 0.015; // 基礎每齒進給量常數
             let maxDocRatio = 0.5; // 建議下刀深度比例
@@ -815,7 +815,6 @@
                 baseChipLoad = 0.010; 
                 maxDocRatio = 1.0; 
             } else if (material === 'plywood') {
-                // 實測精密標定（在此參數設定下，6mm 二刃刀能精準輸出 F1000 ~ F1800 範圍）
                 surfaceSpeed = 190; 
                 baseChipLoad = 0.009; 
                 maxDocRatio = 0.95; 
@@ -966,7 +965,7 @@
                 if (material === 'softwood') {
                     text += `「軟木或MDF」搭配 ${cutterDesc} 纖維阻力低，建議走速範圍 <span class="text-emerald-500 font-bold">F${minF} ~ F${maxF}</span>、建議下刀深度為 ${doc.toFixed(1)}mm。`;
                 } else if (material === 'plywood') {
-                    text += `「層板 / 膠合板」搭配 ${cutterDesc} 此為經剛性實測優化之完美平衡：建議走速範圍設定為 <span class="text-emerald-500 font-bold">F${minF} ~ F${maxF}</span>，建議單次下刀深達 ${doc.toFixed(1)}mm，能完美確保加工高效率與皮帶壽命。`;
+                    text += `「層板 / 膠合板」搭配 ${cutterDesc} 建議走速範圍設定為 <span class="text-emerald-500 font-bold">F${minF} ~ F${maxF}</span>，建議單次下刀深達 ${doc.toFixed(1)}mm，兼顧加工效率與切削品質。`;
                 } else if (material === 'hardwood') {
                     text += `「實木硬木」搭配 ${cutterDesc} 木質緻密，配合穩定進給區間 <span class="text-emerald-500 font-bold">F${minF} ~ F${maxF}</span>、建議下刀深度保守控制在 ${doc.toFixed(1)}mm 進行平穩切削。`;
                 } else if (material === 'toolingboard') {
@@ -983,7 +982,7 @@
                 let text = `Using ${diameter.toFixed(2)}mm ${currentFlutes}-Flute `;
                 let cutterDesc = '';
                 if (currentCutterType === 'downcut') {
-                    cutterDesc = `"<span class="text-orange-500 font-bold">Down-cut spiral bit</span>": The downward force suppresses veneer splintering perfectly, giving an elite surface finish. Keep feeds within <span class="text-emerald-500 font-bold">F${minF} ~ F${maxF}</span> range to throw chips out under pressurized air.`;
+                    cutterDesc = `"<span class="text-orange-500 font-bold">Down-cut spiral bit</span>": The downward force suppresses veneer splintering, giving a smooth surface finish. Keep feeds within <span class="text-emerald-500 font-bold">F${minF} ~ F${maxF}</span> range to throw chips out under pressurized air.`;
                 } else if (currentCutterType === 'upcut') {
                     cutterDesc = `"<span class="text-blue-500 font-bold">Up-cut spiral bit</span>": Outstanding upward chip evacuation and heat management. Splinters top fibers; run within <span class="text-emerald-500 font-bold">F${minF} ~ F${maxF}</span> and use tabs to secure.`;
                 } else {
@@ -993,7 +992,7 @@
                 if (material === 'softwood') {
                     text += `Softwood/MDF with ${cutterDesc} Run F${minF}~F${maxF} and DOC ${doc.toFixed(1)}mm.`;
                 } else if (material === 'plywood') {
-                    text += `Plywood with ${cutterDesc} Standard optimized setting: Feed range of <span class="text-emerald-500 font-bold">F${minF} ~ F${maxF}</span> and DOC of ${doc.toFixed(1)}mm (tested 3.0mm) to balance structural rigidity.`;
+                    text += `Plywood with ${cutterDesc} Recommended setting: Feed range of <span class="text-emerald-500 font-bold">F${minF} ~ F${maxF}</span> and DOC of ${doc.toFixed(1)}mm.`;
                 } else if (material === 'hardwood') {
                     text += `Hardwood with ${cutterDesc} Run F${minF}~F${maxF} and DOC ${doc.toFixed(1)}mm to avoid cutting stress.`;
                 } else if (material === 'toolingboard') {
