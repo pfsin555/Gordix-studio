@@ -74,7 +74,7 @@
             </svg>
             <div>
                 <h4 class="font-bold text-orange-600 dark:text-orange-500 text-sm md:text-base" data-i18n="warning-title">安全與免責聲明</h4>
-                <p class="text-sm text-slate-600 dark:text-slate-400 mt-1 transition-colors leading-relaxed" data-i18n="warning-desc">配合 Makita RT0700 修邊機使用時，手冊建議盡量不要在低於刻度 3 (15,000 RPM) 的狀況下長時間運轉（除鋁合金切削等必要低速工藝外），以確保主軸內部散熱充足。實際加工效果仍取決於皮帶張緊度與刀具狀況。</p>
+                <p class="text-sm text-slate-600 dark:text-slate-400 mt-1 transition-colors leading-relaxed" data-i18n="warning-desc">配合 Makita RT0700 修邊機使用時，手冊建議盡量不要在低於刻度 3 (15,000 RPM) 的狀況下長時間運轉（除鋁合金切削等必要低速工藝外），以確保主軸內部散熱充足。實際加工效果取決於皮帶張緊度與刀具狀況。</p>
             </div>
         </div>
 
@@ -113,7 +113,7 @@
                     <div class="lg:col-span-5 space-y-4">
                         <div>
                             <label class="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-1.5" data-i18n="calc-label-material">1. 選擇加工材質</label>
-                            <select id="calc-material" class="w-full bg-slate-100 border border-slate-300 text-slate-800 rounded-lg p-2.5 text-sm focus:border-orange-500 focus:outline-none dark:bg-slate-950 dark:border-slate-800 dark:text-slate-200" onchange="calculateParams()">
+                            <select id="calc-material" class="w-full bg-slate-100 border border-slate-300 text-slate-800 rounded-lg p-2.5 text-sm focus:border-orange-500 focus:outline-none dark:bg-slate-950 dark:border-slate-800 dark:text-slate-200" onchange="onMaterialChange()">
                                 <option value="softwood" data-i18n="mat-softwood-opt">軟木 / 密集板 (MDF)</option>
                                 <option value="plywood" data-i18n="mat-plywood-opt">層板 / 膠合板 (Plywood)</option>
                                 <option value="hardwood" data-i18n="mat-hardwood-opt">硬木 (櫸木 / 胡桃木)</option>
@@ -215,7 +215,7 @@
                             <line x1="16" y1="17" x2="8" y2="17"></line>
                             <polyline points="10 9 9 9 8 9"></polyline>
                         </svg>
-                        <span data-i18n="cnc-matrix-title">常用材料加工對照表 (以 3mm 或 1/8" 雙刃銑刀為例)</span>
+                        <span data-i18n="cnc-matrix-title">常用材料加工對照表 (以 3.175mm 刀具為基準)</span>
                     </h3>
                     <!-- 轉速與 Makita 刻度智慧切換按鈕 -->
                     <button id="table-display-toggle" onclick="toggleTableDisplay()" class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 text-sm font-bold rounded-lg transition-all flex items-center gap-1.5 text-orange-500 dark:text-orange-400 cursor-pointer shadow-sm">
@@ -244,11 +244,11 @@
                                 <td class="p-3 md:p-4 font-mono font-medium text-slate-800 dark:text-slate-200">3.0 ~ 4.0</td>
                                 <td class="p-3 md:p-4 text-slate-600 dark:text-slate-400 leading-relaxed" data-i18n="note-softwood">排屑快速、阻力低。建議單次下刀至 3.0 ~ 4.0mm，保持適中走速可防止排屑積熱導致工件燒焦。</td>
                             </tr>
-                            <tr class="hover:bg-slate-50 transition-colors dark:hover:bg-slate-800/50 bg-orange-500/5">
-                                <td class="p-3 md:p-4 font-bold text-orange-600 dark:text-orange-500" data-i18n="mat-plywood">層板 / 膠合板 (Plywood)</td>
+                            <tr class="hover:bg-slate-50 transition-colors dark:hover:bg-slate-800/50">
+                                <td class="p-3 md:p-4 font-bold text-slate-800 dark:text-slate-200" data-i18n="mat-plywood">層板 / 膠合板 (Plywood)</td>
                                 <td class="p-3 md:p-4 font-semibold text-slate-700 dark:text-slate-300" id="cell-plywood-speed" data-rpm="18,000 ~ 22,000" data-dial="3 ~ 4">18,000 ~ 22,000</td>
                                 <td class="p-3 md:p-4 font-mono text-emerald-600 dark:text-emerald-400 font-bold">1000 ~ 1200</td>
-                                <td class="p-3 md:p-4 font-mono font-bold text-orange-600 dark:text-orange-500">3.0</td>
+                                <td class="p-3 md:p-4 font-mono font-bold text-slate-800 dark:text-slate-200">3.0</td>
                                 <td class="p-3 md:p-4 text-slate-600 dark:text-slate-400 leading-relaxed" data-i18n="note-plywood">層板建議走速 F1000~1200 搭配建議下刀 3.0mm，具有良好的排屑與加工效率。採用順銑加工可有效減少木層撕裂。</td>
                             </tr>
                             <tr class="hover:bg-slate-50 transition-colors dark:hover:bg-slate-800/50">
@@ -265,12 +265,12 @@
                                 <td class="p-3 md:p-4 font-mono font-medium text-slate-800 dark:text-slate-200">3.0 ~ 4.0</td>
                                 <td class="p-3 md:p-4 text-slate-600 dark:text-slate-400 leading-relaxed" data-i18n="note-toolingboard">無方向性天然木紋，切削阻力低，表面切口光滑。設定走速 F1200~1500、建議下刀深度 3.0~4.0mm 以達到高效打樣。</td>
                             </tr>
-                            <tr class="hover:bg-slate-50 transition-colors dark:hover:bg-slate-800/50">
-                                <td class="p-3 md:p-4 font-bold text-slate-800 dark:text-slate-200" data-i18n="mat-acrylic">壓克力 / 工程塑膠 (POM)</td>
+                            <tr class="hover:bg-slate-50 transition-colors dark:hover:bg-slate-800/50 bg-orange-500/5">
+                                <td class="p-3 md:p-4 font-bold text-orange-600 dark:text-orange-500" data-i18n="mat-acrylic">壓克力 / 工程塑膠 (POM)</td>
                                 <td class="p-3 md:p-4 font-semibold text-slate-700 dark:text-slate-300" id="cell-acrylic-speed" data-rpm="15,000 ~ 17,000" data-dial="3">15,000 ~ 17,000</td>
-                                <td class="p-3 md:p-4 font-mono text-emerald-600 dark:text-emerald-400 font-bold">800 ~ 1000</td>
-                                <td class="p-3 md:p-4 font-mono font-medium text-slate-800 dark:text-slate-200">1.0 ~ 1.5</td>
-                                <td class="p-3 md:p-4 text-slate-600 dark:text-slate-400 leading-relaxed" data-i18n="note-acrylic">⚠️ 主軸保護設定：為確保 Makita RT0700 雕刻機散熱無虞，本機限制最低運作刻度為刻度 3 (15,000 RPM)。建議下刀深度 1.0~1.5mm，配合走速 F800~1000 快速排屑帶走熱量，防止塑料高溫熔化黏刀。</td>
+                                <td class="p-3 md:p-4 font-mono text-emerald-600 dark:text-emerald-400 font-bold">800 ~ 1200</td>
+                                <td class="p-3 md:p-4 font-mono font-bold text-orange-600 dark:text-orange-500">2.0 ~ 3.0</td>
+                                <td class="p-3 md:p-4 text-slate-600 dark:text-slate-400 leading-relaxed" data-i18n="note-acrylic">塑膠加工首選 1 刃上旋刀 (O型刀)。單刃排屑槽容積大，能快速向上抽離屑粒帶走熱量。配合主軸刻度 3 (15,000 RPM)、走速 F800~1200 (基準 F1000) 與下刀深度 2.0~3.0mm，可防止高溫熔化黏刀並保持切口平整。</td>
                             </tr>
                             <tr class="hover:bg-slate-50 transition-colors dark:hover:bg-slate-800/50">
                                 <td class="p-3 md:p-4 font-bold text-slate-800 dark:text-slate-200" data-i18n="mat-doublecolor">雕刻雙色板 / ABS塑料</td>
@@ -279,11 +279,11 @@
                                 <td class="p-3 md:p-4 font-mono font-medium text-slate-800 dark:text-slate-200">0.5 ~ 1.0</td>
                                 <td class="p-3 md:p-4 text-slate-600 dark:text-slate-400 leading-relaxed" data-i18n="note-doublecolor">標牌製作最愛。最低轉速限制在刻度 3 (15,000 RPM) 以保護雕刻馬達，防熔化黏刀的秘訣在於適中轉速，配合流暢無停頓的走速設定。</td>
                             </tr>
-                            <tr class="hover:bg-slate-50 transition-colors dark:hover:bg-slate-800/50 bg-orange-500/5">
-                                <td class="p-3 md:p-4 font-bold text-orange-600 dark:text-orange-450" data-i18n="mat-softmetal">軟金屬 (鋁6061 / 黃銅 / 紅銅)</td>
+                            <tr class="hover:bg-slate-50 transition-colors dark:hover:bg-slate-800/50">
+                                <td class="p-3 md:p-4 font-bold text-slate-800 dark:text-slate-200" data-i18n="mat-softmetal">軟金屬 (鋁6061 / 黃銅 / 紅銅)</td>
                                 <td class="p-3 md:p-4 font-semibold text-slate-700 dark:text-slate-300" id="cell-metal-speed" data-rpm="12,000 ~ 15,000" data-dial="2 ~ 3">12,000 ~ 15,000</td>
                                 <td class="p-3 md:p-4 font-mono text-emerald-600 dark:text-emerald-400 font-bold">1000 ~ 2000</td>
-                                <td class="p-3 md:p-4 font-mono font-bold text-orange-600 dark:text-orange-450">0.1 ~ 0.2</td>
+                                <td class="p-3 md:p-4 font-mono font-medium text-slate-800 dark:text-slate-200">0.1 ~ 0.2</td>
                                 <td class="p-3 md:p-4 text-slate-600 dark:text-slate-400 leading-relaxed" data-i18n="note-softmetal">⚙️ 輕型機台與主軸雙重保護：金屬加工採「高走速、極淺下刀（固定 0.2mm）」，為主軸必要低速工藝，限制在刻度 2 (12,000 RPM) 以上以防散熱不均與失步斷刀。</td>
                             </tr>
                         </tbody>
@@ -409,11 +409,11 @@
             'zh': {
                 'nav-subtitle': '參數指南',
                 'warning-title': '安全與免責聲明',
-                'warning-desc': '配合 Makita RT0700 修邊機使用時，手冊建議盡量不要在低於刻度 3 (15,000 RPM) 的狀況下長時間運轉（除鋁合金切削等必要低速工藝外），以確保主軸內部散熱充足。實際加工效果仍取決於皮帶張緊度與刀具狀況。首次加工新材質時，強烈建議從保守參數開始測試。',
+                'warning-desc': '配合 Makita RT0700 修邊機使用時，手冊建議盡量不要在低於刻度 3 (15,000 RPM) 的狀況下長時間運轉（除鋁合金切削等必要低速工藝外），以確保主軸內部散熱充足。實際加工效果取決於皮帶張緊度與刀具狀況。首次加工新材質時，強烈建議從保守參數開始測試。',
                 'tab-cnc-text': 'CNC 銑削與雕刻參數',
                 'tab-laser-text': '雷射加工與切割參數',
                 'dial-num': '刻度',
-                'cnc-matrix-title': '常用材料加工對照表 (以 3mm 或 1/8" 雙刃銑刀為例)',
+                'cnc-matrix-title': '常用材料加工對照表 (以 3.175mm 刀具為基準)',
                 'th-material': '加工材質',
                 'th-dial': 'Makita 刻度',
                 'th-rpm': '主軸轉速 (RPM)',
@@ -429,7 +429,7 @@
                 'mat-toolingboard': '代木 / 建模高密度樹脂 (Tooling Board)',
                 'note-toolingboard': '無方向性天然木紋，切削阻力低，表面切口光滑。設定走速 F1200~1500、建議下刀深度 3.0~4.0mm 以達到高效打樣。',
                 'mat-acrylic': '壓克力 / 工程塑膠 (POM)',
-                'note-acrylic': '⚠️ 主軸保護設定：為確保 Makita RT0700 雕刻機散熱無虞，本機限制最低運作刻度為刻度 3 (15,000 RPM)。建議下刀深度 1.0~1.5mm，配合走速 F800~1000 快速排屑帶走熱量，防止塑料高溫熔化黏刀。',
+                'note-acrylic': '塑膠加工首選 1 刃上旋刀 (O型刀)。單刃排屑槽容積大，能快速向上抽離屑粒帶走熱量。配合主軸刻度 3 (15,000 RPM)、走速 F800~1200 (基準 F1000) 與下刀深度 2.0~3.0mm，可防止高溫熔化黏刀並保持切口平整。',
                 'mat-doublecolor': '雕刻雙色板 / ABS塑料',
                 'note-doublecolor': '標牌製作最愛。最低轉速限制在刻度 3 (15,000 RPM) 以保護雕刻馬達，防熔化黏刀的秘訣在於適中轉速，配合流暢無停頓的走速設定。',
                 'mat-softmetal': '軟金屬 (鋁6061 / 黃銅 / 紅銅)',
@@ -478,7 +478,7 @@
                 'tab-cnc-text': 'CNC Milling & Carving',
                 'tab-laser-text': 'Laser Engraving & Cutting',
                 'dial-num': 'Dial',
-                'cnc-matrix-title': 'Common Material Processing Reference Table (e.g., 3mm or 1/8" 2-Flute Endmill)',
+                'cnc-matrix-title': 'Common Material Processing Reference Table (Based on 3.175mm Tooling)',
                 'th-material': 'Material',
                 'th-dial': 'Makita Dial',
                 'th-rpm': 'Spindle Speed (RPM)',
@@ -494,7 +494,7 @@
                 'mat-toolingboard': 'Tooling Board / High Density Resin',
                 'note-toolingboard': 'Grainless structure with low resistance. Yields perfectly smooth finishes. Set feed F1200~1500 and DOC 3.0~4.0mm for high-efficiency prototyping.',
                 'mat-acrylic': 'Acrylic / Plastics (POM)',
-                'note-acrylic': '⚠️ Spindle Protection: To ensure Makita heat dissipation, minimum speed is capped at Dial 3 (15,000 RPM). Pair with F800~1000 feed to throw large cool chips and prevent melting.',
+                'note-acrylic': 'Single-flute upcut (O-flute) endmills are ideal for plastics. The large flute gullet rapidly clears chips upward to evacuate heat. Paired with Dial 3 (15,000 RPM), feed rate F800~1200 (baseline F1000), and DOC 2.0~3.0mm, it prevents chip welding and yields clean cut edges.',
                 'mat-doublecolor': 'Engraving Plastic / ABS',
                 'note-doublecolor': 'Popular choice for signboards. Prevent melting by forcing spindle speed to Dial 3 (15,000 RPM) to keep cooling fan active under steady feeds.',
                 'mat-softmetal': 'Soft Metals (Alu 6061 / Brass / Copper)',
@@ -788,6 +788,17 @@
             calculateParams();
         }
 
+        // 當材質切換時自動預設最適刀具
+        function onMaterialChange() {
+            const material = document.getElementById('calc-material').value;
+            if (material === 'acrylic') {
+                // 壓克力/POM 首選 1 刃上旋刀
+                setFlutes(1);
+                setCutterType('upcut');
+            }
+            calculateParams();
+        }
+
         // 智慧速度進位器：提供高可讀性的速度整數區間
         function roundFeed(val) {
             if (val > 500) {
@@ -827,9 +838,10 @@
                 baseChipLoad = 0.010;
                 maxDocRatio = 1.0; 
             } else if (material === 'acrylic') {
-                surfaceSpeed = 120;
-                baseChipLoad = 0.0075;
-                maxDocRatio = 0.4; 
+                // 壓克力/POM：以 1刃上旋刀 F1000、DOC 2~3mm 為核心基準標定
+                surfaceSpeed = 150;
+                baseChipLoad = 0.021; // 3.175mm 單刃時每齒進給約 0.066mm -> 15000 RPM * 1 * 0.066 = 1000 mm/min
+                maxDocRatio = 0.80;  // 3.175mm 刀具 -> 約 2.5mm DOC (位在 2.0~3.0mm 最佳區間)
             } else if (material === 'doublecolor') {
                 surfaceSpeed = 130;
                 baseChipLoad = 0.008;
@@ -882,8 +894,8 @@
             let calculatedFeed = calculatedRpm * currentFlutes * chipLoad;
             
             // 自適應合理走速範圍
-            let feedMin = calculatedFeed * 0.62;
-            let feedMax = calculatedFeed * 1.11;
+            let feedMin = calculatedFeed * 0.75;
+            let feedMax = calculatedFeed * 1.20;
 
             // 限制：Gordix 機台走速上限 F2000
             let isLimited = false;
@@ -903,9 +915,9 @@
                 doc = diameter * maxDocRatio;
                 
                 // 針對大刀具(大於5.9mm)吃刀安全上限保護
-                let maxDocCap = 2.0;
+                let maxDocCap = 3.0;
                 if (diameter >= 5.9 && ['softwood', 'plywood', 'hardwood', 'toolingboard'].includes(material)) {
-                    maxDocCap = 3.2; 
+                    maxDocCap = 3.5; 
                 }
 
                 if (doc > maxDocCap) doc = maxDocCap;
@@ -955,9 +967,9 @@
                 
                 let cutterDesc = '';
                 if (currentCutterType === 'downcut') {
-                    cutterDesc = `「<span class="text-orange-500 font-bold">下旋螺旋刀</span>」進行加工：刀齒具有向下壓實的作用力，切削時可完美保護木材表層與邊緣、杜絕撕裂起毛。但因切屑會向下壓入溝槽底部不易排出，深槽切削容易積熱焦黑，請務必開啟強力吹氣排屑並將進給維持在建議範圍 <span class="text-emerald-500 font-bold">F${minF} ~ F${maxF}</span> 內以拋出木屑。`;
+                    cutterDesc = `「<span class="text-orange-500 font-bold">下旋螺旋刀</span>」進行加工：刀齒具有向下壓實的作用力，切削時可保護木材表層與邊緣、防止撕裂起毛。但切屑會向下壓入溝槽底部不易排出，請務必開啟強力吹氣排屑並將進給維持在建議範圍 <span class="text-emerald-500 font-bold">F${minF} ~ F${maxF}</span> 內。`;
                 } else if (currentCutterType === 'upcut') {
-                    cutterDesc = `「<span class="text-blue-500 font-bold">上旋螺旋刀</span>」進行加工：螺旋槽具有極佳的向上抽屑與排屑力，能最大化散熱，但加工木材時容易在頂部邊緣產生撕裂毛刺。建議配合此走速區間 <span class="text-emerald-500 font-bold">F${minF} ~ F${maxF}</span>，並搭配「橋位 (Tabs)」或在工件表面貼上美紋紙膠帶。`;
+                    cutterDesc = `「<span class="text-blue-500 font-bold">上旋螺旋刀</span>」進行加工：螺旋槽具有良好的向上抽屑與排屑力，能有效帶走熱量。建議配合進給走速區間 <span class="text-emerald-500 font-bold">F${minF} ~ F${maxF}</span>，能保持溝槽清潔。`;
                 } else {
                     cutterDesc = `「<span class="text-slate-550 dark:text-slate-400 font-bold">直刃刀</span>」進行加工：刀齒切削力垂直於旋轉方向，無上下推力，加工槽道不偏擺。適合開槽與基礎雕刻，建議進給走速保守設定在 <span class="text-emerald-500 font-bold">F${minF} ~ F${maxF}</span>。`;
                 }
@@ -965,26 +977,26 @@
                 if (material === 'softwood') {
                     text += `「軟木或MDF」搭配 ${cutterDesc} 纖維阻力低，建議走速範圍 <span class="text-emerald-500 font-bold">F${minF} ~ F${maxF}</span>、建議下刀深度為 ${doc.toFixed(1)}mm。`;
                 } else if (material === 'plywood') {
-                    text += `「層板 / 膠合板」搭配 ${cutterDesc} 建議走速範圍設定為 <span class="text-emerald-500 font-bold">F${minF} ~ F${maxF}</span>，建議單次下刀深達 ${doc.toFixed(1)}mm，兼顧加工效率與切削品質。`;
+                    text += `「層板 / 膠合板」搭配 ${cutterDesc} 建議走速範圍設定為 <span class="text-emerald-500 font-bold">F${minF} ~ F${maxF}</span>，建議單次下刀深達 ${doc.toFixed(1)}mm。`;
                 } else if (material === 'hardwood') {
-                    text += `「實木硬木」搭配 ${cutterDesc} 木質緻密，配合穩定進給區間 <span class="text-emerald-500 font-bold">F${minF} ~ F${maxF}</span>、建議下刀深度保守控制在 ${doc.toFixed(1)}mm 進行平穩切削。`;
+                    text += `「實木硬木」搭配 ${cutterDesc} 木質緻密，配合穩定進給區間 <span class="text-emerald-500 font-bold">F${minF} ~ F${maxF}</span>、建議下刀深度控制在 ${doc.toFixed(1)}mm。`;
                 } else if (material === 'toolingboard') {
-                    text += `「代木建模樹脂」搭配 ${cutterDesc} 材料均勻無紋路。設定建議走速 <span class="text-emerald-500 font-bold">F${minF} ~ F${maxF}</span>、建議下刀深度 ${doc.toFixed(1)}mm，可獲得極平滑的工件表面。`;
+                    text += `「代木建模樹脂」搭配 ${cutterDesc} 材料均勻無紋路。設定建議走速 <span class="text-emerald-500 font-bold">F${minF} ~ F${maxF}</span>、建議下刀深度 ${doc.toFixed(1)}mm，可獲得平滑工件表面。`;
                 } else if (material === 'acrylic') {
-                    text += `「壓克力」搭配 ${cutterDesc} 壓克力極易受熱融化。為確保 Makita 主軸有充足風量散熱，限制最低轉速在刻度 3 (${dial})，配合高速排屑走速範圍 <span class="text-emerald-500 font-bold">F${minF} ~ F${maxF}</span>、建議下刀深度約 ${doc.toFixed(1)}mm 快速帶走熱量，嚴防塑料黏刀！`;
+                    text += `「壓克力 / 工程塑膠 (POM)」搭配 ${cutterDesc} 塑膠易受熱熔化，首選單刃上旋刀以維持優異排屑。限制最低轉速在刻度 3 (${dial})，配合走速範圍 <span class="text-emerald-500 font-bold">F${minF} ~ F${maxF}</span> (基準 F1000) 與下刀深度 ${doc.toFixed(1)}mm (2.0~3.0mm 區間)，可快速拋出切屑帶走熱量，防止塑料黏刀並保持邊緣光潔。`;
                 } else if (material === 'doublecolor') {
-                    text += `「雕刻雙色板 / ABS」搭配 ${cutterDesc} 雕刻表面時建議下刀深度約為 ${doc.toFixed(1)}mm。轉速限制在刻度 3 以上以防止雕刻機高溫運作，適合走速範圍 <span class="text-emerald-500 font-bold">F${minF} ~ F${maxF}</span> 並保持路徑流暢，以免在拐角停頓融化。`;
+                    text += `「雕刻雙色板 / ABS」搭配 ${cutterDesc} 雕刻表面時建議下刀深度約為 ${doc.toFixed(1)}mm。轉速限制在刻度 3 以上以防止雕刻機高溫運作，適合走速範圍 <span class="text-emerald-500 font-bold">F${minF} ~ F${maxF}</span> 並保持路徑流暢。`;
                 } else if (material === 'aluminum') {
-                    text += `「鋁合金 / 軟金屬」搭配 ${cutterDesc} ⚙️採「極淺切、高走速」保護策略。此工藝為 Makita 必要低速度例外，限制在刻度 2 運轉，建議下刀深度固定在極淺的 0.2mm。必須開啟吹氣，並適量噴灑切削油（如WD-40）並維持 <span class="text-emerald-500 font-bold">F${minF} ~ F${maxF}</span> 的高速切削。`;
+                    text += `「鋁合金 / 軟金屬」搭配 ${cutterDesc} ⚙️採「極淺切、高走速」保護策略。限制在刻度 2 運轉，建議下刀深度固定在極淺的 0.2mm。必須開啟吹氣，並適量噴灑切削油並維持 <span class="text-emerald-500 font-bold">F${minF} ~ F${maxF}</span> 高速切削。`;
                 }
                 tipDesc.innerHTML = text;
             } else {
                 let text = `Using ${diameter.toFixed(2)}mm ${currentFlutes}-Flute `;
                 let cutterDesc = '';
                 if (currentCutterType === 'downcut') {
-                    cutterDesc = `"<span class="text-orange-500 font-bold">Down-cut spiral bit</span>": The downward force suppresses veneer splintering, giving a smooth surface finish. Keep feeds within <span class="text-emerald-500 font-bold">F${minF} ~ F${maxF}</span> range to throw chips out under pressurized air.`;
+                    cutterDesc = `"<span class="text-orange-500 font-bold">Down-cut spiral bit</span>": The downward force suppresses veneer splintering. Keep feeds within <span class="text-emerald-500 font-bold">F${minF} ~ F${maxF}</span> range.`;
                 } else if (currentCutterType === 'upcut') {
-                    cutterDesc = `"<span class="text-blue-500 font-bold">Up-cut spiral bit</span>": Outstanding upward chip evacuation and heat management. Splinters top fibers; run within <span class="text-emerald-500 font-bold">F${minF} ~ F${maxF}</span> and use tabs to secure.`;
+                    cutterDesc = `"<span class="text-blue-500 font-bold">Up-cut spiral bit</span>": Outstanding upward chip evacuation and heat management. Run within <span class="text-emerald-500 font-bold">F${minF} ~ F${maxF}</span>.`;
                 } else {
                     cutterDesc = `"<span class="text-slate-550 dark:text-slate-400 font-bold">Straight bit</span>": Balanced carving, neutral forces. Maintain feed within <span class="text-emerald-500 font-bold">F${minF} ~ F${maxF}</span>.`;
                 }
@@ -992,17 +1004,17 @@
                 if (material === 'softwood') {
                     text += `Softwood/MDF with ${cutterDesc} Run F${minF}~F${maxF} and DOC ${doc.toFixed(1)}mm.`;
                 } else if (material === 'plywood') {
-                    text += `Plywood with ${cutterDesc} Recommended setting: Feed range of <span class="text-emerald-500 font-bold">F${minF} ~ F${maxF}</span> and DOC of ${doc.toFixed(1)}mm.`;
+                    text += `Plywood with ${cutterDesc} Feed range of <span class="text-emerald-500 font-bold">F${minF} ~ F${maxF}</span> and DOC of ${doc.toFixed(1)}mm.`;
                 } else if (material === 'hardwood') {
-                    text += `Hardwood with ${cutterDesc} Run F${minF}~F${maxF} and DOC ${doc.toFixed(1)}mm to avoid cutting stress.`;
+                    text += `Hardwood with ${cutterDesc} Run F${minF}~F${maxF} and DOC ${doc.toFixed(1)}mm.`;
                 } else if (material === 'toolingboard') {
-                    text += `Tooling Board with ${cutterDesc} homogenous structure allows highly efficient cuts of <span class="text-emerald-500 font-bold">F${minF} ~ F${maxF}</span> and DOC up to ${doc.toFixed(1)}mm.`;
+                    text += `Tooling Board with ${cutterDesc} Feed <span class="text-emerald-500 font-bold">F${minF} ~ F${maxF}</span> and DOC up to ${doc.toFixed(1)}mm.`;
                 } else if (material === 'acrylic') {
-                    text += `Acrylic with ${cutterDesc} Capped at Dial ${dial} to maintain airflow cooling. Pair with fast feed <span class="text-emerald-500 font-bold">F${minF} ~ F${maxF}</span> and DOC ${doc.toFixed(1)}mm to prevent melting.`;
+                    text += `Acrylic / POM Plastics with ${cutterDesc} Single-flute upcut endmills are ideal for plastics due to high chip clearance. Running at Dial ${dial} (15,000 RPM) with feed rate <span class="text-emerald-500 font-bold">F${minF} ~ F${maxF}</span> (baseline F1000) and DOC ${doc.toFixed(1)}mm rapidly clears heat to prevent chip welding.`;
                 } else if (material === 'doublecolor') {
-                    text += `Double-color ABS with ${cutterDesc} Engrave within <span class="text-emerald-500 font-bold">F${minF} ~ F${maxF}</span> and depth ${doc.toFixed(1)}mm. Spindle is kept at Dial 3 or above for safe cooling.`;
+                    text += `Double-color ABS with ${cutterDesc} Engrave within <span class="text-emerald-500 font-bold">F${minF} ~ F${maxF}</span> and depth ${doc.toFixed(1)}mm.`;
                 } else if (material === 'aluminum') {
-                    text += `Aluminum/Metals with ${cutterDesc} ⚙️ Forced "Shallow-pass, Fast-feed" strategy. Spindle is allowed to run at Dial 2 with feed range <span class="text-emerald-500 font-bold">F${minF} ~ F${maxF}</span> and strictly 0.2mm DOC.`;
+                    text += `Aluminum/Metals with ${cutterDesc} ⚙️ Spindle allowed at Dial 2 with feed range <span class="text-emerald-500 font-bold">F${minF} ~ F${maxF}</span> and 0.2mm DOC.`;
                 }
                 tipDesc.innerHTML = text;
             }
