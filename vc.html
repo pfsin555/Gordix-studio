@@ -3,14 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>V_Carving</title>
+    <title>V_Carving & Grayscale Relief</title>
     <!-- 引入 Tailwind CSS 與 Three.js 及其控制庫 -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
             darkMode: 'class',
         };
-        // 預先讀取並同步本機儲存的主題，防止白閃
         const initialTheme = localStorage.getItem('gordix-theme') || 'dark';
         if (initialTheme === 'dark') {
             document.documentElement.classList.add('dark');
@@ -21,7 +20,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/clipper-lib@6.4.2/clipper.js"></script>
-    <!-- DXF 解析庫 -->
     <script src="https://cdn.jsdelivr.net/npm/dxf-parser@1.1.2/dist/dxf-parser.min.js"></script>
 
     <style>
@@ -29,7 +27,6 @@
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
         }
         
-        /* 基礎主題變數樣式適配 */
         .panel { 
             background: #ffffff; 
             border: 1px solid #e2e8f0; 
@@ -97,31 +94,6 @@
             color: #94a3b8;
         }
 
-        /* 主題切換控制按鈕樣式 */
-        .btn-control {
-            background: #991b1b; /* bg-red-800 */
-            color: #FFFFFF;
-            padding: 8px;
-            border-radius: 9999px;
-            border: 1px solid rgba(254, 202, 202, 0.4); /* border-red-300/40 */
-            transition: background 0.2s, transform 0.1s;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .btn-control:hover {
-            background: #7f1d1d; /* bg-red-900 */
-        }
-        .btn-control:active {
-            transform: scale(0.95);
-        }
-        .icon-control {
-            width: 18px;
-            height: 18px;
-            fill: currentColor;
-        }
-        
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #f1f5f9; }
         .dark ::-webkit-scrollbar-track { background: #1e293b; }
@@ -137,7 +109,6 @@
         .file-custom-label:hover { background: #ef4444; }
     </style>
     
-    <!-- PWA Meta Tags -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0f172a">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -149,29 +120,24 @@
    
     <header class="w-full bg-gradient-to-r from-red-700 to-rose-950 p-6 text-white flex justify-between items-center border-b border-red-500/30 sticky top-0 z-50 shadow-md">
         <div>
-            <h1 id="i18n-title" class="text-2xl font-black tracking-tight text-white" data-i18n="appTitle">轉檔工具 (V雕刻)</h1>
+            <h1 id="i18n-title" class="text-2xl font-black tracking-tight text-white" data-i18n="appTitle">轉檔工具 (V雕刻 & 灰階浮雕)</h1>
         </div>
         <div class="flex gap-3 items-center">
-            <!-- 返回上一頁按鈕 -->
             <button onclick="if(window.history.length > 1) { window.history.back(); } else { window.location.href='index.html'; }" class="flex items-center justify-center text-slate-300 hover:text-orange-400 transition-colors font-bold bg-white/10 hover:bg-white/20 p-1.5 rounded-lg border border-white/20 cursor-pointer" title="返回上一頁 / Go Back">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <line x1="20" y1="12" x2="4" y2="12"></line>
                     <polyline points="10 18 4 12 10 6"></polyline>
                 </svg>
             </button>
-            <!-- 太陽/月亮主題切換按鈕 -->
             <button class="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white hover:text-slate-200 border border-white/20 transition-all flex items-center justify-center cursor-pointer" onclick="toggleTheme()" aria-label="Toggle Theme">
                 <svg id="theme-icon" class="w-5 h-5" viewBox="0 0 24 24" style="width:18px; height:18px;" fill="currentColor">
-                    <!-- 預設為太陽圖示 -->
                     <path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1zM5.99 4.58c-.39-.39-1.03-.39-1.41 0s-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.02 0-1.41L5.99 4.58zm12.37 12.37c-.39-.39-1.03-.39-1.41 0s-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41l-1.06-1.06zm1.06-12.37c-.39-.39-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06c.39-.38.39-1.02 0-1.41zm-12.37 12.37c-.39-.39-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06c.39-.38.39-1.02 0-1.41z"/>
                 </svg>
             </button>
             
-            <!-- 語言切換按鈕 -->
             <button id="lang-toggle" class="px-4 py-1.5 rounded-lg text-[11px] font-bold bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-all flex items-center gap-2 cursor-pointer">
                 <span>中文 / EN</span>
             </button>
-            <!-- 書頁按鈕 -->
             <a href="params.html" class="flex items-center justify-center text-slate-300 hover:text-emerald-400 transition-colors bg-white/10 hover:bg-white/20 p-1.5 rounded-lg border border-white/20 cursor-pointer" title="工藝參數建議 / Parameters Guide">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
@@ -198,18 +164,24 @@
                         <div class="grid grid-cols-2 gap-4 items-end">
                             <div>
                                 <label class="block text-[10px] text-slate-400 font-bold mb-1" data-i18n="targetWidth">整體寬 (mm)</label>
-                                <input type="number" id="target-width" value="100" step="0.001">
+                                <input type="number" id="target-width" value="100">
                             </div>
-                            <div class="flex items-center gap-2 pb-2.5">
-                                <input type="checkbox" id="line-vcarve-check" class="w-4 h-4 accent-red-600 rounded cursor-pointer">
-                                <label for="line-vcarve-check" class="text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer select-none" data-i18n="lineVCarve">路線V雕刻</label>
+                            <div class="flex flex-col gap-2 pb-1">
+                                <div class="flex items-center gap-2">
+                                    <input type="checkbox" id="line-vcarve-check" class="w-4 h-4 accent-red-600 rounded cursor-pointer">
+                                    <label for="line-vcarve-check" class="text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer select-none" data-i18n="lineVCarve">路線V雕刻</label>
+                                </div>
+                                <div id="relief-container" class="hidden flex items-center gap-2">
+                                    <input type="checkbox" id="relief-25d-check" class="w-4 h-4 accent-red-600 rounded cursor-pointer">
+                                    <label for="relief-25d-check" class="text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer select-none" data-i18n="relief25D">灰階浮雕</label>
+                                </div>
                             </div>
                         </div>
                         <div id="threshold-container" class="hidden">
                             <label class="block text-[10px] text-slate-400 font-bold mb-1" data-i18n="threshold">黑白門檻</label>
                             <input type="number" id="threshold" value="128" min="0" max="255">
                         </div>
-                        <div>
+                        <div id="smoothness-container">
                             <div class="flex justify-between items-center mb-2">
                                 <label class="text-[10px] text-slate-400 font-bold" data-i18n="smoothness">簡化度</label>
                             </div>
@@ -226,10 +198,13 @@
 
                 <div class="panel p-5 rounded-xl flex flex-col h-[400px] lg:h-[500px] shadow-2xl">
                     <div class="flex justify-between items-center mb-4">
-                        <h2 class="text-xs font-bold uppercase tracking-widest text-red-500" data-i18n="step2">第二步：零件清單</h2>
+                        <div>
+                            <h2 class="text-xs font-bold uppercase tracking-widest text-red-500" data-i18n="step2">第二步：零件清單</h2>
+                            <p class="text-[9px] text-slate-400 dark:text-slate-500" data-i18n="sortHint">（已依由外往內/大到小排序）</p>
+                        </div>
                         <button id="select-all" class="text-[10px] btn-gray px-3 py-1 rounded" data-i18n="selectAll">全選 / 反選</button>
                     </div>
-                    <div id="part-list" class="flex-grow overflow-y-auto space-y-2"></div>
+                    <div id="part-list" class="flex-grow overflow-y-auto space-y-2 pr-1"></div>
                 </div>
             </div>
 
@@ -253,7 +228,6 @@
                 </div>
             </div>
 
-            <!-- 右側設定面板 -->
             <div class="lg:col-span-3">
                 <div id="job-panel" class="panel p-6 rounded-xl hidden shadow-2xl border-t-4 border-t-red-600">
                     <h2 class="text-sm font-bold text-red-500 mb-6" data-i18n="jobSettings">加工參數設定(mm)</h2>
@@ -275,29 +249,59 @@
                         <div class="grid grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-[10px] text-slate-500 dark:text-slate-400 font-bold mb-1" data-i18n="resolution">解析度 (mm)</label>
-                                <input type="number" id="resolution" value="0.1" min="0.1" step="0.01">
+                                <input type="number" id="resolution" value="0.2" min="0.05" step="0.05">
                             </div>
                             <div>
                                 <label class="block text-[10px] text-slate-500 dark:text-slate-400 font-bold mb-1" data-i18n="feedRate">進給速率</label>
-                                <input type="number" id="job-f" value="1500">
+                                <input type="number" id="job-f" value="1000">
                             </div>
                         </div>
 
-                        <!-- 加工模式在此工具中固定為 vcarve 故隱藏 -->
                         <input type="hidden" id="job-type" value="vcarve">
 
-                        <!-- 加工參數區：已對調位置，刀具直徑與 V型角度排在首行（即時定義實體刀具幾何），加工深度放於下方（受幾何動態限制） -->
+                        <!-- 加工參數區 -->
                         <div id="milling-opts" class="space-y-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+                            <!-- 刀具類型（獨立一排） -->
+                            <div>
+                                <label class="block text-[10px] text-slate-500 dark:text-slate-400 font-bold mb-1" data-i18n="toolType">刀具類型</label>
+                                <select id="tool-type-select" class="w-full">
+                                    <option value="vbit" selected data-i18n="optToolVBit">V型雕刻刀</option>
+                                    <option value="ballnose" data-i18n="optToolBallNose">圓頭刀 (Ball Nose)</option>
+                                </select>
+                            </div>
+
+                            <!-- 刀具直徑 與 V型刀角度（並列一排） -->
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label class="block text-[10px] text-slate-500 dark:text-slate-400 font-bold mb-1" data-i18n="toolDia">刀具直徑</label>
+                                    <label class="block text-[10px] text-slate-500 dark:text-slate-400 font-bold mb-1" data-i18n="toolDia">刀具直徑 (mm)</label>
                                     <input type="number" id="mill-d" value="6.0" step="0.1">
                                 </div>
-                                <div>
+                                <div id="vangle-container">
                                     <label class="block text-[10px] text-slate-500 dark:text-slate-400 font-bold mb-1" data-i18n="vbitAngle">V型刀具角度 (度)</label>
                                     <input type="number" id="vbit-angle" value="90" min="10" max="150" step="1">
                                 </div>
                             </div>
+
+                            <!-- 精緻度與掃描角度：僅在「灰階浮雕」啟用時顯示 -->
+                            <div id="stepover-container" class="hidden grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-[10px] text-slate-500 dark:text-slate-400 font-bold mb-1 flex justify-between items-center">
+                                        <span data-i18n="pathOverlap">精緻度 (mm)</span>
+                                        <span id="stepover-limit-hint" class="text-[9px] text-slate-400 dark:text-slate-500 font-normal"></span>
+                                    </label>
+                                    <input type="number" id="path-overlap" value="1.80" min="0.10" step="0.01">
+                                </div>
+                                <div id="relief-angle-container">
+                                    <label class="block text-[10px] text-slate-500 dark:text-slate-400 font-bold mb-1" data-i18n="pathAngle">路徑方向 (角度)</label>
+                                    <select id="path-angle-select" class="w-full">
+                                        <option value="0" selected>0°</option>
+                                        <option value="45">45°</option>
+                                        <option value="90">90°</option>
+                                        <option value="135">135°</option>
+                                    </select>
+                                </div>
+                            </div>
+
                             <div id="vcarve-opts" class="space-y-4">
                                 <div>
                                     <label class="block text-[10px] text-slate-500 dark:text-slate-400 font-bold mb-1 flex justify-between items-center">
@@ -307,7 +311,7 @@
                                     <input type="number" id="mill-depth" value="3.0" step="0.1">
                                 </div>
                                 <div id="vcarve-layer-container">
-                                    <label class="block text-[10px] text-slate-500 dark:text-slate-400 font-bold mb-1" data-i18n="vcarveLayer">V-Carve 雕刻區域選擇</label>
+                                    <label id="carve-mode-label" class="block text-[10px] text-slate-500 dark:text-slate-400 font-bold mb-1" data-i18n="vcarveLayer">V-Carve 雕刻區域選擇</label>
                                     <select id="vcarve-layer-select" class="w-full">
                                         <option value="even" selected data-i18n="optVCarveEven">雕刻凹部 (預設藍色填滿)</option>
                                         <option value="odd" data-i18n="optVCarveOdd">雕刻凸部 (反轉加工)</option>
@@ -328,15 +332,34 @@
         </div>
     </main>
 
+    <!-- 自訂 Message Box Modal -->
+    <div id="message-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm transition-all duration-200">
+        <div class="panel max-w-md w-full p-6 rounded-2xl shadow-2xl border border-red-500/30 transform scale-100 transition-transform">
+            <div class="flex items-center gap-3 mb-4 text-red-500">
+                <div class="p-2.5 bg-red-100 dark:bg-red-950/50 rounded-xl">
+                    <svg class="w-6 h-6 stroke-red-600 dark:stroke-red-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="8" x2="12" y2="12"></line>
+                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                    </svg>
+                </div>
+                <h3 id="modal-title-text" class="text-base font-bold text-slate-800 dark:text-slate-100">提示資訊</h3>
+            </div>
+            <p id="modal-message-text" class="text-sm text-slate-600 dark:text-slate-300 leading-relaxed mb-6"></p>
+            <div class="flex justify-end">
+                <button onclick="hideMessageBox()" class="px-6 py-2.5 btn-red rounded-xl font-bold text-xs uppercase shadow-md cursor-pointer">
+                    確定 / OK
+                </button>
+            </div>
+        </div>
+    </div>
+
     <canvas id="hidden-canvas" class="hidden"></canvas>
 
     <script>
-        // ==========================================
-        // 1. 多國語言與全域變數宣告
-        // ==========================================
         const i18n = {
             zh: {
-                appTitle: "轉檔工具 (V雕刻)",
+                appTitle: "轉檔工具 (V雕刻 & 灰階浮雕)",
                 step1: "第一步：檔案與解析",
                 chooseFile: "選擇檔案",
                 noFile: "尚未選擇任何檔案",
@@ -346,8 +369,10 @@
                 highDetail: "← 高細節",
                 fewerNodes: "少節點 →",
                 lineVCarve: "路線V雕刻",
+                relief25D: "灰階浮雕",
                 reprocess: "重新解析檔案",
                 step2: "第二步：零件清單",
+                sortHint: "（已依大到小排序）",
                 selectAll: "全選 / 反選",
                 legendOriginal: "未選零件輪廓",
                 legendSelected: "已選零件輪廓",
@@ -361,24 +386,34 @@
                 height: "高度",
                 resolution: "解析度",
                 feedRate: "進給速率",
-                toolDia: "刀具直徑",
-                totalDepth: "加工深度",
+                toolType: "刀具類型",
+                optToolVBit: "V型雕刻刀",
+                optToolBallNose: "圓頭刀 (Ball Nose)",
+                toolDia: "刀具直徑 (mm)",
                 vbitAngle: "V型刀具角度 (度)",
+                pathOverlap: "精緻度 (mm)",
+                pathAngle: "路徑方向 (角度)",
+                totalDepth: "加工深度",
                 vcarveLayer: "V-Carve 雕刻區域選擇",
+                carveModeRelief: "浮雕模式 (陰刻 / 陽刻)",
                 optVCarveEven: "雕刻凹部 (預設藍色填滿)",
                 optVCarveOdd: "雕刻凸部 (反轉加工)",
+                optReliefIncline: "陰刻 (黑深白淺)",
+                optReliefEmboss: "陽刻 (白深黑淺)",
                 updateBtn: "更新計算路徑",
                 selectionHint: "請先在左側清單中勾選零件<br>以進行後續調整",
                 partName: "零件",
                 tagConvex: "凸 (不加工)",
                 tagConcave: "凹 (加工)",
                 tagLine: "線條加工",
+                tagRelief: "灰階浮雕",
                 notApplied: "未應用",
                 themeLight: "明亮模式",
-                themeDark: "深色模式"
+                themeDark: "深色模式",
+                vcarveErrorMsg: "目前配置無法執行V 雕刻。請增加加工深度、刀具角度或直徑，或調低整體寬"
             },
             en: {
-                appTitle: "V-Carving Tool",
+                appTitle: "V-Carve & Grayscale Relief Tool",
                 step1: "Step 1: File & Parsing",
                 chooseFile: "Choose File",
                 noFile: "No file selected",
@@ -388,8 +423,10 @@
                 highDetail: "← High Detail",
                 fewerNodes: "Smooth & Simple →",
                 lineVCarve: "Line V-Carve",
+                relief25D: "Grayscale Relief",
                 reprocess: "Reprocess File",
                 step2: "Step 2: Parts List",
+                sortHint: "(Sorted large to small)",
                 selectAll: "Select All / Invert",
                 legendOriginal: "Unselected Contours",
                 legendSelected: "Selected Contours",
@@ -403,21 +440,31 @@
                 height: "Height",
                 resolution: "Resolution (mm)",
                 feedRate: "Feed Rate",
-                toolDia: "Tool Diameter",
-                totalDepth: "Machining Depth",
+                toolType: "Tool Type",
+                optToolVBit: "V-Carve Bit",
+                optToolBallNose: "Ball Nose Cutter",
+                toolDia: "Tool Diameter (mm)",
                 vbitAngle: "V-Bit Angle (deg)",
+                pathOverlap: "Fineness (mm)",
+                pathAngle: "Path Angle (deg)",
+                totalDepth: "Machining Depth",
                 vcarveLayer: "V-Carve Region",
+                carveModeRelief: "Engraving Mode (Intaglio / Relief)",
                 optVCarveEven: "Carve Cavity (Default Blue Fill)",
                 optVCarveOdd: "Carve Core (Inverted)",
+                optReliefIncline: "Intaglio (Black Deep, White Shallow)",
+                optReliefEmboss: "Relief (White Deep, Black Shallow)",
                 updateBtn: "Update Toolpath",
                 selectionHint: "Please select a part from the left list<br>to configure parameters",
                 partName: "Part",
                 tagConvex: "Convex (No Machining)",
                 tagConcave: "Concave (Machining)",
                 tagLine: "Line Path",
+                tagRelief: "Grayscale Relief",
                 notApplied: "Not Applied",
                 themeLight: "Light Mode",
-                themeDark: "Dark Mode"
+                themeDark: "Dark Mode",
+                vcarveErrorMsg: "Current configuration cannot execute V-Carve. Please increase cutting depth, bit angle or tool diameter, or reduce overall width."
             }
         };
 
@@ -428,20 +475,31 @@
         let parts = []; 
         let selectedIndices = new Set();
         let isNewFileLoad = false;
+        let loadedImageCanvas = null; 
         const SAFE_Z = "1.000";
 
-        // Three.js 相關變數
         let container, scene, camera, renderer, controls;
-        
-        // DOM 元素引用
         let fileInput, fileNameDisplay;
 
-        // ==========================================
-        // 2. 幾何量測、共線、交點求解與主要軸線 (PCA) 輔助演算法
-        // ==========================================
+        function showMessageBox(msg, title = "提示資訊 / Notice") {
+            const modal = document.getElementById('message-modal');
+            const msgText = document.getElementById('modal-message-text');
+            const msgTitle = document.getElementById('modal-title-text');
+            if (modal && msgText) {
+                msgText.innerText = msg;
+                if (msgTitle) msgTitle.innerText = title;
+                modal.classList.remove('hidden');
+            }
+        }
+
+        function hideMessageBox() {
+            const modal = document.getElementById('message-modal');
+            if (modal) modal.classList.add('hidden');
+        }
+
         function getLineIntersection(p1, p2, p3, p4) {
             const denom = (p4.y - p3.y) * (p2.x - p1.x) - (p4.x - p3.x) * (p2.y - p1.y);
-            if (Math.abs(denom) < 1e-6) return null; // 平行
+            if (Math.abs(denom) < 1e-6) return null;
             const ua = ((p4.x - p3.x) * (p1.y - p3.y) - (p4.y - p3.y) * (p1.x - p3.x)) / denom;
             const ub = ((p2.x - p1.x) * (p1.y - p3.y) - (p2.y - p1.y) * (p1.x - p3.x)) / denom;
             if (ua >= 0 && ua <= 1 && ub >= 0 && ub <= 1) {
@@ -451,32 +509,6 @@
                 };
             }
             return null;
-        }
-
-        function getPrincipalAxis(poly) {
-            let xm = 0, ym = 0;
-            const N = poly.length;
-            if (N === 0) return { angle: 0, cosA: 1, sinA: 0, center: { x: 0, y: 0 } };
-            poly.forEach(pt => { xm += pt.x; ym += pt.y; });
-            xm /= N; ym /= N;
-
-            let covXX = 0, covYY = 0, covXY = 0;
-            poly.forEach(pt => {
-                const dx = pt.x - xm;
-                const dy = pt.y - ym;
-                covXX += dx * dx;
-                covYY += dy * dy;
-                covXY += dx * dy;
-            });
-            covXX /= N; covYY /= N; covXY /= N;
-
-            const angle = 0.5 * Math.atan2(2 * covXY, covXX - covYY);
-            return {
-                angle,
-                cosA: Math.cos(angle),
-                sinA: Math.sin(angle),
-                center: { x: xm, y: ym }
-            };
         }
 
         function isPureStraightLinePath(path, tolerance = 0.05) {
@@ -537,15 +569,6 @@
                 }
             }
             return true;
-        }
-
-        function getDistanceToShapeBoundary(pt, segments) {
-            let minDist = Infinity;
-            for (let i = 0; i < segments.length; i++) {
-                const d = pointToSegmentDistance(pt, segments[i].A, segments[i].B);
-                if (d < minDist) minDist = d;
-            }
-            return minDist;
         }
 
         function tracePath(sx, sy, w, h, isBlack, visited){
@@ -615,7 +638,6 @@
             return Math.sqrt((pt.x - proj.x)**2 + (pt.y - proj.y)**2);
         }
 
-        // 刀軌點過濾，移除不必要的微小路徑冗餘
         function cleanPath(path, resolution) {
             if (path.length < 2) return path;
             let filtered = [path[0]], lastPt = path[0];
@@ -694,9 +716,6 @@
             return isFinite(w) && w > 0 ? w : 100;
         }
 
-        /**
-         * 雙端最鄰近旅行商(TSP)路徑最佳化
-         */
         function optimizePathOrder(paths, startX = 0, startY = 0) {
             if (paths.length <= 1) return paths;
             const optimized = [];
@@ -745,17 +764,12 @@
             return optimized;
         }
 
-        /**
-         * 工業級樹狀最小包圍面演算法 (Strict Parent-Child Topology Forest)
-         * 基於當前所有「可見（visible === true）」的零件進行全域即時重算。
-         */
         function computePartNestingTopology() {
             const activeIndices = parts.map((p, idx) => p.visible ? idx : -1).filter(idx => idx !== -1);
             const depths = {};
             const parents = {};
             activeIndices.forEach(idx => { depths[idx] = 1; parents[idx] = null; });
             
-            // 1. 整理所有可見零件的包圍與面積資料
             const polys = activeIndices.map(idx => {
                 const path = parts[idx].rawPath;
                 const area = Math.abs(getPolygonArea(path));
@@ -763,7 +777,6 @@
                 return { idx, path, area, pt };
             });
             
-            // 2. 尋求每個零件最緊密的直接父節點 Parent
             polys.forEach(pA => {
                 let bestParent = null;
                 let minArea = Infinity;
@@ -780,7 +793,6 @@
                 parents[pA.idx] = bestParent;
             });
             
-            // 3. 遞迴追蹤其拓撲深度 (Tree Depth)
             function getDepth(idx) {
                 if (parents[idx] === null || parents[idx] === undefined) {
                     return 1;
@@ -795,22 +807,72 @@
             return { depths, parents };
         }
 
-        function computePartNestingDepths() {
-            return computePartNestingTopology().depths;
+        function getHierarchicalPartOrder() {
+            const topo = computePartNestingTopology();
+            const { depths, parents } = topo;
+            
+            const childrenMap = {};
+            parts.forEach((_, idx) => { childrenMap[idx] = []; });
+            
+            const rootIndices = [];
+            parts.forEach((_, idx) => {
+                const p = parents[idx];
+                if (p === null || p === undefined) {
+                    rootIndices.push(idx);
+                } else {
+                    if (!childrenMap[p]) childrenMap[p] = [];
+                    childrenMap[p].push(idx);
+                }
+            });
+
+            const getArea = (idx) => Math.abs(getPolygonArea(parts[idx].rawPath));
+            rootIndices.sort((a, b) => getArea(b) - getArea(a));
+            Object.keys(childrenMap).forEach(k => {
+                childrenMap[k].sort((a, b) => getArea(b) - getArea(a));
+            });
+
+            const orderedIndices = [];
+            function traverse(idx) {
+                orderedIndices.push(idx);
+                const children = childrenMap[idx] || [];
+                children.forEach(childIdx => traverse(childIdx));
+            }
+
+            rootIndices.forEach(r => traverse(r));
+            return { orderedIndices, depths, parents };
         }
 
-        // ==========================================
-        // 3. 檔案載入與向量/圖片解析函數
-        // ==========================================
         async function parseBitmap(dataUrl, targetW, smoothTol) {
             return new Promise((resolve) => {
                 const img = new Image();
                 img.onload = () => {
                     const canvas = document.getElementById('hidden-canvas');
                     const ctx = canvas.getContext('2d');
-                    const threshold = parseInt(document.getElementById('threshold').value);
                     canvas.width = img.width; canvas.height = img.height;
                     ctx.drawImage(img, 0, 0);
+
+                    loadedImageCanvas = document.createElement('canvas');
+                    loadedImageCanvas.width = img.width;
+                    loadedImageCanvas.height = img.height;
+                    const loadedCtx = loadedImageCanvas.getContext('2d');
+                    loadedCtx.drawImage(img, 0, 0);
+
+                    const isRelief = document.getElementById('relief-25d-check')?.checked;
+                    if (isRelief) {
+                        const mmScale = targetW / img.width;
+                        const mmH = img.height * mmScale;
+                        const outerRect = [
+                            { x: 0, y: 0 },
+                            { x: targetW, y: 0 },
+                            { x: targetW, y: mmH },
+                            { x: 0, y: mmH },
+                            { x: 0, y: 0 }
+                        ];
+                        resolve([outerRect]);
+                        return;
+                    }
+
+                    const threshold = parseInt(document.getElementById('threshold').value);
                     const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
                     const w = canvas.width, h = canvas.height;
                     const visited = new Uint8Array(w * h);
@@ -846,10 +908,6 @@
             });
         }
 
-        /**
-         * 將 SVG path d 屬性字串拆分為獨立的子路徑 (Sub-paths)，
-         * 防止包含多個 M/z 封閉曲線的 path 產生跨越連接線。
-         */
         function splitSVGPathD(d) {
             if (!d) return [];
             const tokenRegex = /([a-df-zA-DF-Z])|([-+]?(?:\d+\.\d+|\d+|\.\d+)(?:[eE][-+]?\d+)?)/g;
@@ -899,44 +957,28 @@
 
                 if (upperCmd === 'M') {
                     pushSubpath();
-
                     let x = getNum();
                     let y = getNum();
-
-                    if (isRel && subpaths.length > 0) {
-                        x += cx;
-                        y += cy;
-                    }
-
-                    cx = x;
-                    cy = y;
-                    startX = x;
-                    startY = y;
-
+                    if (isRel && subpaths.length > 0) { x += cx; y += cy; }
+                    cx = x; cy = y; startX = x; startY = y;
                     currentSubpathTokens.push(`M ${cx} ${cy}`);
 
                     while (i < tokens.length && tokens[i].type === 'num') {
                         let lx = getNum();
                         let ly = getNum();
-                        if (isRel) {
-                            lx += cx;
-                            ly += cy;
-                        }
-                        cx = lx;
-                        cy = ly;
+                        if (isRel) { lx += cx; ly += cy; }
+                        cx = lx; cy = ly;
                         currentSubpathTokens.push(`L ${cx} ${cy}`);
                     }
                     lastCmd = isRel ? 'l' : 'L';
                 } else if (upperCmd === 'Z') {
                     currentSubpathTokens.push('Z');
-                    cx = startX;
-                    cy = startY;
+                    cx = startX; cy = startY;
                     pushSubpath();
                     lastCmd = 'Z';
                 } else if (upperCmd === 'L') {
                     while (i < tokens.length && tokens[i].type === 'num') {
-                        let x = getNum();
-                        let y = getNum();
+                        let x = getNum(); let y = getNum();
                         if (isRel) { x += cx; y += cy; }
                         cx = x; cy = y;
                         currentSubpathTokens.push(`L ${cx} ${cy}`);
@@ -963,11 +1005,7 @@
                         let x1 = getNum(), y1 = getNum();
                         let x2 = getNum(), y2 = getNum();
                         let x = getNum(), y = getNum();
-                        if (isRel) {
-                            x1 += cx; y1 += cy;
-                            x2 += cx; y2 += cy;
-                            x += cx; y += cy;
-                        }
+                        if (isRel) { x1 += cx; y1 += cy; x2 += cx; y2 += cy; x += cx; y += cy; }
                         cx = x; cy = y;
                         currentSubpathTokens.push(`C ${x1} ${y1}, ${x2} ${y2}, ${cx} ${cy}`);
                     }
@@ -976,10 +1014,7 @@
                     while (i < tokens.length && tokens[i].type === 'num') {
                         let x2 = getNum(), y2 = getNum();
                         let x = getNum(), y = getNum();
-                        if (isRel) {
-                            x2 += cx; y2 += cy;
-                            x += cx; y += cy;
-                        }
+                        if (isRel) { x2 += cx; y2 += cy; x += cx; y += cy; }
                         cx = x; cy = y;
                         currentSubpathTokens.push(`S ${x2} ${y2}, ${cx} ${cy}`);
                     }
@@ -988,10 +1023,7 @@
                     while (i < tokens.length && tokens[i].type === 'num') {
                         let x1 = getNum(), y1 = getNum();
                         let x = getNum(), y = getNum();
-                        if (isRel) {
-                            x1 += cx; y1 += cy;
-                            x += cx; y += cy;
-                        }
+                        if (isRel) { x1 += cx; y1 += cy; x += cx; y += cy; }
                         cx = x; cy = y;
                         currentSubpathTokens.push(`Q ${x1} ${y1}, ${cx} ${cy}`);
                     }
@@ -999,9 +1031,7 @@
                 } else if (upperCmd === 'T') {
                     while (i < tokens.length && tokens[i].type === 'num') {
                         let x = getNum(), y = getNum();
-                        if (isRel) {
-                            x += cx; y += cy;
-                        }
+                        if (isRel) { x += cx; y += cy; }
                         cx = x; cy = y;
                         currentSubpathTokens.push(`T ${cx} ${cy}`);
                     }
@@ -1011,9 +1041,7 @@
                         let rx = getNum(), ry = getNum();
                         let rot = getNum(), large = getNum(), sweep = getNum();
                         let x = getNum(), y = getNum();
-                        if (isRel) {
-                            x += cx; y += cy;
-                        }
+                        if (isRel) { x += cx; y += cy; }
                         cx = x; cy = y;
                         currentSubpathTokens.push(`A ${rx} ${ry} ${rot} ${large} ${sweep} ${cx} ${cy}`);
                     }
@@ -1027,67 +1055,35 @@
             return subpaths;
         }
 
-        /**
-         * 計算 SVG userUnit (或 px) 到 mm 的實體單位縮放比
-         */
-        function getSVGToMMScale(svgEl) {
-            const widthAttr = svgEl.getAttribute('width');
-            let physicalWidthMM = null;
-
-            if (widthAttr) {
-                const wStr = widthAttr.trim();
-                const num = parseFloat(wStr);
-                if (!isNaN(num) && num > 0) {
-                    if (wStr.endsWith('mm')) physicalWidthMM = num;
-                    else if (wStr.endsWith('cm')) physicalWidthMM = num * 10;
-                    else if (wStr.endsWith('in')) physicalWidthMM = num * 25.4;
-                    else if (wStr.endsWith('pt')) physicalWidthMM = num * (25.4 / 72);
-                    else if (wStr.endsWith('pc')) physicalWidthMM = num * (25.4 / 6);
-                    else if (wStr.endsWith('px')) physicalWidthMM = num * (25.4 / 96);
-                    else physicalWidthMM = num * (25.4 / 96);
-                }
-            }
-
-            let svgPixelWidth = null;
-            try {
-                const rect = svgEl.getBoundingClientRect();
-                if (rect && rect.width > 0) {
-                    svgPixelWidth = rect.width;
-                }
-            } catch(e) {}
-
-            if (physicalWidthMM !== null && svgPixelWidth !== null && svgPixelWidth > 0) {
-                return physicalWidthMM / svgPixelWidth;
-            }
-
-            return 25.4 / 96;
-        }
-
-        /**
-         * 修正後的 SVG 解析器：
-         * 支援 CTM 矩陣平移/旋轉/縮放、<use> 標籤展開與 Path 子路徑拆解，
-         * 並且精準套用 SVG 單位縮放比 (mm)，完美呈現原始尺寸。
-         */
         function parseSVG(svgString, smoothTol) {
             const parser = new DOMParser();
             const doc = parser.parseFromString(svgString, 'image/svg+xml');
             const svgEl = doc.querySelector('svg');
             if (!svgEl) return [];
 
-            // 1. 建立隱藏容器並掛載到 DOM，讓瀏覽器得以計算真實 CTM 轉置矩陣
             let container = document.getElementById('svg-temp-parser');
             if (!container) {
                 container = document.createElement('div');
                 container.id = 'svg-temp-parser';
-                container.style.cssText = 'position:absolute;left:-9999px;top:-9999px;width:20000px;height:20000px;opacity:0;pointer-events:none;overflow:visible;';
+                container.style.cssText = 'position:absolute;left:-9999px;top:-9999px;width:10000px;height:10000px;opacity:0;pointer-events:none;overflow:hidden;';
                 document.body.appendChild(container);
             }
             container.innerHTML = '';
             container.appendChild(svgEl);
 
-            const svgScale = getSVGToMMScale(svgEl);
+            let svgScale = 1.0;
+            const wAttr = svgEl.getAttribute('width');
+            if (wAttr && wAttr.includes('mm')) {
+                const physicalMM = parseFloat(wAttr);
+                const boundingBoxWidth = svgEl.getBBox ? svgEl.getBBox().width : 0;
+                const clientW = boundingBoxWidth || parseFloat(wAttr) * 3.7795275591;
+                if (clientW > 0) {
+                    svgScale = physicalMM / clientW;
+                }
+            } else {
+                svgScale = 25.4 / 96.0; 
+            }
 
-            // 2. 展開所有 <use> 引用標籤為包含矩陣 Transform 的獨立實體節點
             const useElements = Array.from(svgEl.querySelectorAll('use'));
             useElements.forEach(useEl => {
                 const href = useEl.getAttribute('href') || useEl.getAttribute('xlink:href');
@@ -1115,13 +1111,11 @@
             const elements = svgEl.querySelectorAll('path, rect, circle, ellipse, line, polyline, polygon');
             
             elements.forEach(el => {
-                // 忽略位於 <defs> 區塊內的未渲染樣板
                 if (el.closest && el.closest('defs')) return;
 
                 let pts = [];
                 const type = el.tagName.toLowerCase();
 
-                // 獲取該元素的絕對 CTM 轉換矩陣
                 let ctm = null;
                 try {
                     ctm = el.getCTM();
@@ -1129,7 +1123,6 @@
                     ctm = null;
                 }
 
-                // 將本地座標系點經 CTM 轉換與 svgScale 轉換後，轉換至 CNC 平面 (Y軸反轉，單位為 mm)
                 function getPt(x, y) {
                     if (ctm) {
                         const tx = x * ctm.a + y * ctm.c + ctm.e;
@@ -1151,11 +1144,7 @@
                             parent.appendChild(tempPath);
 
                             let len = 0;
-                            try {
-                                len = tempPath.getTotalLength();
-                            } catch(e) {
-                                len = 0;
-                            }
+                            try { len = tempPath.getTotalLength(); } catch(e) { len = 0; }
 
                             if (len > 0) {
                                 const subPts = [];
@@ -1173,23 +1162,6 @@
                                 tempPath.parentNode.removeChild(tempPath);
                             }
                         });
-                    } else {
-                        let len = 0;
-                        try {
-                            len = el.getTotalLength();
-                        } catch(e) {
-                            len = 0;
-                        }
-                        if (len > 0) {
-                            const segments = Math.max(10, Math.ceil(len / (smoothTol * 5))); 
-                            for(let i = 0; i <= segments; i++) {
-                                const p = el.getPointAtLength(i * len / segments);
-                                pts.push(getPt(p.x, p.y)); 
-                            }
-                            if (pts.length > 1) {
-                                paths.push(simplifyPath(pts, smoothTol));
-                            }
-                        }
                     }
                 } else if (type === 'rect') {
                     const x = parseFloat(el.getAttribute('x') || 0);
@@ -1234,9 +1206,7 @@
                 }
             });
 
-            // 清理暫存節點
             container.innerHTML = '';
-
             return paths;
         }
 
@@ -1290,8 +1260,12 @@
         }
 
         function processVectorIntoParts(vectorPaths) {
+            const sortedPaths = [...vectorPaths].sort((pA, pB) => {
+                return Math.abs(getPolygonArea(pB)) - Math.abs(getPolygonArea(pA));
+            });
+
             let gMinX = Infinity, gMaxX = -Infinity, gMinY = Infinity, gMaxY = -Infinity;
-            vectorPaths.forEach(p => p.forEach(pt => {
+            sortedPaths.forEach(p => p.forEach(pt => {
                 gMinX = Math.min(gMinX, pt.x); gMaxX = Math.max(gMaxX, pt.x);
                 gMinY = Math.min(gMinY, pt.y); gMaxY = Math.max(gMaxY, pt.y);
             }));
@@ -1299,7 +1273,7 @@
             const gCx = (gMinX + gMaxX) / 2;
             const gCy = (gMinY + gMaxY) / 2;
 
-            parts = vectorPaths.map((p, idx) => {
+            parts = sortedPaths.map((p, idx) => {
                 let pMinX = Infinity, pMaxX = -Infinity, pMinY = Infinity, pMaxY = -Infinity;
                 p.forEach(pt => { pMinX = Math.min(pMinX, pt.x); pMaxX = Math.max(pMaxX, pt.x); pMinY = Math.min(pMinY, pt.y); pMaxY = Math.max(pMaxY, pt.y); });
                 
@@ -1310,24 +1284,31 @@
                 }
                 
                 return { 
-                    id: idx+1, rawPath: centeredPath, 
+                    id: idx + 1, 
+                    rawPath: centeredPath, 
                     originalDim: { w: pMaxX-pMinX, h: pMaxY-pMinY }, 
                     currentDim: { w: pMaxX-pMinX, h: pMaxY-pMinY }, 
                     visible: true, 
-                    jobConfig: { type: 'vcarve', f: 1500, d: 6.0, depth: 3.0, overlap: 0.5, resolution: 0.1, vbitAngle: 90 }, 
+                    jobConfig: { 
+                        type: 'vcarve', f: 1000, d: 6.0, depth: 3.0, 
+                        overlap: 1.80, resolution: 0.2, vbitAngle: 90,
+                        toolType: 'vbit', pathAngle: 0, carveLayer: 'even'
+                    }, 
                     toolpath: null, appliedMethod: null 
                 };
             });
 
             selectedIndices.clear(); 
+            const isRelief = document.getElementById('relief-25d-check')?.checked;
+            if (isRelief) {
+                parts.forEach((_, idx) => selectedIndices.add(idx));
+            }
+
             renderPartList(); 
             update3D(); 
             updateStats();
         }
 
-        // ==========================================
-        // 4. UI 渲染控制與 3D 更新函數
-        // ==========================================
         function updateLanguage() {
             document.querySelectorAll('[data-i18n]').forEach(el => {
                 const key = el.getAttribute('data-i18n');
@@ -1338,14 +1319,13 @@
             renderPartList();
         }
 
-        // 動態計算格線，保持一格為固定 50mm，並隨零件邊界自動展延
         function updateGridHelper() {
             if (!scene) return;
             const existingGrid = scene.getObjectByName("gridHelper");
             if (existingGrid) scene.remove(existingGrid);
 
-            const GRID_STEP = 50; // 固定一格 50mm
-            let maxSpan = 200; // 預設最小邊界涵蓋範圍
+            const GRID_STEP = 50;
+            let maxSpan = 200;
 
             if (parts && parts.length > 0) {
                 let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
@@ -1364,7 +1344,6 @@
                 }
             }
 
-            // 將格線數量四捨五入至偶數格，確保 (0,0) 恆定對齊格線中心
             const numCells = Math.max(4, Math.ceil((maxSpan + GRID_STEP * 2) / (GRID_STEP * 2)) * 2);
             const totalSize = numCells * GRID_STEP;
 
@@ -1388,7 +1367,8 @@
             if (existingMesh) scene.remove(existingMesh);
 
             const isLineVCarve = document.getElementById('line-vcarve-check')?.checked;
-            if (isLineVCarve) return; // 路線 V 雕刻模式下隱藏區域填滿預覽
+            const isRelief = document.getElementById('relief-25d-check')?.checked;
+            if (isLineVCarve || isRelief) return;
 
             const jobType = document.getElementById('job-type').value;
             if (jobType === 'vcarve' && selectedIndices.size > 0) {
@@ -1484,17 +1464,15 @@
             updateVCarveVisuals();
         }
 
-        /**
-         * 預估總加工時間算法
-         */
         function updateStats() {
             let totalSec = 0;
             let currentX = 0, currentY = 0;
             const SAFE_Z_VAL = parseFloat(SAFE_Z) || 1.0;
             let currentZ = SAFE_Z_VAL;
 
-            const G0_SPEED = 2000;      
-            const PLUNGE_SPEED = 300;   
+            const G0_XY_SPEED = 3000;   // G0 XY 快速移動速度 (mm/min)
+            const G0_Z_SPEED = 1200;    // G0 Z 軸快速移動速度 (mm/min)
+            const PLUNGE_SPEED = 300;   // Z 軸下刀切入速度 (mm/min)
 
             let allPathsToCut = [];
             parts.forEach(p => {
@@ -1561,7 +1539,7 @@
                 const cfg = item.cfg;
                 const start = path[0];
                 const startZ = (start.z !== undefined) ? start.z : 0;
-                const cuttingFeedrate = cfg.f || 1500;
+                const cuttingFeedrate = cfg.f || 1000;
 
                 const distSq = Math.pow(start.x - currentX, 2) + Math.pow(start.y - currentY, 2);
                 const contiguous = distSq < 0.01; 
@@ -1576,12 +1554,12 @@
                     currentX = start.x;
                     currentY = start.y;
                 } else {
-                    const travelZToSafe = Math.abs(currentZ - SAFE_Z_VAL);
-                    totalSec += (travelZToSafe / G0_SPEED) * 60;
+                    const travelZUp = Math.abs(currentZ - SAFE_Z_VAL);
+                    totalSec += (travelZUp / G0_Z_SPEED) * 60;
                     currentZ = SAFE_Z_VAL;
 
                     const travelXY = Math.sqrt(distSq);
-                    totalSec += (travelXY / G0_SPEED) * 60;
+                    totalSec += (travelXY / G0_XY_SPEED) * 60;
                     currentX = start.x;
                     currentY = start.y;
 
@@ -1590,15 +1568,14 @@
                     currentZ = startZ;
                 }
 
-                let pathDist = 0;
                 for (let j = 1; j < path.length; j++) {
                     const pt1 = path[j-1];
                     const pt2 = path[j];
                     const z1 = (pt1.z !== undefined) ? pt1.z : 0;
                     const z2 = (pt2.z !== undefined) ? pt2.z : 0;
-                    pathDist += Math.sqrt(Math.pow(pt2.x - pt1.x, 2) + Math.pow(pt2.y - pt1.y, 2) + Math.pow(z2 - z1, 2));
+                    const segDist = Math.sqrt(Math.pow(pt2.x - pt1.x, 2) + Math.pow(pt2.y - pt1.y, 2) + Math.pow(z2 - z1, 2));
+                    totalSec += (segDist / cuttingFeedrate) * 60;
                 }
-                totalSec += (pathDist / cuttingFeedrate) * 60;
 
                 const lastPtInPath = path[path.length - 1];
                 currentX = lastPtInPath.x;
@@ -1607,11 +1584,11 @@
             });
 
             const travelZToSafe = Math.abs(currentZ - SAFE_Z_VAL);
-            totalSec += (travelZToSafe / G0_SPEED) * 60;
+            totalSec += (travelZToSafe / G0_Z_SPEED) * 60;
             currentZ = SAFE_Z_VAL;
 
             const returnXY = Math.sqrt(currentX * currentX + currentY * currentY);
-            totalSec += (returnXY / G0_SPEED) * 60;
+            totalSec += (returnXY / G0_XY_SPEED) * 60;
 
             const h = Math.floor(totalSec / 3600), m = Math.floor((totalSec % 3600) / 60), s = Math.floor(totalSec % 60);
             document.getElementById('est-time').innerText = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
@@ -1623,19 +1600,24 @@
             list.innerHTML = '';
             
             const isLineVCarve = document.getElementById('line-vcarve-check')?.checked;
-            const topo = computePartNestingTopology();
-            const depths = topo.depths;
+            const isRelief = document.getElementById('relief-25d-check')?.checked;
+            const { orderedIndices, depths } = getHierarchicalPartOrder();
             const targetLayer = document.getElementById('vcarve-layer-select')?.value || 'even';
 
-            parts.forEach((p, i) => {
+            orderedIndices.forEach((i) => {
+                const p = parts[i];
+                if (!p) return;
+
                 const isSelected = selectedIndices.has(i);
                 const depth = depths[i] || 1;
                 
                 let tagText = "";
                 let badgeClass = "";
 
-                if (isLineVCarve) {
-                    // 勾選「路線V雕刻」時不區分凹凸，統一顯示為線條加工
+                if (isRelief) {
+                    tagText = i18n[currentLang].tagRelief;
+                    badgeClass = "bg-purple-100 text-purple-700 border border-purple-200 dark:bg-purple-900/40 dark:text-purple-400 dark:border-purple-800/60";
+                } else if (isLineVCarve) {
                     tagText = i18n[currentLang].tagLine;
                     badgeClass = "bg-emerald-100 text-emerald-700 border border-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-400 dark:border-emerald-800/60";
                 } else {
@@ -1645,19 +1627,22 @@
                 }
 
                 const div = document.createElement('div');
-                div.className = `p-4 border border-slate-200 dark:border-slate-700 rounded-xl flex flex-col transition-all cursor-pointer ${isSelected ? 'active-part shadow-lg' : 'hover:bg-slate-100 dark:hover:bg-slate-850'}`;
+                div.className = `p-3.5 border border-slate-200 dark:border-slate-700 rounded-xl flex flex-col transition-all cursor-pointer ${isSelected ? 'active-part shadow-lg' : 'hover:bg-slate-100 dark:hover:bg-slate-850'}`;
+
                 div.innerHTML = `
-                    <div class="flex justify-between items-center mb-2">
-                        <div class="flex items-center gap-3">
-                            <input type="checkbox" class="w-5 h-5 accent-green-600" ${isSelected ? 'checked' : ''}>
+                    <div class="flex justify-between items-center mb-1.5">
+                        <div class="flex items-center gap-2.5">
+                            <input type="checkbox" class="w-4 h-4 accent-green-600" ${isSelected ? 'checked' : ''}>
                             <span class="text-xs font-bold text-slate-800 dark:text-slate-100">${i18n[currentLang].partName} ${p.id}</span>
                         </div>
-                        <span class="text-[10px] px-2.5 py-0.5 rounded-full font-bold font-mono ${badgeClass}">${p.visible ? tagText : i18n[currentLang].notApplied}</span>
-                        <button class="toggle-vis p-1">
-                            ${p.visible ? '<svg class="w-5 h-5 stroke-slate-500 dark:stroke-slate-400" fill="none" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>' : '<svg class="w-5 h-5 stroke-slate-400 dark:stroke-slate-600" fill="none" stroke-width="2" viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>'}
-                        </button>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[10px] px-2 py-0.5 rounded-full font-bold font-mono ${badgeClass}">${p.visible ? tagText : i18n[currentLang].notApplied}</span>
+                            <button class="toggle-vis p-1">
+                                ${p.visible ? '<svg class="w-4 h-4 stroke-slate-500 dark:stroke-slate-400" fill="none" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>' : '<svg class="w-4 h-4 stroke-slate-400 dark:stroke-slate-600" fill="none" stroke-width="2" viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>'}
+                            </button>
+                        </div>
                     </div>
-                    <div class="flex flex-wrap gap-2 ml-8 items-center">
+                    <div class="flex flex-wrap gap-2 ml-6 items-center">
                         <span class="dimension-badge">${p.currentDim.w.toFixed(1)} x ${p.currentDim.h.toFixed(1)} mm</span>
                     </div>
                 `;
@@ -1679,23 +1664,45 @@
             updateJobUI();
         }
 
-        // 動態幾何最大下刀深度計算與即時限制
-        function updateDepthLimit() {
+        function updateStepoverLimit() {
             const d = parseFloat(document.getElementById('mill-d').value) || 6.0;
-            const angle = parseFloat(document.getElementById('vbit-angle').value) || 90;
-            const tanHalf = Math.tan((angle / 2) * Math.PI / 180);
-            const maxDepth = d / (2 * tanHalf);
-            
+            const stepInput = document.getElementById('path-overlap');
+            const limitHint = document.getElementById('stepover-limit-hint');
+            const maxStepover = 0.9 * d;
+
+            if (stepInput) {
+                stepInput.min = "0.10";
+                stepInput.max = maxStepover.toFixed(2);
+                const curVal = parseFloat(stepInput.value);
+                if (isNaN(curVal) || curVal > maxStepover || curVal < 0.10) {
+                    stepInput.value = (0.3 * d).toFixed(2);
+                }
+            }
+            if (limitHint) {
+                limitHint.innerText = `(0.10 ~ ${maxStepover.toFixed(2)} mm)`;
+            }
+        }
+
+        function updateDepthLimit() {
+            const toolType = document.getElementById('tool-type-select')?.value || 'vbit';
             const depthInput = document.getElementById('mill-depth');
             const limitHint = document.getElementById('depth-limit-hint');
-            if (depthInput) {
-                depthInput.max = maxDepth.toFixed(3);
-                if (parseFloat(depthInput.value) > maxDepth) {
-                    depthInput.value = parseFloat(maxDepth.toFixed(2));
+
+            if (toolType === 'vbit') {
+                const d = parseFloat(document.getElementById('mill-d').value) || 6.0;
+                const angle = parseFloat(document.getElementById('vbit-angle').value) || 90;
+                const tanHalf = Math.tan((angle / 2) * Math.PI / 180);
+                const maxDepth = d / (2 * tanHalf);
+                if (depthInput) {
+                    depthInput.max = maxDepth.toFixed(3);
+                    if (parseFloat(depthInput.value) > maxDepth) {
+                        depthInput.value = parseFloat(maxDepth.toFixed(2));
+                    }
+                    if (limitHint) limitHint.innerText = `(Max: ${maxDepth.toFixed(1)} mm)`;
                 }
-                if (limitHint) {
-                    limitHint.innerText = `(Max: ${maxDepth.toFixed(1)} mm)`;
-                }
+            } else {
+                if (depthInput) depthInput.removeAttribute('max');
+                if (limitHint) limitHint.innerText = "";
             }
         }
 
@@ -1704,12 +1711,38 @@
             if (!panel || !hint) return;
 
             const isLineVCarve = document.getElementById('line-vcarve-check')?.checked;
+            const isRelief = document.getElementById('relief-25d-check')?.checked;
             const vcarveLayerContainer = document.getElementById('vcarve-layer-container');
-            if (vcarveLayerContainer) {
-                if (isLineVCarve) {
-                    vcarveLayerContainer.classList.add('hidden');
-                } else {
-                    vcarveLayerContainer.classList.remove('hidden');
+            const stepoverContainer = document.getElementById('stepover-container');
+            const vangleContainer = document.getElementById('vangle-container');
+            const layerSelect = document.getElementById('vcarve-layer-select');
+            const labelCarve = document.getElementById('carve-mode-label');
+
+            if (isRelief) {
+                if (stepoverContainer) stepoverContainer.classList.remove('hidden');
+                if (vcarveLayerContainer) vcarveLayerContainer.classList.remove('hidden');
+                
+                if (labelCarve) labelCarve.innerText = i18n[currentLang].carveModeRelief;
+                if (layerSelect) {
+                    const curVal = layerSelect.value || 'even';
+                    layerSelect.innerHTML = `
+                        <option value="even" ${curVal === 'even' ? 'selected' : ''}>${i18n[currentLang].optReliefIncline}</option>
+                        <option value="odd" ${curVal === 'odd' ? 'selected' : ''}>${i18n[currentLang].optReliefEmboss}</option>
+                    `;
+                }
+            } else {
+                if (stepoverContainer) stepoverContainer.classList.add('hidden');
+                if (vcarveLayerContainer) {
+                    if (isLineVCarve) vcarveLayerContainer.classList.add('hidden');
+                    else vcarveLayerContainer.classList.remove('hidden');
+                }
+                if (labelCarve) labelCarve.innerText = i18n[currentLang].vcarveLayer;
+                if (layerSelect) {
+                    const curVal = layerSelect.value || 'even';
+                    layerSelect.innerHTML = `
+                        <option value="even" ${curVal === 'even' ? 'selected' : ''}>${i18n[currentLang].optVCarveEven}</option>
+                        <option value="odd" ${curVal === 'odd' ? 'selected' : ''}>${i18n[currentLang].optVCarveOdd}</option>
+                    `;
                 }
             }
 
@@ -1728,24 +1761,201 @@
                     }
                 });
                 const elVBit = document.getElementById('vbit-angle');
-                if (elVBit && lastP.jobConfig.vbitAngle !== undefined) {
-                    elVBit.value = lastP.jobConfig.vbitAngle;
+                if (elVBit && lastP.jobConfig.vbitAngle !== undefined) elVBit.value = lastP.jobConfig.vbitAngle;
+                const elOverlap = document.getElementById('path-overlap');
+                if (elOverlap && lastP.jobConfig.overlap !== undefined) elOverlap.value = lastP.jobConfig.overlap;
+                const elAngle = document.getElementById('path-angle-select');
+                if (elAngle && lastP.jobConfig.pathAngle !== undefined) elAngle.value = lastP.jobConfig.pathAngle;
+                
+                const elTool = document.getElementById('tool-type-select');
+                if (elTool && lastP.jobConfig.toolType) {
+                    elTool.value = lastP.jobConfig.toolType;
                 }
+
+                if (layerSelect && lastP.jobConfig.carveLayer) {
+                    layerSelect.value = lastP.jobConfig.carveLayer;
+                }
+
+                updateStepoverLimit();
                 updateDepthLimit();
             } else { panel.classList.add('hidden'); hint.classList.remove('hidden'); }
+
+            const selectedTool = document.getElementById('tool-type-select')?.value || 'vbit';
+            if (selectedTool === 'vbit') {
+                if (vangleContainer) vangleContainer.classList.remove('hidden');
+            } else {
+                if (vangleContainer) vangleContainer.classList.add('hidden');
+            }
+
             toggleMillingOptions();
         }
 
-        // ==========================================
-        // 5. 刀軌路徑計算與 V-Carving 核心演算法
-        // ==========================================
+        function calculateReliefToolpaths(groupScale) {
+            if (!loadedImageCanvas) return;
+            const selectedArr = Array.from(selectedIndices);
+            if (selectedArr.length === 0) return;
+
+            const firstIdx = selectedArr[0];
+            const cfg = parts[firstIdx].jobConfig;
+            const targetLayer = cfg.carveLayer || document.getElementById('vcarve-layer-select')?.value || 'even';
+
+            const imgW = loadedImageCanvas.width;
+            const imgH = loadedImageCanvas.height;
+            const ctx = loadedImageCanvas.getContext('2d');
+            const imgData = ctx.getImageData(0, 0, imgW, imgH).data;
+
+            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+            parts[firstIdx].rawPath.forEach(pt => {
+                minX = Math.min(minX, pt.x); maxX = Math.max(maxX, pt.x);
+                minY = Math.min(minY, pt.y); maxY = Math.max(maxY, pt.y);
+            });
+            const mmW = (maxX - minX) * groupScale;
+            const mmH = (maxY - minY) * groupScale;
+
+            const toolDia = cfg.d || 6.0;
+            const toolRadius = toolDia / 2.0;
+            const isBallNose = (cfg.toolType === 'ballnose');
+            const stepover = Math.max(0.10, cfg.overlap || (0.3 * toolDia));
+            const maxDepth = cfg.depth || 3.0;
+            const scanAngle = parseInt(cfg.pathAngle || 0);
+
+            function getPixelGray(xMM, yMM) {
+                const px = Math.floor((xMM / mmW) * imgW);
+                const py = Math.floor(((mmH - yMM) / mmH) * imgH);
+                if (px < 0 || px >= imgW || py < 0 || py >= imgH) return 255;
+                const idx = (py * imgW + px) * 4;
+                const r = imgData[idx], g = imgData[idx+1], b = imgData[idx+2];
+                return 0.299 * r + 0.587 * g + 0.114 * b;
+            }
+
+            function grayToRawDepth(gray) {
+                let norm = gray / 255.0; 
+                if (targetLayer === 'even') {
+                    return -maxDepth * (1.0 - norm);
+                } else {
+                    return -maxDepth * norm;
+                }
+            }
+
+            function getCompensatedZ(xMM, yMM) {
+                const baseZ = grayToRawDepth(getPixelGray(xMM, yMM));
+                if (!isBallNose) return baseZ;
+
+                let maxZ = baseZ;
+                const rMax = toolRadius;
+                if (rMax <= 0.05) return baseZ;
+
+                // 動態調整鄰域採樣點，精確進行 3D 球頭刀 Drop-Cutter 補償（避免過度深挖與誤削周圍高點）
+                const sampleSteps = Math.min(8, Math.max(4, Math.ceil(rMax / Math.max(0.2, res))));
+                const stepMM = rMax / sampleSteps;
+
+                for (let dx = -sampleSteps; dx <= sampleSteps; dx++) {
+                    for (let dy = -sampleSteps; dy <= sampleSteps; dy++) {
+                        if (dx === 0 && dy === 0) continue;
+                        const rx = dx * stepMM;
+                        const ry = dy * stepMM;
+                        const distSq = rx * rx + ry * ry;
+                        if (distSq <= rMax * rMax) {
+                            const neighborGray = getPixelGray(xMM + rx, yMM + ry);
+                            const neighborZ = grayToRawDepth(neighborGray);
+                            const sphereOffset = toolRadius - Math.sqrt(Math.max(0, toolRadius * toolRadius - distSq));
+                            const compZ = neighborZ - sphereOffset;
+                            // 修正：當鄰近點算出的刀尖 Z 較高 (較不深) 時，必須提升刀尖高度 (取 maxZ) 以防過切/防撞高點
+                            if (compZ > maxZ) {
+                                maxZ = compZ;
+                            }
+                        }
+                    }
+                }
+                return Math.max(-maxDepth, Math.min(0, maxZ));
+            }
+
+            const res = Math.max(0.05, cfg.resolution || 0.2);
+            const toolpaths = [];
+
+            if (scanAngle === 0) {
+                const ySteps = Math.ceil(mmH / stepover);
+                for (let i = 0; i <= ySteps; i++) {
+                    const curY = Math.min(mmH, i * stepover);
+                    const line = [];
+                    const xSteps = Math.ceil(mmW / res);
+                    const isReverse = (i % 2 === 1);
+
+                    for (let j = 0; j <= xSteps; j++) {
+                        const curX = isReverse ? (mmW - j * res) : (j * res);
+                        const clampedX = Math.max(0, Math.min(mmW, curX));
+                        const z = getCompensatedZ(clampedX, curY);
+                        line.push({ x: clampedX - mmW/2, y: curY - mmH/2, z: z });
+                    }
+                    toolpaths.push(cleanPath(line, res));
+                }
+            } else if (scanAngle === 90) {
+                const xSteps = Math.ceil(mmW / stepover);
+                for (let i = 0; i <= xSteps; i++) {
+                    const curX = Math.min(mmW, i * stepover);
+                    const line = [];
+                    const ySteps = Math.ceil(mmH / res);
+                    const isReverse = (i % 2 === 1);
+
+                    for (let j = 0; j <= ySteps; j++) {
+                        const curY = isReverse ? (mmH - j * res) : (j * res);
+                        const clampedY = Math.max(0, Math.min(mmH, curY));
+                        const z = getCompensatedZ(curX, clampedY);
+                        line.push({ x: curX - mmW/2, y: clampedY - mmH/2, z: z });
+                    }
+                    toolpaths.push(cleanPath(line, res));
+                }
+            } else {
+                const rad = (scanAngle * Math.PI) / 180;
+                const cosA = Math.cos(rad), sinA = Math.sin(rad);
+                const diag = Math.sqrt(mmW * mmW + mmH * mmH);
+                
+                const steps = Math.ceil(diag * 2 / stepover);
+                for (let i = -steps/2; i <= steps/2; i++) {
+                    const offset = i * stepover;
+                    const line = [];
+                    const sampleSteps = Math.ceil(diag / res);
+                    const isReverse = (Math.abs(Math.floor(i)) % 2 === 1);
+
+                    for (let j = 0; j <= sampleSteps; j++) {
+                        const t = isReverse ? (diag / 2 - j * res) : (-diag / 2 + j * res);
+                        const curX = mmW/2 + t * cosA - offset * sinA;
+                        const curY = mmH/2 + t * sinA + offset * cosA;
+
+                        if (curX >= 0 && curX <= mmW && curY >= 0 && curY <= mmH) {
+                            const z = getCompensatedZ(curX, curY);
+                            line.push({ x: curX - mmW/2, y: curY - mmH/2, z: z });
+                        }
+                    }
+                    if (line.length >= 2) {
+                        toolpaths.push(cleanPath(line, res));
+                    }
+                }
+            }
+
+            parts[firstIdx].toolpath = toolpaths;
+            parts[firstIdx].appliedMethod = 'relief25d';
+
+            selectedArr.forEach(idx => {
+                if (idx !== firstIdx) {
+                    parts[idx].toolpath = [];
+                    parts[idx].appliedMethod = 'relief25d';
+                }
+            });
+        }
+
         function calculateAllVCarvePaths(groupScale) {
             const selectedArr = Array.from(selectedIndices);
             if (selectedArr.length === 0) return;
 
+            const isRelief = document.getElementById('relief-25d-check')?.checked;
+            if (isRelief) {
+                calculateReliefToolpaths(groupScale);
+                return;
+            }
+
             const isLineVCarve = document.getElementById('line-vcarve-check')?.checked;
 
-            // 如果勾選「路線V雕刻」，直接沿已選零件的輪廓線進行直走加工
             if (isLineVCarve) {
                 parts.forEach((p, idx) => {
                     if (selectedIndices.has(idx) && p.visible) {
@@ -1768,7 +1978,6 @@
             }
 
             const targetLayer = document.getElementById('vcarve-layer-select')?.value || 'even';
-            
             const topo = computePartNestingTopology();
             const depths = topo.depths;
             const parents = topo.parents;
@@ -1809,61 +2018,44 @@
                 return;
             }
 
-            const consolidatedPaths = [];
             const D_max = cfg.depth; 
             const theta = cfg.vbitAngle || 90;
             const tanHalf = Math.tan((theta / 2) * Math.PI / 180);
-            const r_max = D_max * tanHalf; 
-            const scale = 10000;
+            const isBallNose = (cfg.toolType === 'ballnose');
+            const toolRadius = cfg.d / 2.0;
+            const r_max = isBallNose ? (D_max >= toolRadius ? toolRadius : Math.sqrt(Math.max(0, 2 * toolRadius * D_max - D_max * D_max))) : Math.min(toolRadius, D_max * tanHalf);
 
-            nestedShapes.forEach(shape => {
+            let cannotExecuteVCarve = false;
+            const consolidatedPaths = [];
+
+            for (const shape of nestedShapes) {
                 const spineStrokes = computeNestedVCarve(shape, cfg);
-                consolidatedPaths.push(...spineStrokes);
 
-                let hasWideRegions = false;
-                spineStrokes.forEach(stroke => {
-                    stroke.forEach(pt => {
-                        if (pt.r > r_max) hasWideRegions = true;
-                    });
-                });
-
-                if (hasWideRegions) {
-                    const stepover = (1 - cfg.overlap) * (2 * r_max);
-                    let currentOffset = r_max;
-
-                    const shapePaths = new ClipperLib.Paths();
-                    const outerClipper = shape.outer.map(pt => ({ X: Math.round(pt.x * scale), Y: Math.round(pt.y * scale) }));
-                    shapePaths.push(outerClipper);
-                    shape.holes.forEach(hole => {
-                        const holeClipper = hole.map(pt => ({ X: Math.round(pt.x * scale), Y: Math.round(pt.y * scale) }));
-                        shapePaths.push(holeClipper);
-                    });
-
-                    for (let step = 0; step < 50; step++) {
-                        const co = new ClipperLib.ClipperOffset();
-                        co.AddPaths(shapePaths, ClipperLib.JoinType.jtRound, ClipperLib.EndType.etClosedPolygon);
-                        
-                        const offsetResult = new ClipperLib.Paths();
-                        co.Execute(offsetResult, -currentOffset * scale);
-
-                        if (offsetResult.length === 0) break;
-
-                        offsetResult.forEach(path => {
-                            const p = path.map(pt => ({
-                                x: pt.X / scale,
-                                y: pt.Y / scale,
-                                z: -D_max 
-                            }));
-                            if (p.length > 0) {
-                                p.push(p[0]); 
-                                consolidatedPaths.push(cleanPath(p, cfg.resolution));
-                            }
-                        });
-
-                        currentOffset += stepover;
+                // 檢查是否包含無法由 XYZ 同動 V 雕刻 (r > r_max) 加工的過寬區域
+                for (const stroke of spineStrokes) {
+                    for (const pt of stroke) {
+                        if (pt.r > r_max + 1e-3) {
+                            cannotExecuteVCarve = true;
+                            break;
+                        }
                     }
+                    if (cannotExecuteVCarve) break;
                 }
-            });
+
+                if (cannotExecuteVCarve) break;
+                consolidatedPaths.push(...spineStrokes);
+            }
+
+            // 若加工參數無法涵蓋完全面積，不產生路徑並提示使用者調整參數
+            if (cannotExecuteVCarve) {
+                selectedArr.forEach(idx => {
+                    parts[idx].toolpath = [];
+                    parts[idx].appliedMethod = 'vcarve';
+                });
+                const errorMsg = i18n[currentLang]?.vcarveErrorMsg || "目前配置無法執行V 雕刻。請增加加工深度、刀具角度或直徑，或調低整體寬";
+                showMessageBox(errorMsg);
+                return;
+            }
 
             consolidatedPaths.sort((pathA, pathB) => {
                 const maxZA = Math.max(...pathA.map(pt => pt.z !== undefined ? pt.z : 0));
@@ -1882,9 +2074,6 @@
             });
         }
 
-        /**
-         * 嵌套式 2D 距離變換 Medial Axis 骨架中心路徑
-         */
         function computeNestedVCarve(shape, cfg) {
             const outer = [...shape.outer];
             if (outer.length > 2 && outer[0].x === outer[outer.length-1].x && outer[0].y === outer[outer.length-1].y) {
@@ -1913,6 +2102,8 @@
 
             const loops = [resampledOuter, ...resampledHoles];
 
+            const isBallNose = (cfg.toolType === 'ballnose');
+            const toolRadius = cfg.d / 2.0;
             const vbitAngle = cfg.vbitAngle || 90;
             const halfAngleRad = (vbitAngle / 2) * Math.PI / 180;
             const tanHalf = Math.tan(halfAngleRad);
@@ -1940,9 +2131,8 @@
                 let minDist = Infinity;
                 for (let i = 0; i < allSegments.length; i++) {
                     const s = allSegments[i];
-                    if (s.loopIdx === excludeLoopIdx && excludeSegIndices.includes(s.segIdx)) {
-                        continue;
-                    }
+                    if (s.loopIdx === excludeLoopIdx && excludeSegIndices.includes(s.segIdx)) continue;
+                    
                     let dx = 0;
                     if (pt.x < s.minX) dx = s.minX - pt.x;
                     else if (pt.x > s.maxX) dx = pt.x - s.maxX;
@@ -1969,9 +2159,6 @@
             let finishedStrokes = [];
             let bypassedSkeleton = false;
 
-            // ==========================================
-            // 完美十字斜切填充
-            // ==========================================
             if (isStraight && holes.length === 0) {
                 if (simpOuter.length === 4) {
                     const C = getLineIntersection(simpOuter[0], simpOuter[2], simpOuter[1], simpOuter[3]);
@@ -1981,18 +2168,20 @@
                             const d = pointToSegmentDistance(C, simpOuter[i], simpOuter[(i+1)%4]);
                             if (d < dMin) dMin = d;
                         }
-                        const Z_C = -dMin / tanHalf;
+                        const Z_C = isBallNose ? 
+                            (dMin >= toolRadius ? -maxDepth : -(toolRadius - Math.sqrt(Math.max(0, toolRadius*toolRadius - dMin*dMin)))) : 
+                            -dMin / tanHalf;
                         const targetZC = Math.max(-maxDepth, Z_C);
 
                         const stroke1 = [
-                            { x: simpOuter[0].x, y: simpOuter[0].y, z: 0 },
-                            { x: C.x, y: C.y, z: targetZC },
-                            { x: simpOuter[2].x, y: simpOuter[2].y, z: 0 }
+                            { x: simpOuter[0].x, y: simpOuter[0].y, z: 0, r: dMin },
+                            { x: C.x, y: C.y, z: targetZC, r: dMin },
+                            { x: simpOuter[2].x, y: simpOuter[2].y, z: 0, r: dMin }
                         ];
                         const stroke2 = [
-                            { x: simpOuter[1].x, y: simpOuter[1].y, z: 0 },
-                            { x: C.x, y: C.y, z: targetZC },
-                            { x: simpOuter[3].x, y: simpOuter[3].y, z: 0 }
+                            { x: simpOuter[1].x, y: simpOuter[1].y, z: 0, r: dMin },
+                            { x: C.x, y: C.y, z: targetZC, r: dMin },
+                            { x: simpOuter[3].x, y: simpOuter[3].y, z: 0, r: dMin }
                         ];
 
                         finishedStrokes.push(cleanPath(stroke1, cfg.resolution));
@@ -2014,13 +2203,15 @@
                         const area = Math.sqrt(Math.max(0, s * (s - a) * (s - b) * (s - c)));
                         const r = area / s;
 
-                        const Z_C = -r / tanHalf;
+                        const Z_C = isBallNose ? 
+                            (r >= toolRadius ? -maxDepth : -(toolRadius - Math.sqrt(Math.max(0, toolRadius*toolRadius - r*r)))) : 
+                            -r / tanHalf;
                         const targetZC = Math.max(-maxDepth, Z_C);
 
                         for (let i = 0; i < 3; i++) {
                             finishedStrokes.push(cleanPath([
-                                { x: simpOuter[i].x, y: simpOuter[i].y, z: 0 },
-                                { x: C.x, y: C.y, z: targetZC }
+                                { x: simpOuter[i].x, y: simpOuter[i].y, z: 0, r },
+                                { x: C.x, y: C.y, z: targetZC, r }
                             ], cfg.resolution));
                         }
                         bypassedSkeleton = true;
@@ -2028,9 +2219,6 @@
                 }
             }
 
-            // ==========================================
-            // 標準中軸骨架演算法
-            // ==========================================
             if (!bypassedSkeleton) {
                 loops.forEach((loop, loopIdx) => {
                     const m = loop.length;
@@ -2075,11 +2263,7 @@
                             const dStart = Math.min(pointToSegmentDistance(Pt, prev, curr), pointToSegmentDistance(Pt, curr, next));
                             const dOther = getDistanceToRegionBoundary(Pt, loopIdx, startSegs);
 
-                            if (dStart < dOther) {
-                                low = mid;
-                            } else {
-                                high = mid;
-                            }
+                            if (dStart < dOther) low = mid; else high = mid;
                         }
 
                         const tStar = (low + high) / 2;
@@ -2089,7 +2273,9 @@
                         const isInsideSolid = isPointInPolygon(PtStar, simpOuter) && !simpHoles.some(h => isPointInPolygon(PtStar, h));
 
                         if (radius > 0.05 && isInsideSolid) {
-                            let z = -radius / tanHalf;
+                            let z = isBallNose ? 
+                                (radius >= toolRadius ? -maxDepth : -(toolRadius - Math.sqrt(Math.max(0, toolRadius*toolRadius - radius*radius)))) : 
+                                -radius / tanHalf;
                             skeletonPoints.push({
                                 x: PtStar.x, y: PtStar.y,
                                 z: Math.max(-maxDepth, z),
@@ -2099,7 +2285,6 @@
                     }
                 });
 
-                // 建立標準中心脊線刀軌
                 const spineStrokes = [];
                 if (skeletonPoints.length > 0) {
                     const unvisited = [...skeletonPoints];
@@ -2195,8 +2380,8 @@
 
                             if (nearestPtOnSpine && minDistSq > 0.25) {
                                 const miterLine = [
-                                    { x: curr.x, y: curr.y, z: 0 },
-                                    { x: nearestPtOnSpine.x, y: nearestPtOnSpine.y, z: nearestPtOnSpine.z }
+                                    { x: curr.x, y: curr.y, z: 0, r: nearestPtOnSpine.r || toolRadius },
+                                    { x: nearestPtOnSpine.x, y: nearestPtOnSpine.y, z: nearestPtOnSpine.z, r: nearestPtOnSpine.r || toolRadius }
                                 ];
                                 finishedStrokes.push(cleanPath(miterLine, cfg.resolution));
                             }
@@ -2205,105 +2390,9 @@
                 }
             }
 
-            // ==========================================
-            // 自適應局部寬度過濾，決定是否生成平行副軸切削線段
-            // ==========================================
-            const perpendicularStrokes = [];
-            if (isStraight && outer.length > 2) {
-                const pca = getPrincipalAxis(outer);
-                const cosA = pca.cosA;
-                const sinA = pca.sinA;
-                const center = pca.center;
-
-                let tMin = Infinity, tMax = -Infinity;
-                outer.forEach(pt => {
-                    const dx = pt.x - center.x;
-                    const dy = pt.y - center.y;
-                    const t = dx * cosA + dy * sinA;
-                    if (t < tMin) tMin = t;
-                    if (t > tMax) tMax = t;
-                });
-
-                const wCarveMax = 2 * maxDepth * tanHalf;
-                const stepSize = Math.max(0.8, cfg.d * (1 - (cfg.overlap || 0.5)));
-                
-                const boundarySegments = [];
-                for (let i = 0; i < outer.length; i++) {
-                    boundarySegments.push({ A: outer[i], B: outer[(i + 1) % outer.length] });
-                }
-                holes.forEach(hole => {
-                    for (let i = 0; i < hole.length; i++) {
-                        boundarySegments.push({ A: hole[i], B: hole[(i + 1) % hole.length] });
-                    }
-                });
-
-                for (let t = tMin + stepSize * 0.5; t < tMax; t += stepSize) {
-                    const oX = center.x + t * cosA;
-                    const oY = center.y + t * sinA;
-
-                    const intersections = [];
-                    boundarySegments.forEach(seg => {
-                        const Ax = seg.A.x, Ay = seg.A.y;
-                        const Bx = seg.B.x, By = seg.B.y;
-                        const Dx = Bx - Ax;
-                        const Dy = By - Ay;
-
-                        const det = -Dx * cosA - Dy * sinA;
-                        if (Math.abs(det) > 1e-6) {
-                            const detLambda = -(oX - Ax) * cosA - (oY - Ay) * sinA;
-                            const lambda = detLambda / det;
-                            if (lambda >= 0 && lambda <= 1) {
-                                const detP = Dx * (oY - Ay) - Dy * (oX - Ax);
-                                const p = detP / det;
-                                intersections.push(p);
-                            }
-                        }
-                    });
-
-                    intersections.sort((a, b) => a - b);
-
-                    for (let j = 0; j < intersections.length - 1; j += 2) {
-                        const pStart = intersections[j];
-                        const pEnd = intersections[j+1];
-                        const segLength = pEnd - pStart;
-                        if (segLength < 0.1) continue;
-
-                        if (segLength > Math.min(cfg.d, wCarveMax * 0.95)) {
-                            const perpPath = [];
-                            const sampleSpacing = Math.max(0.2, cfg.resolution * 3);
-                            const steps = Math.ceil(segLength / sampleSpacing);
-
-                            for (let s = 0; s <= steps; s++) {
-                                const pSample = pStart + (segLength * (s / steps));
-                                const ptX = oX - pSample * sinA;
-                                const ptY = oY + pSample * cosA;
-                                const pt = { x: ptX, y: ptY };
-
-                                const dist = getDistanceToShapeBoundary(pt, boundarySegments);
-                                const z = -dist / tanHalf;
-
-                                perpPath.push({
-                                    x: ptX,
-                                    y: ptY,
-                                    z: Math.max(-maxDepth, z)
-                                });
-                            }
-
-                            if (perpPath.length >= 2) {
-                                perpendicularStrokes.push(cleanPath(perpPath, cfg.resolution));
-                            }
-                        }
-                    }
-                }
-            }
-
-            const allStrokes = [...finishedStrokes, ...perpendicularStrokes];
-            return optimizePathOrder(allStrokes, 0, 0);
+            return optimizePathOrder(finishedStrokes, 0, 0);
         }
 
-        // ==========================================
-        // 6. THREE.JS 預覽區域初始化與動畫循環
-        // ==========================================
         function animate() { 
             requestAnimationFrame(animate); 
             if (controls) controls.update(); 
@@ -2334,9 +2423,6 @@
             animate();
         }
 
-        // ==========================================
-        // 7. 統一主題與語系管理系統
-        // ==========================================
         let currentTheme = localStorage.getItem('gordix-theme') || 'dark';
 
         function applyTheme(theme) {
@@ -2376,9 +2462,6 @@
             update3D(); 
         }
 
-        // ==========================================
-        // 8. 視窗載入與事件初始化
-        // ==========================================
         window.onload = () => {
             initThreeJS();
             applyTheme(currentTheme);
@@ -2400,8 +2483,10 @@
                     const isImg = ["jpg","jpeg","png","bmp","webp"].includes(fileExtension);
                     if (isImg) {
                         document.getElementById('threshold-container').classList.remove('hidden');
+                        document.getElementById('relief-container').classList.remove('hidden');
                     } else {
                         document.getElementById('threshold-container').classList.add('hidden');
+                        document.getElementById('relief-container').classList.add('hidden');
                     }
                     
                     document.getElementById('process-img-btn').click();
@@ -2431,7 +2516,7 @@
                     if (isNewFileLoad) {
                         const origW = getPathsWidth(rawPaths);
                         if (origW > 0) {
-                            targetW = parseFloat(origW.toFixed(3));
+                            targetW = parseFloat(origW.toFixed(2));
                             targetWInput.value = targetW;
                         }
                     }
@@ -2441,7 +2526,7 @@
                     if (isNewFileLoad) {
                         const origW = getPathsWidth(rawPaths);
                         if (origW > 0) {
-                            targetW = parseFloat(origW.toFixed(3));
+                            targetW = parseFloat(origW.toFixed(2));
                             targetWInput.value = targetW;
                         }
                     }
@@ -2483,12 +2568,19 @@
             };
 
             document.getElementById('vcarve-layer-select').onchange = () => {
+                const curVal = document.getElementById('vcarve-layer-select').value;
+                selectedIndices.forEach(idx => {
+                    if (parts[idx]) parts[idx].jobConfig.carveLayer = curVal;
+                });
                 renderPartList();
                 update3D();
             };
 
-            // 路線 V 雕刻勾選變更監聽
-            document.getElementById('line-vcarve-check').onchange = () => {
+            document.getElementById('line-vcarve-check').onchange = (e) => {
+                if (e.target.checked) {
+                    const reliefCheck = document.getElementById('relief-25d-check');
+                    if (reliefCheck) reliefCheck.checked = false;
+                }
                 renderPartList();
                 updateJobUI();
                 if (selectedIndices.size > 0 && parts.length > 0) {
@@ -2499,29 +2591,50 @@
                 }
             };
 
-            // 監聽刀徑及角度變更，以即時限制與警示深度
-            document.getElementById('mill-d').addEventListener('input', updateDepthLimit);
-            document.getElementById('vbit-angle').addEventListener('input', updateDepthLimit);
-            document.getElementById('mill-depth').addEventListener('input', () => {
-                const d = parseFloat(document.getElementById('mill-d').value) || 6.0;
-                const angle = parseFloat(document.getElementById('vbit-angle').value) || 90;
-                const tanHalf = Math.tan((angle / 2) * Math.PI / 180);
-                const maxDepth = d / (2 * tanHalf);
-                const depthInput = document.getElementById('mill-depth');
-                if (parseFloat(depthInput.value) > maxDepth) {
-                    depthInput.value = parseFloat(maxDepth.toFixed(2));
+            document.getElementById('relief-25d-check').onchange = (e) => {
+                if (e.target.checked) {
+                    const lineCheck = document.getElementById('line-vcarve-check');
+                    if (lineCheck) lineCheck.checked = false;
+                    
+                    document.getElementById('threshold-container').classList.add('hidden');
+                    document.getElementById('smoothness-container').classList.add('hidden');
+                    
+                    selectedIndices.clear();
+                    parts.forEach((_, idx) => selectedIndices.add(idx));
+                } else {
+                    document.getElementById('threshold-container').classList.remove('hidden');
+                    document.getElementById('smoothness-container').classList.remove('hidden');
                 }
+                document.getElementById('process-img-btn').click();
+            };
+
+            document.getElementById('tool-type-select').onchange = (e) => {
+                const val = e.target.value;
+                selectedIndices.forEach(idx => {
+                    if (parts[idx]) parts[idx].jobConfig.toolType = val;
+                });
+                updateJobUI();
+            };
+
+            document.getElementById('mill-d').addEventListener('input', () => {
+                updateStepoverLimit();
+                updateDepthLimit();
             });
+            document.getElementById('vbit-angle').addEventListener('input', updateDepthLimit);
 
             document.getElementById('apply-job-btn').onclick = () => {
+                updateStepoverLimit();
                 updateDepthLimit(); 
-                const newRes = Math.max(0.1, parseFloat(document.getElementById('resolution').value) || 0.1);
+                const newRes = Math.max(0.05, parseFloat(document.getElementById('resolution').value) || 0.2);
                 const newF = parseFloat(document.getElementById('job-f').value);
                 const newType = 'vcarve';
                 const newD = parseFloat(document.getElementById('mill-d').value);
                 const newDepth = parseFloat(document.getElementById('mill-depth').value);
-                const newOverlap = 0.5; 
+                const newOverlap = parseFloat(document.getElementById('path-overlap').value) || (0.3 * newD);
+                const newPathAngle = parseInt(document.getElementById('path-angle-select').value) || 0;
                 const newVBitAngle = parseFloat(document.getElementById('vbit-angle').value) || 90;
+                const newToolType = document.getElementById('tool-type-select').value;
+                const newCarveLayer = document.getElementById('vcarve-layer-select').value;
 
                 let minX = Infinity, maxX = -Infinity;
                 selectedIndices.forEach(idx => { parts[idx].rawPath.forEach(pt => { minX = Math.min(minX, pt.x); maxX = Math.max(maxX, pt.x); }); });
@@ -2531,7 +2644,8 @@
                     parts[idx].toolpath = null;
                     parts[idx].jobConfig = { 
                         type: newType, f: newF, d: newD, depth: newDepth, 
-                        overlap: newOverlap, resolution: newRes, vbitAngle: newVBitAngle 
+                        overlap: newOverlap, resolution: newRes, vbitAngle: newVBitAngle,
+                        toolType: newToolType, pathAngle: newPathAngle, carveLayer: newCarveLayer
                     };
                     parts[idx].currentDim = { w: parts[idx].originalDim.w * groupScale, h: parts[idx].originalDim.h * groupScale };
                     parts[idx].appliedMethod = newType; 
@@ -2542,9 +2656,6 @@
                 renderPartList(); update3D(); updateStats();
             };
 
-            /**
-             * 高性能 G-code 導出模組
-             */
             document.getElementById('export-gcode').onclick = () => {
                 if(parts.length === 0) return;
 
@@ -2614,7 +2725,7 @@
                 }
 
                 let gc = [
-                    `; CNC V5.5 - Global TSP V-Carving Pro`, 
+                    `; CNC V6.4 - Concentric Inward Clearing V-Carving & Grayscale Relief Pro`, 
                     `G21`, 
                     `G90`, 
                     `G0 X0 Y0 F2000`
@@ -2692,24 +2803,22 @@
                 a.click();
             };
 
-            // 語言切換事件
             document.getElementById('lang-toggle').onclick = () => { 
                 currentLang = currentLang === 'zh' ? 'en' : 'zh'; 
                 localStorage.setItem('gordix-lang', currentLang);
                 updateLanguage(); 
             };
 
-            // 主題切換
             window.toggleTheme = function() {
                 const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
                 applyTheme(nextTheme);
             };
 
             updateLanguage();
+            updateStepoverLimit();
             updateDepthLimit();
         };
     </script>
-    <!-- PWA Service Worker 註冊 -->
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
