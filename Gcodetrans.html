@@ -755,6 +755,14 @@
 
     function animate() { requestAnimationFrame(animate); renderer.render(scene, camera); }
 
+    // 格式化數字：四捨五入至指定位數並自動去除尾數不必要的 0
+    function formatNum(val, maxDecimals = 4) {
+        if (typeof val !== 'number' || isNaN(val)) return '0';
+        let res = parseFloat(val.toFixed(maxDecimals));
+        if (Object.is(res, -0) || res === 0) res = 0;
+        return res.toString();
+    }
+
     function convertInchToMetric(text) {
         const lines = text.split('\n');
         let isInchMode = false;
@@ -788,7 +796,7 @@
                 cleanCmd = cleanCmd.replace(/([XYZIJKRF])\s*([-+]?[0-9]*\.?[0-9]+)/gi, (match, letter, valStr) => {
                     const val = parseFloat(valStr);
                     const convertedVal = val * 25.4;
-                    return letter.toUpperCase() + convertedVal.toFixed(4);
+                    return letter.toUpperCase() + formatNum(convertedVal, 4);
                 });
             }
 
@@ -2135,12 +2143,12 @@
             newlineParts.push(seg.type);
             
             if (!isZOnlyMove) {
-                newlineParts.push('X' + fX.toFixed(4));
-                newlineParts.push('Y' + fY.toFixed(4));
+                newlineParts.push('X' + formatNum(fX, 4));
+                newlineParts.push('Y' + formatNum(fY, 4));
             }
             
             if (zChanged) {
-                newlineParts.push('Z' + fZ.toFixed(4));
+                newlineParts.push('Z' + formatNum(fZ, 4));
             }
 
             if (seg.type === 'G2' || seg.type === 'G3') {
@@ -2149,12 +2157,12 @@
                     const rawJ = seg.J || 0;
                     let fI = (rawI * Math.cos(rotRad) - rawJ * Math.sin(rotRad)) * scale;
                     let fJ = (rawI * Math.sin(rotRad) + rawJ * Math.cos(rotRad)) * scale;
-                    newlineParts.push('I' + fI.toFixed(4));
-                    newlineParts.push('J' + fJ.toFixed(4));
+                    newlineParts.push('I' + formatNum(fI, 4));
+                    newlineParts.push('J' + formatNum(fJ, 4));
                 }
                 if (seg.R !== null) {
                     let fR = seg.R * scale;
-                    newlineParts.push('R' + fR.toFixed(4));
+                    newlineParts.push('R' + formatNum(fR, 4));
                 }
             }
 
@@ -2169,7 +2177,7 @@
                         }
                         state.hasOutputXYFInCurrentCut = true;
                         if (state.activeFeedrate === null || Math.abs(segF - state.activeFeedrate) > 0.01) {
-                            newlineParts.push('F' + segF.toFixed(2));
+                            newlineParts.push('F' + formatNum(segF, 2));
                             state.activeFeedrate = segF;
                         }
                     } else {
@@ -2177,7 +2185,7 @@
                             segF = targetFeedrate;
                         }
                         if (state.activeFeedrate === null || Math.abs(segF - state.activeFeedrate) > 0.01) {
-                            newlineParts.push('F' + segF.toFixed(2));
+                            newlineParts.push('F' + formatNum(segF, 2));
                             state.activeFeedrate = segF;
                         }
                     }
@@ -2187,17 +2195,20 @@
                     }
                     if (segF) {
                         if (state.activeFeedrate === null || Math.abs(segF - state.activeFeedrate) > 0.01) {
-                            newlineParts.push('F' + segF.toFixed(2));
+                            newlineParts.push('F' + formatNum(segF, 2));
                             state.activeFeedrate = segF;
                         }
                     }
                 }
             } else {
-                /* G0 快速移動時固定進給速度為 F2000 */
-                const g0Feedrate = 2000;
-                if (state.activeFeedrate === null || Math.abs(g0Feedrate - state.activeFeedrate) > 0.01) {
-                    newlineParts.push('F' + g0Feedrate.toFixed(2));
-                    state.activeFeedrate = g0Feedrate;
+                /* G0 快速移動：僅在純走 XY 軸（Z 軸無變動）時加入 F2000 */
+                const isPureXYMove = segmentPhysicalXYChanged && !zChanged;
+                if (isPureXYMove) {
+                    const g0Feedrate = 2000;
+                    if (state.activeFeedrate === null || Math.abs(g0Feedrate - state.activeFeedrate) > 0.01) {
+                        newlineParts.push('F' + formatNum(g0Feedrate, 2));
+                        state.activeFeedrate = g0Feedrate;
+                    }
                 }
             }
 
