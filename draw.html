@@ -13,37 +13,37 @@
     <style>
         .canvas-container {
             position: relative;
-            background: #ffffff; /* 明亮主題時預覽視窗的底色改為白色 */
-            border: 2px solid #cbd5e1; /* slate-300 */
+            background: #ffffff;
+            border: 2px solid #cbd5e1;
             height: 70vh;
             min-height: 500px;
             display: flex;
             align-items: center;
             justify-content: center;
             border-radius: 1rem;
-            overflow: hidden; /* 改為隱藏，由 JS 控制平移 */
+            overflow: hidden;
             padding: 0;
-            touch-action: none; /* 防止行動裝置預設手勢干擾 */
+            touch-action: none;
             cursor: grab;
             transition: background-color 0.3s, border-color 0.3s;
         }
         
         .dark .canvas-container {
-            background: #0f172a; /* 深色主題時預覽視窗的底色 */
-            border-color: #1e293b; /* slate-800 */
+            background: #0f172a;
+            border-color: #1e293b;
         }
         
         .canvas-container:active {
             cursor: grabbing;
         }
 
-        /* 雙向滑動拉霸樣式 */
+        /* 雙向與單向滑動拉霸樣式 */
         .range-slider::-webkit-slider-thumb {
             pointer-events: auto !important;
             width: 16px;
             height: 16px;
             border-radius: 50%;
-            background-color: #f59e0b; /* Tailwind amber-500 */
+            background-color: #f59e0b;
             cursor: pointer;
             appearance: none;
             border: 2px solid #ffffff;
@@ -51,7 +51,7 @@
             transition: background-color 0.15s, transform 0.15s;
         }
         .range-slider::-webkit-slider-thumb:hover {
-            background-color: #d97706; /* Tailwind amber-600 */
+            background-color: #d97706;
             transform: scale(1.1);
         }
         .range-slider::-moz-range-thumb {
@@ -70,7 +70,6 @@
             transform: scale(1.1);
         }
 
-        /* 畫布與向量層的定位包裝 */
         .preview-wrapper {
             position: relative;
             box-shadow: 0 0 50px rgba(0,0,0,0.5);
@@ -81,7 +80,6 @@
             display: block;
             image-rendering: auto;
             transition: opacity 0.2s;
-            /* 移除 max-width 限制，交由縮放邏輯處理 */
         }
         #vector-overlay {
             position: absolute;
@@ -115,13 +113,11 @@
             background: #3b82f6;
         }
 
-        /* 隱藏 Chrome, Safari, Edge, Opera 的數字輸入框內建上下微調按鈕，防止遮擋 "mm" */
         input::-webkit-outer-spin-button,
         input::-webkit-inner-spin-button {
             -webkit-appearance: none;
             margin: 0;
         }
-        /* 隱藏 Firefox 的數字輸入框內建上下微調按鈕 */
         input[type=number] {
             -moz-appearance: textfield;
         }
@@ -141,39 +137,32 @@
                 <h1 id="i18n-title" class="text-2xl font-black tracking-tight none">轉檔工具 (繪圖)</h1>
             </div>
             <div class="flex gap-3 items-center">
-                <!-- 返回上一頁按鈕 -->
                 <button onclick="if(window.history.length > 1) { window.history.back(); } else { window.location.href='index.html'; }" class="flex items-center justify-center text-slate-300 hover:text-orange-400 transition-colors font-bold bg-white/10 hover:bg-white/20 p-1.5 rounded-lg border border-white/20 cursor-pointer" title="返回上一頁 / Go Back">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                         <line x1="20" y1="12" x2="4" y2="12"></line>
                         <polyline points="10 18 4 12 10 6"></polyline>
                     </svg>
                 </button>
-                <!-- 主題切換 -->
                 <button id="theme-toggle" class="p-1.5 rounded-lg text-[11px] font-bold bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-all flex items-center justify-center" aria-label="Toggle Theme">
                     <svg id="theme-icon" class="w-4 h-4 animate-pulse-slow" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <!-- 圖示由 JS 動態注入 -->
                     </svg>
                 </button>
-                <!-- 語系切換 -->
                 <button id="lang-toggle" class="px-3 py-1.5 rounded-lg text-[11px] font-bold bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-all flex items-center gap-2">
                     <span id="lang-toggle-text">中文 / EN</span>
                 </button>
-                <!-- 書頁按鈕 -->
                 <a href="params.html" class="flex items-center justify-center text-slate-300 hover:text-emerald-400 transition-colors bg-white/10 hover:bg-white/20 p-1.5 rounded-lg border border-white/20 cursor-pointer" title="工藝參數建議 / Parameters Guide">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                         <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
                         <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
                     </svg>
                 </a>
-                <!-- 載入中動畫 -->
                 <div id="loading-spinner" class="hidden animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
             </div>
         </div>
 
-        <!-- 3-Column Layout: Left Sidebar (Inputs & Sliders) | Center (Preview Canvas) | Right Sidebar (Output Config & Downloader) -->
         <div class="grid grid-cols-1 lg:grid-cols-12">
             
-            <!-- Left Sidebar (3/12 width): Image Processing & Optimization Parameters -->
+            <!-- Left Sidebar (3/12 width): Image Processing & Parameters -->
             <div class="lg:col-span-3 p-6 border-r border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 space-y-6 overflow-y-auto max-h-[85vh] transition-colors duration-300">
                 <!-- 圖片來源 -->
                 <section>
@@ -228,7 +217,6 @@
                         <input type="checkbox" id="enable-fill" class="w-4 h-4 accent-blue-500 rounded">
                     </div>
                     <div id="fill-settings-group" class="space-y-3 transition-opacity opacity-30 pointer-events-none">
-                        <!-- 點擊圖形提示與快速切換按鈕 -->
                         <div class="flex items-center justify-between bg-blue-50/50 dark:bg-blue-900/20 p-2 rounded-lg border border-blue-200/50 dark:border-blue-500/20">
                             <span id="i18n-label-fill-tip" class="text-[9px] text-blue-600 dark:text-blue-300 font-bold">💡 點選預覽圖形可個別開關填滿</span>
                             <div class="flex gap-1">
@@ -288,7 +276,6 @@
                     <div class="absolute top-0 left-0 transition-none transform-gpu origin-top-left" id="zoom-wrapper" style="transform: translate(0px, 0px) scale(1);">
                         <canvas id="preview-canvas"></canvas>
                         <svg id="vector-overlay">
-                            <!-- 尺寸網格層放置於背景層，避免遮擋向量輪廓 -->
                             <g id="grid-group"></g>
                             <g id="hatch-group"></g>
                             <g id="contour-group"></g>
@@ -302,7 +289,7 @@
 
             <!-- Right Sidebar (3/12 width): Machine Controls & Download Actions -->
             <div class="lg:col-span-3 p-6 border-l border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 space-y-6 overflow-y-auto max-h-[85vh] transition-colors duration-300">
-                <!-- 筆桿直徑 -->
+                <!-- 筆桿直徑 & 雷射功率 -->
                 <section class="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-500/20 transition-colors duration-300">
                     <div class="flex justify-between items-center mb-2">
                         <label id="i18n-label-pen-diam" class="block text-[10px] font-black text-blue-600 dark:text-blue-400 none tracking-widest">筆桿直徑</label>
@@ -313,6 +300,15 @@
                         <span class="absolute right-3 text-[10px] text-slate-400 dark:text-slate-500 select-none">mm</span>
                     </div>
                     <div id="offset-preview" class="mt-2 text-[9px] font-mono text-slate-500 dark:text-slate-400 italic">Y-Offset: 0.00mm</div>
+
+                    <!-- 當筆桿直徑為0 (雷射模式) 時顯示的雷射功率 S (0~255) 左右拉霸 -->
+                    <div id="laser-power-container" class="mt-3 pt-3 border-t border-blue-200 dark:border-blue-500/30">
+                        <div class="flex justify-between items-center mb-1">
+                            <label id="i18n-label-laser-power" class="text-[10px] font-black text-blue-600 dark:text-blue-400 tracking-widest">雷射功率 (S)</label>
+                            <span id="laser-power-val-text" class="text-xs font-mono font-bold text-blue-600 dark:text-blue-400">S255</span>
+                        </div>
+                        <input type="range" id="laser-power-slider" min="0" max="255" value="255" class="w-full h-1.5 bg-blue-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer">
+                    </div>
                 </section>
 
                 <!-- 輸出寬度 & 工作走速 -->
@@ -327,18 +323,15 @@
                     </div>
                 </section>
 
-                <!-- 灰階雷射功率範圍設定 (僅在啟用灰階填滿時顯示) -->
+                <!-- 灰階雷射功率範圍設定 -->
                 <section id="grayscale-power-container" class="hidden p-4 bg-amber-50 dark:bg-amber-950/20 rounded-xl border border-amber-200 dark:border-amber-500/20 transition-all duration-300">
                     <div class="flex justify-between items-center mb-1">
                         <label id="i18n-label-grayscale-power" class="text-[10px] font-black text-amber-600 dark:text-amber-400 tracking-widest">灰階功率範圍 (S)</label>
                         <span id="grayscale-range-display" class="text-xs font-mono font-bold text-amber-600 dark:text-amber-400">S0 - S255</span>
                     </div>
                     <div class="relative w-full h-6 flex items-center mb-2">
-                        <!-- 底色滑軌 -->
                         <div class="absolute h-1.5 w-full bg-slate-200 dark:bg-slate-800 rounded-lg"></div>
-                        <!-- 被雙把手選取的啟用中亮色軌跡 -->
                         <div id="slider-track" class="absolute h-1.5 bg-amber-500 dark:bg-amber-400 rounded-lg"></div>
-                        <!-- 重疊的雙軌 Slider -->
                         <input type="range" id="min-s-power" min="0" max="255" value="0" class="range-slider absolute w-full h-1.5 appearance-none bg-transparent pointer-events-none focus:outline-none">
                         <input type="range" id="max-s-power" min="0" max="255" value="255" class="range-slider absolute w-full h-1.5 appearance-none bg-transparent pointer-events-none focus:outline-none">
                     </div>
@@ -350,7 +343,7 @@
                     <div class="mt-2 text-[9px] font-mono text-slate-500 dark:text-slate-400 italic" id="i18n-grayscale-power-tip">對應：白色 ➔ S Min，黑色 ➔ S Max</div>
                 </section>
 
-                <!-- 輸出設定 (格式、下載、統計) -> 預設常駐顯示 -->
+                <!-- 輸出設定 -->
                 <div id="status-panel" class="space-y-4">
                     <div class="p-4 bg-slate-100 dark:bg-slate-950/50 rounded-xl border border-slate-200 dark:border-slate-800 transition-colors duration-300">
                         <span id="i18n-label-format" class="text-[10px] font-black text-slate-500 dark:text-slate-400 none tracking-widest block mb-2">輸出格式</span>
@@ -358,13 +351,11 @@
                             <button id="format-gcode" class="flex-1 py-2 rounded text-[10px] font-bold transition-all bg-blue-600 text-white ring-2 ring-blue-400">Gcode</button>
                             <button id="format-svg" class="flex-1 py-2 rounded text-[10px] font-bold transition-all bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400">SVG</button>
                         </div>
-                        <!-- 統計內容 -->
                         <div id="coord-range" class="font-mono text-[11px] font-bold text-blue-600 dark:text-blue-400 whitespace-pre-line leading-relaxed">
                             請上傳檔案以產生加工數據
                         </div>
                     </div>
                     
-                    <!-- 預設禁用狀態，待上傳後由 JS 轉為亮綠色 active 狀態 -->
                     <button id="download-btn" class="w-full py-4 bg-slate-300 dark:bg-slate-800 text-slate-500 cursor-not-allowed font-black rounded-xl transition flex flex-col items-center justify-center leading-tight" disabled>
                         <span id="i18n-btn-download" class="text-sm">點擊下載檔案</span>
                         <span id="filename-preview" class="text-[10px] opacity-70 font-mono mt-1">filename.gcode</span>
@@ -382,6 +373,7 @@
                 labelPenDiam: "筆桿直徑", 
                 toolLaser: "雷射雕刻",
                 toolPen: "筆",
+                labelLaserPower: "雷射功率 (S)",
                 labelSource: "1. 圖片來源",
                 btnBrowse: "選擇檔案",
                 labelWidth: "輸出寬度 (mm)",
@@ -426,6 +418,7 @@
                 labelPenDiam: "Pen Body Dia.", 
                 toolLaser: "Laser engraving",
                 toolPen: "Pen",
+                labelLaserPower: "Laser Power (S)",
                 labelSource: "1. Image Source",
                 btnBrowse: "Browse File",
                 labelWidth: "Output Width (mm)",
@@ -472,12 +465,15 @@
         const penDiamInput = document.getElementById('pen-diameter');
         const toolBadge = document.getElementById('tool-type-badge');
         const offsetPreview = document.getElementById('offset-preview');
+        const laserPowerContainer = document.getElementById('laser-power-container');
+        const laserPowerSlider = document.getElementById('laser-power-slider');
+        const laserPowerValText = document.getElementById('laser-power-val-text');
 
         const themeToggleBtn = document.getElementById('theme-toggle');
         const themeIcon = document.getElementById('theme-icon');
 
         function initTheme() {
-            const savedTheme = localStorage.getItem('gordix-theme') || 'dark'; // 預設暗色主題
+            const savedTheme = localStorage.getItem('gordix-theme') || 'dark';
             setTheme(savedTheme);
         }
 
@@ -485,12 +481,10 @@
             const isDark = (theme === 'dark');
             if (isDark) {
                 document.documentElement.classList.add('dark');
-                // Sun 圖示
                 themeIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m0-12.728l.707.707m12.728 12.728l.707.707M12 8a4 4 0 100 8 4 4 0 000-8z" />`;
                 localStorage.setItem('gordix-theme', 'dark');
             } else {
                 document.documentElement.classList.remove('dark');
-                // Moon 圖示
                 themeIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />`;
                 localStorage.setItem('gordix-theme', 'light');
             }
@@ -499,7 +493,6 @@
             if (originalImage) {
                 const currentScale = isSvgSource ? (1000 / parseFloat(widthInput.value)) : (previewCanvas.width / parseFloat(widthInput.value));
                 renderGrid(previewCanvas.width, previewCanvas.height, currentScale);
-                // 變更主題時，若為 SVG / DXF 來源，則一併重繪畫布底圖與背景線條以適應對比
                 if (isSvgSource) {
                     processImage();
                 }
@@ -510,6 +503,9 @@
             const data = i18n[currentLang];
             document.getElementById('i18n-title').innerText = data.title;
             document.getElementById('i18n-label-pen-diam').innerText = data.labelPenDiam;
+            if (document.getElementById('i18n-label-laser-power')) {
+                document.getElementById('i18n-label-laser-power').innerText = data.labelLaserPower;
+            }
             document.getElementById('i18n-label-source').innerText = data.labelSource;
             document.getElementById('i18n-btn-browse').innerText = data.btnBrowse;
             document.getElementById('i18n-label-width').innerText = data.labelWidth;
@@ -565,9 +561,11 @@
             if (d === 0) {
                 toolBadge.innerText = data.toolLaser;
                 toolBadge.className = "text-[9px] px-2 py-0.5 rounded bg-red-500/20 text-red-600 dark:text-red-400 font-bold uppercase";
+                if (laserPowerContainer) laserPowerContainer.classList.remove('hidden');
             } else {
                 toolBadge.innerText = data.toolPen;
                 toolBadge.className = "text-[9px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold uppercase";
+                if (laserPowerContainer) laserPowerContainer.classList.add('hidden');
             }
             offsetPreview.innerText = `Y-Offset: ${offset.toFixed(2)}mm`;
         }
@@ -629,7 +627,7 @@
         const btnFormatSvg = document.getElementById('format-svg');
         
         let originalImage = null;
-        let originalPixelData = null; // 儲存最原始底圖色彩像素
+        let originalPixelData = null;
         let originalPixelWidth = 0;
         let originalPixelHeight = 0;
         let originalFileName = "output";
@@ -639,8 +637,8 @@
         let showImage = true, showContour = true, showHatch = true;
         let isSvgSource = false; 
         let rawSvgPaths = [];    
-        let selectedContourIndices = new Set(); // 記錄選擇進行填滿的輪廓索引
-        let pointerDownPos = { x: 0, y: 0 };   // 記錄點擊初始位置以過濾拖曳
+        let selectedContourIndices = new Set();
+        let pointerDownPos = { x: 0, y: 0 };
 
         let processDebounceTimeout;
         function triggerLiveProcess() {
@@ -690,6 +688,19 @@
             }
         };
 
+        function syncLaserPower(val) {
+            const sVal = Math.max(0, Math.min(255, parseInt(val) || 0));
+            laserPowerSlider.value = sVal;
+            maxSPowerInput.value = sVal;
+            laserPowerValText.innerText = `S${sVal}`;
+            updateDualSlider();
+        }
+
+        laserPowerSlider.oninput = () => {
+            syncLaserPower(laserPowerSlider.value);
+            if (originalImage) triggerLiveProcess();
+        };
+
         widthInput.oninput = () => { if (originalImage) recomputeFillLines(); };
         feedInput.oninput = () => { if (originalImage) updateStats(previewCanvas.width, previewCanvas.height); };
         fillAngleSelect.onchange = () => { if (originalImage) recomputeFillLines(); };
@@ -699,13 +710,11 @@
             let minVal = parseInt(minSPowerInput.value);
             let maxVal = parseInt(maxSPowerInput.value);
 
-            // 確保左右把手不會交疊甚至反轉
             if (minVal >= maxVal) {
-                minSPowerInput.value = maxVal - 1;
-                minVal = maxVal - 1;
+                minSPowerInput.value = Math.max(0, maxVal - 1);
+                minVal = Math.max(0, maxVal - 1);
             }
 
-            // 計算當前百分比來塗滿中間的黃色音軌條
             const minPercent = (minVal / 255) * 100;
             const maxPercent = (maxVal / 255) * 100;
 
@@ -713,6 +722,8 @@
             sliderTrack.style.right = (100 - maxPercent) + '%';
             
             grayscaleRangeDisplay.innerText = `S${minVal} - S${maxVal}`;
+            if (laserPowerValText) laserPowerValText.innerText = `S${maxVal}`;
+            if (laserPowerSlider) laserPowerSlider.value = maxVal;
         }
 
         minSPowerInput.oninput = () => {
@@ -721,7 +732,7 @@
         };
 
         maxSPowerInput.oninput = () => {
-            updateDualSlider();
+            syncLaserPower(maxSPowerInput.value);
             if (originalImage) triggerLiveProcess();
         };
 
@@ -852,7 +863,6 @@
                 state.lastMouseY = state.evCache[0].clientY;
             }
 
-            // 當放開點擊且位移極小 (點擊動作而非拖曳平移) 時，觸發個別圖形填滿開關
             if (fillEnable.checked && pointerDownPos) {
                 const dist = Math.hypot(e.clientX - pointerDownPos.x, e.clientY - pointerDownPos.y);
                 if (dist < 5) {
@@ -898,7 +908,7 @@
         }
 
         function parseSvgDimension(val, fallbackPx) {
-            if (!val) return fallbackPx * 0.264583; // fallback 96 DPI
+            if (!val) return fallbackPx * 0.264583;
             val = val.trim();
             const num = parseFloat(val);
             if (isNaN(num)) return fallbackPx * 0.264583;
@@ -906,7 +916,7 @@
             if (val.endsWith('cm')) return num * 10;
             if (val.endsWith('in')) return num * 25.4;
             if (val.endsWith('px')) return num * 0.264583;
-            return num * 0.264583; // 預設當 px
+            return num * 0.264583;
         }
 
         async function extractPointsFromDxf(dxfText) {
@@ -1001,7 +1011,7 @@
             
             finalContours = [];
             finalFillLines = [];
-            selectedContourIndices = new Set(); // 載入新檔案時重置選擇紀錄
+            selectedContourIndices = new Set();
             originalPixelData = null;
             
             document.getElementById('coord-range').innerText = currentLang === 'zh' ? '處理中...' : 'Processing...';
@@ -1020,7 +1030,7 @@
                     isSvgSource = true; 
                     
                     const lines = dxfText.split(/\r?\n/);
-                    let insunits = 4; // 預設 mm
+                    let insunits = 4;
                     for (let k = 0; k < lines.length - 2; k++) {
                         if (lines[k].trim() === '$INSUNITS') {
                             if (lines[k+2] && lines[k+2].trim() === '70') {
@@ -1046,7 +1056,6 @@
                     const dxfW_mm = maxX - minX || 1;
                     const dxfH_mm = maxY - minY || 1;
                     
-                    // 套用 DXF 原檔物理毫米尺寸
                     widthInput.value = dxfW_mm.toFixed(1);
 
                     const internalScale = 1000 / dxfW_mm;
@@ -1112,7 +1121,6 @@
                         }
                     }
                     
-                    // 套用 SVG 原檔物理毫米尺寸
                     widthInput.value = fileWidthMm.toFixed(1);
 
                     const internalScale = 1000 / svgW;
@@ -1150,7 +1158,6 @@
                     img.onload = () => {
                         originalImage = img;
                         
-                        // 建立離線畫布儲存高精度原圖色彩數據
                         const offCanvas = document.createElement('canvas');
                         offCanvas.width = img.width;
                         offCanvas.height = img.height;
@@ -1171,7 +1178,6 @@
             }
         });
 
-        // 將含多組 M/m ... Z/z 的複合 path d 屬性精準拆解成獨立子路徑字串陣列
         function splitSvgPathDToSubpaths(d, svg) {
             if (!d) return [];
 
@@ -1282,7 +1288,6 @@
             const svg = doc.querySelector("svg");
             if (!svg) return [];
 
-            // 展開 <use> 標籤以支援引用圖形與其 transform 屬性
             const useElements = Array.from(svg.querySelectorAll("use"));
             useElements.forEach(useEl => {
                 const href = useEl.getAttribute("href") || useEl.getAttribute("xlink:href");
@@ -1319,7 +1324,6 @@
             const pathsPoints = [];
 
             shapes.forEach(el => {
-                // 排除 <defs> 或 <symbol> 內的未引用模板圖案
                 if (el.closest('defs') || el.closest('symbol')) return;
 
                 let d = "";
@@ -1345,13 +1349,11 @@
 
                 if (!d.trim()) return;
 
-                // 取得 CTM 轉換矩陣以套用所有群組 (<g>) 的 transform (平移、旋轉、縮放)
                 let ctm = null;
                 try {
                     ctm = el.getCTM();
                 } catch(e) {}
 
-                // 將包含多個子路徑 (Subpaths) 的 d 拆解為獨立的單一子路徑 d 陣列
                 const subpathStrings = splitSvgPathDToSubpaths(d, svg);
 
                 subpathStrings.forEach(subD => {
@@ -1378,7 +1380,6 @@
                             pts.push({ x, y });
                         }
 
-                        // 確保包含終點
                         const endP = tempPath.getPointAtLength(len);
                         let endX = endP.x, endY = endP.y;
                         if (ctm) {
@@ -1689,7 +1690,6 @@
                 }
             }
             
-            // 保留使用者先前的點選選擇，如無選擇則預設全選
             if (!selectedContourIndices || selectedContourIndices.size === 0) {
                 selectedContourIndices = new Set(finalContours.map((_, i) => i));
             } else {
@@ -1704,7 +1704,6 @@
             document.getElementById('loading-spinner').classList.add('hidden');
         }
 
-        // 重新計算被選中圖形的填滿線條
         function recomputeFillLines() {
             let targetW_mm = parseFloat(widthInput.value);
             if (isNaN(targetW_mm) || targetW_mm <= 1.0) targetW_mm = 100.0;
@@ -1714,7 +1713,6 @@
 
             const currentScale = isSvgSource ? (1000 / targetW_mm) : (previewCanvas.width / targetW_mm);
             
-            // 僅篩選出使用者勾選/點選要填滿的輪廓
             const activeContours = finalContours.filter((_, idx) => selectedContourIndices.has(idx));
 
             const rawHatchLines = fillEnable.checked ? generateFillLines(activeContours, parseFloat(fillAngleSelect.value), fillSpacing_mm * currentScale) : [];
@@ -1765,7 +1763,8 @@
                     }
                 } else {
                     pts.push(p2);
-                    powers.push(255);
+                    const defaultS = parseInt(maxSPowerInput.value);
+                    powers.push(isNaN(defaultS) ? 255 : defaultS);
                 }
                 
                 if (pts.length > 1) {
@@ -1806,7 +1805,6 @@
             });
             hatchGroup.innerHTML = hatchHtml;
 
-            // 渲染帶互動事件的向量輪廓圖案，所有輪廓皆保持實線（#10b981）以確保外框繪製
             contourGroup.innerHTML = finalContours.map((p, idx) => {
                 const isSelected = selectedContourIndices.has(idx);
                 const strokeColor = "#10b981";
@@ -1851,6 +1849,9 @@
             const dPen = parseFloat(penDiamInput.value) || 0;
             const yOffset = (dPen === 0) ? 0 : (dPen / 2) - 12.6;
 
+            const maxSVal = parseInt(maxSPowerInput.value);
+            const activePowerS = isNaN(maxSVal) ? 255 : maxSVal;
+
             let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
             const updateBounds = p => { 
                 minX = Math.min(minX, p.x * scale); maxX = Math.max(maxX, p.x * scale); 
@@ -1866,7 +1867,7 @@
 
             let g = [
                 `(Generated by Draw Converter)`, 
-                `(Tool: ${dPen === 0 ? 'Laser' : 'Pen Body ' + dPen + 'mm'})`, 
+                `(Tool: ${dPen === 0 ? 'Laser (S' + activePowerS + ')' : 'Pen Body ' + dPen + 'mm'})`, 
                 `(Y Offset Applied: ${yOffset.toFixed(3)}mm)`,
                 `G21`, 
                 `G90`, 
@@ -1905,14 +1906,13 @@
                 g.push(`G0 X${tx(pts[0].x * scale)} Y${ty(pts[0].y)}`);
 
                 if (target.isHatch && powers) {
-                    // 灰階動態功率漸變填滿
                     g.push(`M03 S${powers[0]}`);
                     for (let i = 1; i < pts.length; i++) {
                         g.push(`G1 X${tx(pts[i].x * scale)} Y${ty(pts[i].y)} S${powers[i-1]}`);
                     }
                 } else {
-                    // 標準向量邊緣（恆定功率輸出）
-                    g.push("M03 S255");
+                    // 標準向量邊緣（使用 max-s-power 變數輸出）
+                    g.push(`M03 S${activePowerS}`);
                     for (let i = 1; i < pts.length; i++) {
                         g.push(`G1 X${tx(pts[i].x * scale)} Y${ty(pts[i].y)}`);
                     }
