@@ -690,10 +690,19 @@
             }
         };
 
-        widthInput.oninput = () => { if (originalImage) recomputeFillLines(); };
+        // 輸入框連續觸發時，合併為每個畫面幀只重算一次
+        let recomputeRaf = 0;
+        function scheduleRecompute() {
+            if (recomputeRaf) return;
+            recomputeRaf = requestAnimationFrame(() => {
+                recomputeRaf = 0;
+                if (originalImage) recomputeFillLines();
+            });
+        }
+        widthInput.oninput = () => { if (originalImage) scheduleRecompute(); };
         feedInput.oninput = () => { if (originalImage) updateStats(previewCanvas.width, previewCanvas.height); };
-        fillAngleSelect.onchange = () => { if (originalImage) recomputeFillLines(); };
-        fillSpacingInput.oninput = () => { if (originalImage) recomputeFillLines(); };
+        fillAngleSelect.onchange = () => { if (originalImage) scheduleRecompute(); };
+        fillSpacingInput.oninput = () => { if (originalImage) scheduleRecompute(); };
         
         function updateDualSlider() {
             let minVal = parseInt(minSPowerInput.value);
@@ -1447,18 +1456,28 @@
         }
 
         function simplifyPath(pts, epsilon) {
-            if (pts.length <= 2) return pts;
-            let dmax = 0, idx = 0;
-            for (let i = 1; i < pts.length - 1; i++) {
-                let d = distToSegment(pts[i], pts[0], pts[pts.length - 1]);
-                if (d > dmax) { idx = i; dmax = d; }
+            const n = pts.length;
+            if (n <= 2) return pts;
+            const eps2 = epsilon * epsilon;
+            const keep = new Uint8Array(n);
+            keep[0] = 1; keep[n - 1] = 1;
+            const stack = [0, n - 1];
+            while (stack.length) {
+                const hi = stack.pop(), lo = stack.pop();
+                if (hi - lo < 2) continue;
+                let dmax = 0, idx = lo;
+                for (let i = lo + 1; i < hi; i++) {
+                    const d = distToSegment(pts[i], pts[lo], pts[hi]);
+                    if (d > dmax) { idx = i; dmax = d; }
+                }
+                if (dmax > eps2) {
+                    keep[idx] = 1;
+                    stack.push(lo, idx, idx, hi);
+                }
             }
-            if (dmax > epsilon * epsilon) {
-                let r1 = simplifyPath(pts.slice(0, idx + 1), epsilon);
-                let r2 = simplifyPath(pts.slice(idx), epsilon);
-                return r1.slice(0, -1).concat(r2);
-            }
-            return [pts[0], pts[pts.length - 1]];
+            const out = [];
+            for (let i = 0; i < n; i++) if (keep[i]) out.push(pts[i]);
+            return out;
         }
 
         function distToSegment(p, p1, p2) {
@@ -1487,16 +1506,71 @@
             return cur;
         }
 
+        // 以「帶狀(sleeve)」演算法合併共線點，複雜度 O(n)
+        function mergeCollinear(pts, tol) {
+            const n = pts.length;
+            const out = [pts[0]];
+            let i = 0;
+            while (i < n - 1) {
+                const A = pts[i];
+                let loX = 0, loY = 0, hiX = 0, hiY = 0, has = false;
+                let j = i + 1;
+                while (true) {
+                    // 將 pts[j] 視為中間點，縮小允許的方向範圍
+                    const vx = pts[j].x - A.x, vy = pts[j].y - A.y;
+                    const dist = Math.sqrt(vx * vx + vy * vy);
+                    if (dist > tol) {
+                        const sn = tol / dist, cs = Math.sqrt(1 - sn * sn);
+                        const nlx = vx * cs + vy * sn, nly = -vx * sn + vy * cs; // 順時針邊界
+                        const nhx = vx * cs - vy * sn, nhy = vx * sn + vy * cs;  // 逆時針邊界
+                        if (!has) { loX = nlx; loY = nly; hiX = nhx; hiY = nhy; has = true; }
+                        else {
+                            if (loX * nly - loY * nlx > 0) { loX = nlx; loY = nly; }
+                            if (nhx * hiY - nhy * hiX > 0) { hiX = nhx; hiY = nhy; }
+                        }
+                    }
+                    if (j + 1 >= n) break;
+                    const wx = pts[j + 1].x - A.x, wy = pts[j + 1].y - A.y;
+                    const w2 = wx * wx + wy * wy;
+                    if (w2 === 0 || w2 < dist * dist) break; // 重複點或折返
+                    if (has) {
+                        if (loX * wy - loY * wx < 0) break;
+                        if (wx * hiY - wy * hiX < 0) break;
+                        if (wx * (loX + hiX) + wy * (loY + hiY) <= 0) break;
+                    }
+                    j++;
+                }
+                out.push(pts[j]);
+                i = j;
+            }
+            return out;
+        }
+
         function resamplePath(pts, segPx) {
             if (pts.length < 2) return pts;
             const targetSegPx = Math.max(1.0, segPx);
-            const res = [pts[0]];
-            let last = pts[0], acc = 0;
-            for (let i = 1; i < pts.length; i++) {
-                const p1 = pts[i-1], p2 = pts[i];
+
+            // 步驟1：合併共線的點 (直線不需要中間點)
+            const merged = mergeCollinear(pts, 0.02);
+            if (merged.length < 2) return merged;
+
+            // 步驟2：長度 >= 解析度的直線段原樣保留；較短的(曲線取樣點)才依解析度重新取樣
+            const res = [merged[0]];
+            let last = merged[0], acc = 0;
+            for (let k = 1; k < merged.length; k++) {
+                const p1 = merged[k-1], p2 = merged[k];
                 const dx = p2.x - p1.x, dy = p2.y - p1.y;
                 const d = Math.sqrt(dx * dx + dy * dy);
                 if (d === 0) continue;
+
+                if (d >= targetSegPx) {
+                    // 直線段：不分切，只保留端點
+                    if (acc > 0 && (last.x !== p1.x || last.y !== p1.y)) res.push(p1);
+                    res.push(p2);
+                    last = p2; acc = 0;
+                    continue;
+                }
+
                 let rem = d, pos = 0;
                 while (rem + acc >= targetSegPx) {
                     const move = targetSegPx - acc;
@@ -1507,7 +1581,9 @@
                 }
                 acc += rem;
             }
-            if (Math.sqrt(Math.pow(pts[pts.length-1].x - last.x, 2) + Math.pow(pts[pts.length-1].y - last.y, 2)) > targetSegPx * 0.1) res.push(pts[pts.length-1]);
+            const endP = merged[merged.length - 1];
+            const tail = Math.hypot(endP.x - last.x, endP.y - last.y);
+            if (tail > 1e-6) res.push(endP); // 確保終點(閉合路徑的回到起點)存在
             return res;
         }
 
@@ -1535,32 +1611,64 @@
             const lines = [];
             if (!paths.length) return lines;
             
-            if (isNaN(spacingPx) || spacingPx <= 1.0) {
+            // 間隔只需為正數即可 (不再受「像素 <= 1」限制，否則大尺寸+小間距時會整個消失)
+            if (isNaN(spacingPx) || spacingPx <= 1e-6) {
                 return lines;
             }
 
             const rad = (deg * Math.PI) / 180;
             const cos = Math.cos(rad), sin = Math.sin(rad);
-            const rotated = paths.map(p => p.map(pt => ({ x: pt.x * cos + pt.y * sin, y: -pt.x * sin + pt.y * cos })));
+
+            // 旋轉後建立邊表 (略過水平邊，它們不會與任何掃描線相交)
+            const edges = [];
             let minY = Infinity, maxY = -Infinity;
-            rotated.forEach(rp => rp.forEach(pt => { minY = Math.min(minY, pt.y); maxY = Math.max(maxY, pt.y); }));
+            for (const path of paths) {
+                const n = path.length;
+                const rx = new Float64Array(n), ry = new Float64Array(n);
+                for (let i = 0; i < n; i++) {
+                    const pt = path[i];
+                    rx[i] = pt.x * cos + pt.y * sin;
+                    ry[i] = -pt.x * sin + pt.y * cos;
+                    if (ry[i] < minY) minY = ry[i];
+                    if (ry[i] > maxY) maxY = ry[i];
+                }
+                for (let i = 0; i < n; i++) {
+                    const k = (i + 1) % n;
+                    const y1 = ry[i], y2 = ry[k];
+                    if (y1 === y2) continue;
+                    edges.push({ x1: rx[i], y1: y1, x2: rx[k], y2: y2,
+                                 ymin: y1 < y2 ? y1 : y2, ymax: y1 < y2 ? y2 : y1 });
+                }
+            }
             
             const lineCountEstimate = (maxY - minY) / spacingPx;
-            if (lineCountEstimate > 3000) {
+            if (lineCountEstimate > 200000) {
                 return lines; 
             }
 
-            for (let y = minY + spacingPx; y < maxY; y += spacingPx) {
-                let inters = [];
-                rotated.forEach(rp => {
-                    for (let i = 0; i < rp.length; i++) {
-                        let p1 = rp[i], p2 = rp[(i+1)%rp.length];
-                        if ((p1.y <= y && p2.y > y) || (p2.y <= y && p1.y > y)) inters.push(p1.x + (y - p1.y) * (p2.x - p1.x) / (p2.y - p1.y));
-                    }
-                });
+            edges.sort((a, b) => a.ymin - b.ymin);
+            let nextEdge = 0;
+            let active = [];
+
+            const lineCount = Math.floor((maxY - minY) / spacingPx);
+            for (let n = 1; n <= lineCount; n++) {
+                const y = minY + n * spacingPx;
+                if (y >= maxY) break;
+
+                // 加入開始生效的邊、移除已結束的邊
+                while (nextEdge < edges.length && edges[nextEdge].ymin <= y) active.push(edges[nextEdge++]);
+                let w = 0;
+                for (let i = 0; i < active.length; i++) if (active[i].ymax > y) active[w++] = active[i];
+                active.length = w;
+
+                const inters = [];
+                for (let i = 0; i < active.length; i++) {
+                    const e = active[i];
+                    inters.push(e.x1 + (y - e.y1) * (e.x2 - e.x1) / (e.y2 - e.y1));
+                }
                 inters.sort((a,b)=>a-b);
-                for (let i = 0; i < inters.length; i += 2) {
-                    if (i+1 < inters.length) lines.push([{ x: inters[i] * cos - y * sin, y: inters[i] * sin + y * cos }, { x: inters[i+1] * cos - y * sin, y: inters[i+1] * sin + y * cos }]);
+                for (let i = 0; i + 1 < inters.length; i += 2) {
+                    lines.push([{ x: inters[i] * cos - y * sin, y: inters[i] * sin + y * cos }, { x: inters[i+1] * cos - y * sin, y: inters[i+1] * sin + y * cos }]);
                 }
             }
             return lines;
@@ -1665,25 +1773,36 @@
             } else {
                 const w = previewCanvas.width, h = previewCanvas.height;
                 const pixels = pCtx.getImageData(0, 0, w, h).data;
-                const isBlack = (x, y) => pixels[(y * w + x) * 4] === 0;
+                // 預先建立黑白遮罩，避免重複讀取 RGBA 與閉包呼叫
+                const mask = new Uint8Array(w * h);
+                for (let i = 0, n = w * h; i < n; i++) mask[i] = pixels[i * 4] === 0 ? 1 : 0;
+                const isBlack = (x, y) => mask[y * w + x] === 1;
                 const visited = new Uint8Array(w * h);
                 const mmToPx = w / targetW_mm;
+                const noiseMin = parseInt(noiseSlider.value);
+                const smoothIters = parseInt(smoothSlider.value);
+                const segPxBitmap = parseFloat(segmentSlider.value) * mmToPx;
                 
                 finalContours = [];
                 for (let y = 1; y < h - 1; y++) {
+                    const row = y * w;
                     for (let x = 1; x < w - 1; x++) {
-                        if (isBlack(x, y) && !visited[y * w + x]) {
-                            let isEdge = false;
-                            for(let dy=-1; dy<=1; dy++) for(let dx=-1; dx<=1; dx++) if(!isBlack(x+dx, y+dy)) { isEdge = true; break; }
+                        const idx = row + x;
+                        if (mask[idx] === 1 && !visited[idx]) {
+                            // 八鄰域只要有一個白色像素就是邊緣
+                            const isEdge = mask[idx - 1] === 0 || mask[idx + 1] === 0 ||
+                                           mask[idx - w] === 0 || mask[idx + w] === 0 ||
+                                           mask[idx - w - 1] === 0 || mask[idx - w + 1] === 0 ||
+                                           mask[idx + w - 1] === 0 || mask[idx + w + 1] === 0;
                             if (isEdge) {
                                 const raw = traceContour(x, y, visited, isBlack, w, h);
-                                if (raw.length > parseInt(noiseSlider.value)) {
+                                if (raw.length > noiseMin) {
                                     let path = simplifyPath(raw, 0.5);
-                                    path = smoothPathChaikin(path, parseInt(smoothSlider.value));
-                                    path = resamplePath(path, parseFloat(segmentSlider.value) * mmToPx);
+                                    path = smoothPathChaikin(path, smoothIters);
+                                    path = resamplePath(path, segPxBitmap);
                                     finalContours.push(path);
                                 }
-                            } else visited[y * w + x] = 1;
+                            } else visited[idx] = 1;
                         }
                     }
                 }
@@ -1722,6 +1841,10 @@
             finalFillLines = [];
             const segPx = parseFloat(segmentSlider.value) * currentScale;
             const isGrayscale = grayscaleFillCheckbox.checked;
+            const useGray = isGrayscale && originalPixelData;
+            const minS = parseFloat(minSPowerInput.value) || 0;
+            const maxS = parseFloat(maxSPowerInput.value) || 255;
+            const cw = previewCanvas.width, ch = previewCanvas.height;
 
             rawHatchLines.forEach(line => {
                 const p1 = line[0], p2 = line[1];
@@ -1732,20 +1855,19 @@
                 const pts = [p1];
                 const powers = [];
                 
-                if (isGrayscale && originalPixelData) {
+                if (useGray) {
                     let currentDist = 0;
                     while (currentDist < d) {
                         const nextDist = Math.min(d, currentDist + segPx);
                         const r1 = currentDist / d;
                         const r2 = nextDist / d;
-                        const ptStart = { x: p1.x + dx*r1, y: p1.y + dy*r1 };
                         const ptEnd = { x: p1.x + dx*r2, y: p1.y + dy*r2 };
                         
-                        const mx = (ptStart.x + ptEnd.x) / 2;
-                        const my = (ptStart.y + ptEnd.y) / 2;
+                        const mx = ((p1.x + dx*r1) + ptEnd.x) / 2;
+                        const my = ((p1.y + dy*r1) + ptEnd.y) / 2;
                         
-                        const rx = (mx / previewCanvas.width) * originalPixelWidth;
-                        const ry = (my / previewCanvas.height) * originalPixelHeight;
+                        const rx = (mx / cw) * originalPixelWidth;
+                        const ry = (my / ch) * originalPixelHeight;
                         const ix = Math.max(0, Math.min(originalPixelWidth - 1, Math.floor(rx)));
                         const iy = Math.max(0, Math.min(originalPixelHeight - 1, Math.floor(ry)));
                         const idx = (iy * originalPixelWidth + ix) * 4;
@@ -1755,8 +1877,6 @@
                         const b = originalPixelData[idx+2];
                         const gray = r * 0.299 + g * 0.587 + b * 0.114;
                         
-                        const minS = parseFloat(minSPowerInput.value) || 0;
-                        const maxS = parseFloat(maxSPowerInput.value) || 255;
                         const power = Math.round(maxS - (gray / 255) * (maxS - minS));
                         
                         pts.push(ptEnd);
@@ -1787,22 +1907,27 @@
         }
 
         function renderOverlay() {
-            let hatchHtml = '';
-            
             const minS = parseFloat(minSPowerInput.value) || 0;
             const maxS = parseFloat(maxSPowerInput.value) || 255;
             const sRange = (maxS - minS) || 1;
+            const fx = v => Math.round(v * 1000) / 1000;
 
+            // 相同透明度的線段合併為單一 <path>，大幅減少 DOM 節點數
+            const hatchGroups = new Map();
             finalFillLines.forEach(line => {
                 for (let i = 0; i < line.powers.length; i++) {
                     const pStart = line.pts[i];
                     const pEnd = line.pts[i+1];
-                    const power = line.powers[i];
-                    
-                    const normalizedPower = (power - minS) / sRange;
-                    const alpha = 0.15 + 0.85 * Math.max(0, Math.min(1, normalizedPower));
-                    hatchHtml += `<line x1="${pStart.x}" y1="${pStart.y}" x2="${pEnd.x}" y2="${pEnd.y}" stroke="#3b82f6" stroke-width="1.2" opacity="${alpha}" />`;
+                    const normalizedPower = (line.powers[i] - minS) / sRange;
+                    const alpha = (0.15 + 0.85 * Math.max(0, Math.min(1, normalizedPower))).toFixed(3);
+                    let arr = hatchGroups.get(alpha);
+                    if (!arr) { arr = []; hatchGroups.set(alpha, arr); }
+                    arr.push(`M${fx(pStart.x)} ${fx(pStart.y)}L${fx(pEnd.x)} ${fx(pEnd.y)}`);
                 }
+            });
+            let hatchHtml = '';
+            hatchGroups.forEach((segs, alpha) => {
+                hatchHtml += `<path d="${segs.join('')}" fill="none" stroke="#3b82f6" stroke-width="1.2" opacity="${alpha}" />`;
             });
             hatchGroup.innerHTML = hatchHtml;
 
@@ -1814,7 +1939,9 @@
                 const fillColor = showFillBg ? "rgba(16, 185, 129, 0.15)" : "rgba(0, 0, 0, 0.001)";
                 const pointerEvents = fillEnable.checked ? "all" : "none";
                 const cursor = fillEnable.checked ? "pointer" : "default";
-                const d = `M ${p[0].x} ${p[0].y} ${p.slice(1).map(pt => `L ${pt.x} ${pt.y}`).join(' ')} Z`;
+                let d = `M ${p[0].x} ${p[0].y}`;
+                for (let k = 1; k < p.length; k++) d += ` L ${p[k].x} ${p[k].y}`;
+                d += ' Z';
                 
                 return `<path d="${d}" data-index="${idx}" fill="${fillColor}" stroke="${strokeColor}" stroke-width="${showFillBg ? 1.8 : 1.2}" style="pointer-events: ${pointerEvents}; cursor: ${cursor}; transition: all 0.15s;" class="hover:stroke-amber-400 hover:stroke-2 hover:fill-amber-400/20" />`;
             }).join('');
@@ -1827,7 +1954,11 @@
             if (isNaN(targetW) || targetW <= 0) targetW = 100;
             const scale = targetW / w;
             let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-            const up = p => { minX = Math.min(minX, p.x*scale); maxX = Math.max(maxX, p.x*scale); minY = Math.min(minY, p.y*scale); maxY = Math.max(maxY, p.y*scale); };
+            const up = p => {
+                const x = p.x * scale, y = p.y * scale;
+                if (x < minX) minX = x; if (x > maxX) maxX = x;
+                if (y < minY) minY = y; if (y > maxY) maxY = y;
+            };
             finalContours.forEach(p => p.forEach(up));
             finalFillLines.forEach(line => line.pts.forEach(up));
             
@@ -1853,8 +1984,9 @@
 
             let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
             const updateBounds = p => { 
-                minX = Math.min(minX, p.x * scale); maxX = Math.max(maxX, p.x * scale); 
-                minY = Math.min(minY, p.y * scale); maxY = Math.max(maxY, p.y * scale); 
+                const x = p.x * scale, y = p.y * scale;
+                if (x < minX) minX = x; if (x > maxX) maxX = x;
+                if (y < minY) minY = y; if (y > maxY) maxY = y;
             };
             finalContours.forEach(path => path.forEach(updateBounds));
             finalFillLines.forEach(line => line.pts.forEach(updateBounds));
@@ -1873,9 +2005,18 @@
                 `G1 F${feed}`
             ];
 
+            // 預先計算每條路徑起/終點(已四捨五入至 0.001mm)，避免在最近鄰搜尋時重複格式化
+            const mkItem = (pts, powers, isClosed, isHatch) => {
+                const f = pts[0], l = pts[pts.length - 1];
+                return {
+                    pts, powers, isClosed, isHatch,
+                    sx: parseFloat(tx(f.x * scale)), sy: parseFloat(ty(f.y)),
+                    ex: parseFloat(tx(l.x * scale)), ey: parseFloat(ty(l.y))
+                };
+            };
             let allPaths = [];
-            finalContours.forEach(path => allPaths.push({ pts: path, isClosed: true, isHatch: false }));
-            finalFillLines.forEach(line => allPaths.push({ pts: line.pts, powers: line.powers, isClosed: false, isHatch: true }));
+            finalContours.forEach(path => allPaths.push(mkItem(path, null, true, false)));
+            finalFillLines.forEach(line => allPaths.push(mkItem(line.pts, line.powers, false, true)));
 
             let cx = 0, cy = 0; 
 
@@ -1885,13 +2026,15 @@
                 let reversePath = false;
 
                 for (let i = 0; i < allPaths.length; i++) {
-                    const p = allPaths[i].pts;
-                    const dStart = Math.pow(parseFloat(tx(p[0].x * scale)) - cx, 2) + Math.pow(parseFloat(ty(p[0].y)) - cy, 2);
+                    const it = allPaths[i];
+                    const ax = it.sx - cx, ay = it.sy - cy;
+                    const dStart = ax * ax + ay * ay;
                     if (dStart < minDist) {
                         minDist = dStart; bestIdx = i; reversePath = false;
                     }
-                    if (!allPaths[i].isClosed) {
-                        const dEnd = Math.pow(parseFloat(tx(p[p.length - 1].x * scale)) - cx, 2) + Math.pow(parseFloat(ty(p[p.length - 1].y)) - cy, 2);
+                    if (!it.isClosed) {
+                        const bx = it.ex - cx, by = it.ey - cy;
+                        const dEnd = bx * bx + by * by;
                         if (dEnd < minDist) {
                             minDist = dEnd; bestIdx = i; reversePath = true;
                         }
@@ -1969,9 +2112,11 @@
             const content = isGcode ? generateGcode() : generateSVG();
             const blob = new Blob([content], { type: isGcode ? 'text/plain' : 'image/svg+xml' });
             const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
+            const url = URL.createObjectURL(blob);
+            a.href = url;
             a.download = filenameLabel.innerText;
             a.click();
+            setTimeout(() => URL.revokeObjectURL(url), 10000);
         };
 
         const resizeObserver = new ResizeObserver(() => {
