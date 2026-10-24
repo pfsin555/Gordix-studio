@@ -264,7 +264,7 @@
                 <div class="lg:col-span-6 order-1 lg:order-2">
                     <div id="preview-container" class="shadow-2xl ring-1 ring-gray-700 select-none">
                         <div class="absolute top-3 right-3 z-10">
-                            <div class="bg-black/80 backdrop-blur-md text-emerald-400 px-3 py-1 rounded-full text-[9px] font-black border border-emerald-500/30 shadow-md" id="txt-preview-hint">
+                            <div class="bg-black/80 backdrop-blur-md text-emerald-400 px-3 py-1 rounded-full text-[9px] font-black border border-emerald-500/30 shadow-md">
                                 3D REALTIME VIEW
                             </div>
                         </div>
@@ -399,7 +399,7 @@
                             </div>
                             <div class="text-right">
                                 <p class="text-[9px] text-emerald-500 font-bold uppercase tracking-wider" id="txt-info-dist">路徑長度</p>
-                                <p class="text-sm font-mono font-bold" id="distContainer"><span id="distEst">0</span> <span class="text-[10px] text-gray-500">mm</span></p>
+                                <p class="text-sm font-mono font-bold"><span id="distEst">0</span> <span class="text-[10px] text-gray-500">mm</span></p>
                             </div>
                         </div>
                         <button id="downloadBtn" class="w-full bg-emerald-500 text-gray-900 py-3 rounded-lg font-black text-xs uppercase hover:bg-emerald-400 transition shadow-lg disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed" disabled>
@@ -495,7 +495,7 @@
 
     let currentLang = 'zh';
     let lastTimeSec = 0, lastDistance = 0;
-    let scene, camera, renderer, gcodeGroup, grid, cameraTarget;
+    let scene, camera, renderer, gcodeGroup, grid, originAxes, originMarker, cameraTarget;
     let originalGcode = "";
     let originalFileName = "output";
 
@@ -599,16 +599,46 @@
 
     function updateThreeGrid() {
         if (!scene) return;
-        if (grid) scene.remove(grid);
+        if (grid) { scene.remove(grid); grid.geometry.dispose(); grid.material.dispose(); }
+        if (originAxes) { scene.remove(originAxes); originAxes.geometry.dispose(); originAxes.material.dispose(); }
+        if (originMarker) { scene.remove(originMarker); originMarker.geometry.dispose(); originMarker.material.dispose(); }
         const isLight = !document.documentElement.classList.contains('dark');
         
         const gridColor = isLight ? 0xcccccc : 0x222222;
         const centerColor = isLight ? 0x059669 : 0x10b981;
         
-        grid = new THREE.GridHelper(currentGridSize, currentGridDivisions, centerColor, gridColor);
+        // 格線只負責提供 50mm 刻度 (中心線與一般線同色)；格線中心已對齊 50mm 的倍數，
+        // 因此每條格線都落在「距座標原點 50mm 整數倍」的位置
+        grid = new THREE.GridHelper(currentGridSize, currentGridDivisions, gridColor, gridColor);
         grid.rotation.x = Math.PI / 2;
         grid.position.set(currentGridCenterX, currentGridCenterY, 0);
         scene.add(grid);
+
+        // 十字座標軸固定畫在世界座標原點 (0,0)，不隨路徑或格線範圍移動，
+        // 平移 (X/Y 偏移) 時可直接看出路徑與座標原點的對應關係
+        const half = currentGridSize / 2;
+        const axisVerts = new Float32Array([
+            currentGridCenterX - half, 0, 0,   currentGridCenterX + half, 0, 0,   // X 軸
+            0, currentGridCenterY - half, 0,   0, currentGridCenterY + half, 0    // Y 軸
+        ]);
+        const axisGeo = new THREE.BufferGeometry();
+        axisGeo.setAttribute('position', new THREE.BufferAttribute(axisVerts, 3));
+        originAxes = new THREE.LineSegments(axisGeo, new THREE.LineBasicMaterial({ color: centerColor, depthTest: false }));
+        originAxes.renderOrder = 1;
+        scene.add(originAxes);
+
+        // 原點標記：固定在 (0,0) 的橘色圓點，大小以螢幕像素計算 (縮放視角時不會變大變小)，並顯示在路徑之上
+        const markerGeo = new THREE.BufferGeometry();
+        markerGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array([0, 0, 0]), 3));
+        originMarker = new THREE.Points(markerGeo, new THREE.PointsMaterial({
+            color: isLight ? 0xea580c : 0xfb923c,
+            size: 9,
+            sizeAttenuation: false,
+            depthTest: false
+        }));
+        originMarker.renderOrder = 2;
+        scene.add(originMarker);
+        requestRender();
     }
 
     function initThree() {
@@ -665,6 +695,7 @@
             }
             camera.lookAt(cameraTarget);
             previousMouse = { x, y };
+            requestRender();
         };
 
         container.addEventListener('mousedown', e => { 
@@ -681,6 +712,7 @@
             const newDist = e.deltaY > 0 ? dist * 1.1 : dist / 1.1;
             camera.position.copy(cameraTarget).addScaledVector(dir, newDist);
             camera.lookAt(cameraTarget);
+            requestRender();
         });
         container.oncontextmenu = e => { e.preventDefault(); };
 
@@ -742,6 +774,7 @@
                 
                 camera.lookAt(cameraTarget);
                 previousMouse = { x: midX, y: midY };
+                requestRender();
             }
         }, { passive: true });
 
@@ -753,7 +786,36 @@
         animate();
     }
 
-    function animate() { requestAnimationFrame(animate); renderer.render(scene, camera); }
+    // 依需求渲染：只有視角/內容/尺寸改變時才重繪，閒置時不佔用 GPU
+    let renderQueued = false;
+    function requestRender() {
+        if (renderQueued || !renderer) return;
+        renderQueued = true;
+        requestAnimationFrame(() => {
+            renderQueued = false;
+            renderer.render(scene, camera);
+        });
+    }
+    function animate() { requestRender(); }
+
+    // 釋放 Three.js 物件的 GPU 資源
+    function disposeObject(root) {
+        const geos = new Set(), mats = new Set(), texs = new Set();
+        root.traverse(o => {
+            if (o.geometry) geos.add(o.geometry);
+            if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => { mats.add(m); if (m.map) texs.add(m.map); });
+        });
+        geos.forEach(g => g.dispose());
+        mats.forEach(m => m.dispose());
+        texs.forEach(t => t.dispose());
+    }
+
+    // 連續輸入事件合併成每個畫面幀只重算一次
+    let processRaf = 0;
+    function scheduleProcess() {
+        if (processRaf) return;
+        processRaf = requestAnimationFrame(() => { processRaf = 0; processAndPreview(); });
+    }
 
     // 格式化數字：四捨五入至指定位數並自動去除尾數不必要的 0
     function formatNum(val, maxDecimals = 4) {
@@ -821,23 +883,38 @@
         return false;
     }
 
-    function findMachiningBounds(text) {
-        const lines = text.split('\n');
+    // 解析單行指令中的「字母+數值」字組 (共用同一個正規表示式，避免每行重新建立迭代器與陣列)
+    const WORD_RE = /([A-Z])\s*([-+]?[0-9]*\.?[0-9]+)/gi;
+    function parseWords(str) {
+        const words = {};
+        WORD_RE.lastIndex = 0;
+        let m;
+        while ((m = WORD_RE.exec(str)) !== null) {
+            words[m[1]] = parseFloat(m[2]);
+        }
+        return words;
+    }
+
+    // 逐行解析一次：空行/註解行為 null，其餘為該行的字組
+    function parseLineWords(lines) {
+        const out = new Array(lines.length);
+        for (let i = 0; i < lines.length; i++) {
+            const cmd = lines[i].trim().toUpperCase();
+            if (!cmd || cmd.startsWith('(') || cmd.startsWith(';')) { out[i] = null; continue; }
+            const semiIdx = cmd.indexOf(';');
+            out[i] = parseWords(semiIdx !== -1 ? cmd.substring(0, semiIdx).trim() : cmd);
+        }
+        return out;
+    }
+
+    function findMachiningBoundsFromWords(lineWords) {
         let firstMachiningIdx = -1;
         let lastMachiningIdx = -1;
         let currentMotionMode = null;
         
-        lines.forEach((line, i) => {
-            const cmd = line.trim().toUpperCase();
-            if (!cmd || cmd.startsWith('(') || cmd.startsWith(';')) return;
-            
-            let cleanCmd = cmd.split(';')[0].trim();
-            
-            const words = {};
-            const matches = cleanCmd.matchAll(/([A-Z])\s*([-+]?[0-9]*\.?[0-9]+)/gi);
-            for (const match of matches) {
-                words[match[1]] = parseFloat(match[2]);
-            }
+        for (let i = 0; i < lineWords.length; i++) {
+            const words = lineWords[i];
+            if (!words) continue;
             
             if (words['G'] !== undefined) {
                 const gVal = Math.round(words['G']);
@@ -854,7 +931,7 @@
                 if (firstMachiningIdx === -1) firstMachiningIdx = i;
                 lastMachiningIdx = i;
             }
-        });
+        }
         
         return { firstMachiningIdx, lastMachiningIdx };
     }
@@ -947,30 +1024,18 @@
     }
 
     function parseGcode(text) {
-        const bounds = findMachiningBounds(text);
+        const lines = text.split('\n');
+        const lineWords = parseLineWords(lines);
+        const bounds = findMachiningBoundsFromWords(lineWords);
         const firstMachiningIdx = bounds.firstMachiningIdx;
         const lastMachiningIdx = bounds.lastMachiningIdx;
-
-        const lines = text.split('\n');
         let currentPos = { x: 0, y: 0, z: 0, f: 1000 };
         let activeMotion = null; 
         const pathData = [];
+        const rHeight = getRetractHeight();
 
-        lines.forEach((line, index) => {
-            const cmd = line.trim().toUpperCase();
-            if (!cmd || cmd.startsWith('(') || cmd.startsWith(';')) return;
-
-            let cleanCmd = cmd;
-            const semiIdx = cmd.indexOf(';');
-            if (semiIdx !== -1) {
-                cleanCmd = cmd.substring(0, semiIdx).trim();
-            }
-
-            const words = {};
-            const matches = cleanCmd.matchAll(/([A-Z])\s*([-+]?[0-9]*\.?[0-9]+)/gi);
-            for (const match of matches) {
-                words[match[1]] = parseFloat(match[2]);
-            }
+        lineWords.forEach((words, index) => {
+            if (!words) return;
 
             if (words['G'] !== undefined) {
                 const gVal = Math.round(words['G']);
@@ -987,7 +1052,6 @@
                 let newY = words['Y'] !== undefined ? words['Y'] : currentPos.y;
                 let newZ = words['Z'] !== undefined ? words['Z'] : currentPos.z;
                 
-                const rHeight = getRetractHeight();
                 if (newZ > 0.0001) {
                     newZ = rHeight;
                 }
@@ -1074,570 +1138,6 @@
             return Math.abs(uniqueZs[0]);
         }
         return 1.5;
-    }
-
-    function getPolygonSignedArea(poly) {
-        let area = 0;
-        const n = poly.length;
-        for (let i = 0; i < n; i++) {
-            const j = (i + 1) % n;
-            area += poly[i].x * poly[j].y - poly[j].x * poly[i].y;
-        }
-        return area / 2;
-    }
-
-    function isPointInPolygon(pt, poly) {
-        let inside = false;
-        const n = poly.length;
-        for (let i = 0, j = n - 1; i < n; j = i++) {
-            const xi = poly[i].x, yi = poly[i].y;
-            const xj = poly[j].x, yj = poly[j].y;
-            const intersect = ((yi > pt.y) !== (yj > pt.y))
-                && (pt.x < (xj - xi) * (pt.y - yi) / (yj - yi) + xi);
-            if (intersect) inside = !inside;
-        }
-        return inside;
-    }
-
-    function getPointLineProjection(pt, p1, p2) {
-        const dx = p2.x - p1.x;
-        const dy = p2.y - p1.y;
-        const lenSq = dx * dx + dy * dy;
-        if (lenSq < 1e-8) return { x: p1.x, y: p1.y };
-        const t = ((pt.x - p1.x) * dx + (pt.y - p1.y) * dy) / lenSq;
-        return {
-            x: p1.x + t * dx,
-            y: p1.y + t * dy
-        };
-    }
-
-    function getLineLineIntersection(L1_p1, L1_p2, L2_p1, L2_p2, P) {
-        const A1 = L1_p2.y - L1_p1.y;
-        const B1 = L1_p1.x - L1_p2.x;
-        const C1 = A1 * L1_p1.x + B1 * L1_p1.y;
-        
-        const A2 = L2_p2.y - L2_p1.y;
-        const B2 = L2_p1.x - L2_p2.x;
-        const C2 = A2 * L2_p1.x + B2 * L2_p1.y; 
-        
-        const det = A1 * B2 - A2 * B1;
-        if (Math.abs(det) > 1e-5) {
-            return {
-                x: (B2 * C1 - B1 * C2) / det,
-                y: (A1 * C2 - A2 * C1) / det
-            };
-        }
-        return { x: (L1_p2.x + L2_p1.x) / 2, y: (L1_p2.y + L2_p1.y) / 2 };
-    }
-
-    function getLineCircleIntersection(K1, K2, O, R, P) {
-        const x1 = K1.x - O.x;
-        const y1 = K1.y - O.y;
-        const x2 = K2.x - O.x;
-        const y2 = K2.y - O.y;
-        
-        const dx = x2 - x1;
-        const dy = y2 - y1;
-        const drSq = dx * dx + dy * dy;
-        const dr = Math.sqrt(drSq);
-        
-        if (dr < 1e-6) {
-            return { x: K1.x, y: K1.y };
-        }
-        
-        const D = x1 * y2 - x2 * y1;
-        const delta = R * R * drSq - D * D;
-        
-        if (delta < 0) {
-            const t = ((O.x - K1.x) * dx + (O.y - K1.y) * dy) / drSq;
-            const projX = K1.x + t * dx;
-            const projY = K1.y + t * dy;
-            
-            const vx = projX - O.x;
-            const vy = projY - O.y;
-            const len = Math.sqrt(vx * vx + vy * vy);
-            if (len > 1e-5) {
-                return { x: O.x + (vx / len) * R, y: O.y + (vy / len) * R };
-            }
-            return { x: projX, y: projY };
-        }
-        
-        const dy_sgn = dy < 0 ? -1 : 1;
-        const sqrtDelta = Math.sqrt(delta);
-        
-        const p1 = {
-            x: (D * dy + dy_sgn * dx * sqrtDelta) / drSq + O.x,
-            y: (-D * dx + Math.abs(dy) * sqrtDelta) / drSq + O.y
-        };
-        const p2 = {
-            x: (D * dy - dy_sgn * dx * sqrtDelta) / drSq + O.x,
-            y: (-D * dx - Math.abs(dy) * sqrtDelta) / drSq + O.y
-        };
-        
-        const d1 = (p1.x - P.x)**2 + (p1.y - P.y)**2;
-        const d2 = (p2.x - P.x)**2 + (p2.y - P.y)**2;
-        return d1 < d2 ? p1 : p2;
-    }
-
-    function getCircleCircleIntersection(O1, R1, O2, R2, P) {
-        const dx = O2.x - O1.x;
-        const dy = O2.y - O1.y;
-        const d = Math.sqrt(dx * dx + dy * dy);
-        
-        if (d < 1e-5) {
-            const ux = P.x - O1.x;
-            const uy = P.y - O1.y;
-            const len = Math.sqrt(ux*ux + uy*uy);
-            if (len > 1e-5) {
-                return { x: O1.x + (ux / len) * R1, y: O1.y + (ux / len) * R1 };
-            }
-            return { x: O1.x + R1, y: O1.y };
-        }
-        
-        if (d > R1 + R2 || d < Math.abs(R1 - R2)) {
-            const ux = P.x - O1.x;
-            const uy = P.y - O1.y;
-            const len1 = Math.sqrt(ux*ux + uy*uy);
-            const p1 = len1 > 1e-5 ? { x: O1.x + (ux / len1) * R1, y: O1.y + (ux / len1) * R1 } : { x: O1.x + R1, y: O1.y };
-            
-            const vx = P.x - O2.x;
-            const vy = P.y - O2.y;
-            const len2 = Math.sqrt(vx*vx + vy*vy);
-            const p2 = len2 > 1e-5 ? { x: O2.x + (vx / len2) * R2, y: O2.y + (vx / len2) * R2 } : { x: O2.x + R2, y: O2.y };
-            
-            return { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
-        }
-        
-        const a = (R1 * R1 - R2 * R2 + d * d) / (2 * d);
-        const h = Math.sqrt(Math.max(0, R1 * R1 - a * a));
-        
-        const p0x = O1.x + (a * dx) / d;
-        const p0y = O1.y + (a * dy) / d;
-        
-        const rx = -dy / d;
-        const ry = dx / d;
-        
-        const p1 = { x: p0x + h * rx, y: p0y + h * ry };
-        const p2 = { x: p0x - h * rx, y: p0y - h * ry };
-        
-        const d1 = (p1.x - P.x)**2 + (p1.y - P.y)**2;
-        const d2 = (p2.x - P.x)**2 + (p2.y - P.y)**2;
-        return d1 < d2 ? p1 : p2;
-    }
-
-    function getIntersection(geo1, geo2, P) {
-        if (geo1.type === "LINE" && geo2.type === "LINE") {
-            const isPoint1 = Math.sqrt((geo1.p2.x - geo1.p1.x)**2 + (geo1.p2.y - geo1.p1.y)**2) < 1e-4;
-            const isPoint2 = Math.sqrt((geo2.p2.x - geo2.p1.x)**2 + (geo2.p2.y - geo2.p1.y)**2) < 1e-4;
-            
-            if (isPoint1 && isPoint2) {
-                return { x: geo1.p1.x, y: geo1.p1.y };
-            }
-            if (isPoint1) {
-                return getPointLineProjection(geo1.p1, geo2.p1, geo2.p2);
-            }
-            if (isPoint2) {
-                return getPointLineProjection(geo2.p1, geo1.p1, geo1.p2);
-            }
-            return getLineLineIntersection(geo1.p1, geo1.p2, geo2.p1, geo2.p2, P);
-        }
-        if (geo1.type === "LINE" && geo2.type === "ARC") {
-            return getLineCircleIntersection(geo1.p1, geo1.p2, geo2.center, geo2.radius, P);
-        }
-        if (geo1.type === "ARC" && geo2.type === "LINE") {
-            return getLineCircleIntersection(geo2.p1, geo2.p2, geo1.center, geo1.radius, P);
-        }
-        if (geo1.type === "ARC" && geo2.type === "ARC") {
-            return getCircleCircleIntersection(geo1.center, geo1.radius, geo2.center, geo2.radius, P);
-        }
-        return { x: P.x, y: P.y };
-    }
-
-    function applySingleOffsetChain(chain, loop, dist) {
-        const n = chain.length;
-        if (n === 0) return;
-
-        const offset_geometries = [];
-        for (let i = 0; i < n; i++) {
-            const seg = chain[i];
-            if (seg.type === 'G1' || seg.type === 'G0') {
-                const dx = seg.to.x - seg.from.x;
-                const dy = seg.to.y - seg.from.y;
-                const len = Math.sqrt(dx * dx + dy * dy);
-                if (len > 1e-6) {
-                    const ux = dx / len;
-                    const uy = dy / len;
-                    const nx = loop.isCCW ? uy : -uy;
-                    const ny = loop.isCCW ? -ux : ux;
-                    
-                    offset_geometries.push({
-                        type: "LINE",
-                        p1: { x: seg.from.x + nx * dist, y: seg.from.y + ny * dist },
-                        p2: { x: seg.to.x + nx * dist, y: seg.to.y + ny * dist }
-                    });
-                } else {
-                    offset_geometries.push({
-                        type: "LINE",
-                        p1: { ...seg.from },
-                        p2: { ...seg.to }
-                    });
-                }
-            } else if (seg.type === 'G2' || seg.type === 'G3') {
-                const center = findArcCenter(seg.from, seg.to, seg.I, seg.J, seg.R, seg.type === 'G2');
-                if (center) {
-                    const R_orig = Math.sqrt((seg.from.x - center.x)**2 + (seg.from.y - center.y)**2);
-                    const rSign = (loop.isCCW === (seg.type === 'G3')) ? 1 : -1;
-                    const R_new = R_orig + rSign * dist;
-                    
-                    if (R_new <= 0.1) {
-                        offset_geometries.push({
-                            type: "LINE",
-                            p1: { x: center.x, y: center.y },
-                            p2: { x: center.x, y: center.y }
-                        });
-                        seg.type = 'G1';
-                        seg.I = null;
-                        seg.J = null;
-                        seg.R = null;
-                    } else {
-                        offset_geometries.push({
-                            type: "ARC",
-                            center: center,
-                            radius: R_new,
-                            orig_R: R_orig,
-                            orig_I: seg.I,
-                            orig_J: seg.J,
-                            orig_R_val: seg.R,
-                            typeG: seg.type
-                        });
-                    }
-                } else {
-                    offset_geometries.push({
-                        type: "LINE",
-                        p1: { ...seg.from },
-                        p2: { ...seg.to }
-                    });
-                    seg.type = 'G1';
-                    seg.I = null;
-                    seg.J = null;
-                    seg.R = null;
-                }
-            }
-        }
-
-        const new_vertices = [];
-        if (loop.isClosed) {
-            for (let i = 0; i < n; i++) {
-                const prev_idx = (i - 1 + n) % n;
-                const curr_idx = i;
-                const orig_pt = chain[curr_idx].from;
-
-                const P_int = getIntersection(offset_geometries[prev_idx], offset_geometries[curr_idx], orig_pt);
-                new_vertices.push(P_int);
-            }
-
-            for (let i = 0; i < n; i++) {
-                const prev_idx = (i - 1 + n) % n;
-                const curr_idx = i;
-                const joint = new_vertices[curr_idx];
-
-                chain[prev_idx].to.x = joint.x;
-                chain[prev_idx].to.y = joint.y;
-                chain[curr_idx].from.x = joint.x;
-                chain[curr_idx].from.y = joint.y;
-            }
-        } else {
-            for (let i = 1; i < n; i++) {
-                const orig_pt = chain[i].from;
-                const P_int = getIntersection(offset_geometries[i-1], offset_geometries[i], orig_pt);
-                
-                chain[i-1].to.x = P_int.x;
-                chain[i-1].to.y = P_int.y;
-                chain[i].from.x = P_int.x;
-                chain[i].from.y = P_int.y;
-            }
-            if (offset_geometries[0].type === "LINE") {
-                chain[0].from.x = offset_geometries[0].p1.x;
-                chain[0].from.y = offset_geometries[0].p1.y;
-            }
-            if (offset_geometries[n-1].type === "LINE") {
-                chain[n-1].to.x = offset_geometries[n-1].p2.x;
-                chain[n-1].to.y = offset_geometries[n-1].p2.y;
-            }
-        }
-
-        for (let i = 0; i < n; i++) {
-            const seg = chain[i];
-            const geom = offset_geometries[i];
-            if (seg.type === 'G2' || seg.type === 'G3') {
-                if (geom && geom.type === 'ARC') {
-                    const center = geom.center;
-                    const R_new = geom.radius;
-
-                    let newI = center.x - seg.from.x;
-                    let newJ = center.y - seg.from.y;
-
-                    const origI = geom.orig_I !== null ? geom.orig_I : 0;
-                    const origJ = geom.orig_J !== null ? geom.orig_J : 0;
-
-                    if (Math.abs(origI) < 1e-4) newI = 0;
-                    if (Math.abs(origJ) < 1e-4) newJ = 0;
-
-                    if (R_new <= 0.1) {
-                        seg.type = 'G1';
-                        seg.I = null;
-                        seg.J = null;
-                        seg.R = null;
-                    } else {
-                        seg.I = newI;
-                        seg.J = newJ;
-                        if (geom.orig_R_val !== null) {
-                            seg.R = Math.sign(geom.orig_R_val) * R_new;
-                        }
-
-                        const new_center = { x: seg.from.x + newI, y: seg.from.y + newJ };
-                        const R_actual = Math.sqrt(newI * newI + newJ * newJ);
-                        const end_vector = { x: seg.to.x - new_center.x, y: seg.to.y - new_center.y };
-                        const end_dist = Math.sqrt(end_vector.x**2 + end_vector.y**2);
-                        if (end_dist > 1e-5) {
-                            seg.to.x = new_center.x + (end_vector.x / end_dist) * R_actual;
-                            seg.to.y = new_center.y + (end_vector.y / end_dist) * R_actual;
-
-                            const next_idx = i + 1;
-                            if (loop.isClosed) {
-                                const cyclic_next = next_idx % n;
-                                chain[cyclic_next].from.x = seg.to.x;
-                                chain[cyclic_next].from.y = seg.to.y;
-                            } else {
-                                if (next_idx < n) {
-                                    chain[next_idx].from.x = seg.to.x;
-                                    chain[next_idx].from.y = seg.to.y;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    function propagateOffsets(origPath, modifiedPath) {
-        for (let i = 0; i < modifiedPath.length; i++) {
-            const hasFromOffset = Math.abs(modifiedPath[i].from.x - origPath[i].from.x) > 1e-6 || 
-                                  Math.abs(modifiedPath[i].from.y - origPath[i].from.y) > 1e-6;
-            if (hasFromOffset) {
-                const offX = modifiedPath[i].from.x - origPath[i].from.x;
-                const offY = modifiedPath[i].from.y - origPath[i].from.y;
-                let prevIdx = i - 1;
-                let currentTargetXY = { ...origPath[i].from };
-                
-                while (prevIdx >= 0) {
-                    const distTo = Math.sqrt(
-                        (origPath[prevIdx].to.x - currentTargetXY.x)**2 + 
-                        (origPath[prevIdx].to.y - currentTargetXY.y)**2
-                    );
-                    if (distTo < 1e-4) {
-                        modifiedPath[prevIdx].to.x = origPath[prevIdx].to.x + offX;
-                        modifiedPath[prevIdx].to.y = origPath[prevIdx].to.y + offY;
-                        
-                        const distFrom = Math.sqrt(
-                            (origPath[prevIdx].from.x - currentTargetXY.x)**2 + 
-                            (origPath[prevIdx].from.y - currentTargetXY.y)**2
-                        );
-                        if (distFrom < 1e-4) {
-                            modifiedPath[prevIdx].from.x = origPath[prevIdx].from.x + offX;
-                            modifiedPath[prevIdx].from.y = origPath[prevIdx].from.y + offY;
-                            prevIdx--;
-                        } else {
-                            break;
-                        }
-                    } else {
-                        break;
-                    }
-                }
-            }
-        }
-
-        for (let i = modifiedPath.length - 1; i >= 0; i--) {
-            const hasToOffset = Math.abs(modifiedPath[i].to.x - origPath[i].to.x) > 1e-6 || 
-                                Math.abs(modifiedPath[i].to.y - origPath[i].to.y) > 1e-6;
-            if (hasToOffset) {
-                const offX = modifiedPath[i].to.x - origPath[i].to.x;
-                const offY = modifiedPath[i].to.y - origPath[i].to.y;
-                let nextIdx = i + 1;
-                let currentTargetXY = { ...origPath[i].to };
-                
-                while (nextIdx < modifiedPath.length) {
-                    const distFrom = Math.sqrt(
-                        (origPath[nextIdx].from.x - currentTargetXY.x)**2 + 
-                        (origPath[nextIdx].from.y - currentTargetXY.y)**2
-                    );
-                    if (distFrom < 1e-4) {
-                        modifiedPath[nextIdx].from.x = origPath[nextIdx].from.x + offX;
-                        modifiedPath[nextIdx].from.y = origPath[nextIdx].from.y + offY;
-                        
-                        const distTo = Math.sqrt(
-                            (origPath[nextIdx].to.x - currentTargetXY.x)**2 + 
-                            (origPath[nextIdx].to.y - currentTargetXY.y)**2
-                        );
-                        if (distTo < 1e-4) {
-                            modifiedPath[nextIdx].to.x = origPath[nextIdx].to.x + offX;
-                            modifiedPath[nextIdx].to.y = origPath[nextIdx].to.y + offY;
-                            nextIdx++;
-                        } else {
-                            break;
-                        }
-                    } else {
-                        break;
-                    }
-                }
-            }
-        }
-    }
-
-    function applyTwoStepCutterCompensation(pathData) {
-        const toolChangeEnable = document.getElementById('toolChangeEnable') && document.getElementById('toolChangeEnable').checked;
-        
-        const cloneSegments = (segs) => segs.map(s => ({
-            from: { ...s.from },
-            to: { ...s.to },
-            f: s.f,
-            type: s.type,
-            I: s.I,
-            J: s.J,
-            R: s.R,
-            isStartOrEndHome: s.isStartOrEndHome,
-            lineIdx: s.lineIdx,
-            hasZ: s.hasZ
-        }));
-
-        if (!toolChangeEnable) {
-            return { workpiecePath: cloneSegments(pathData), newToolPath: pathData };
-        }
-
-        const origToolDia = parseFloat(document.getElementById('origToolDiaInput').value) || 6.35;
-        let newToolDia = parseFloat(document.getElementById('newToolDiaInput').value) || 3.175;
-        newToolDia = Math.max(0.1, newToolDia);
-
-        const R_orig = origToolDia / 2;
-        const R_new = newToolDia / 2;
-
-        const chains = [];
-        let currentChain = null;
-
-        pathData.forEach((seg, idx) => {
-            const dx = seg.to.x - seg.from.x;
-            const dy = seg.to.y - seg.from.y;
-            const dXY = Math.sqrt(dx * dx + dy * dy);
-            const isXYMove = dXY > 1e-4;
-
-            const isCut = (seg.from.z < -0.001 || seg.to.z < -0.001) && seg.type !== 'G0' && !seg.isStartOrEndHome && isXYMove;
-            if (isCut) {
-                if (!currentChain) {
-                    currentChain = [];
-                    chains.push(currentChain);
-                }
-                currentChain.push(seg);
-            } else {
-                currentChain = null;
-            }
-        });
-
-        const closedLoops = [];
-        chains.forEach(chain => {
-            if (chain.length < 3) return;
-            const first = chain[0].from;
-            const last = chain[chain.length - 1].to;
-            const dist = Math.sqrt((first.x - last.x)**2 + (first.y - last.y)**2);
-            const isClosed = dist < 0.5;
-
-            const poly = chain.map(seg => ({ x: seg.from.x, y: seg.from.y }));
-            const cleanPoly = [];
-            poly.forEach(pt => {
-                if (cleanPoly.length === 0 || Math.sqrt((pt.x - cleanPoly[cleanPoly.length-1].x)**2 + (pt.y - cleanPoly[cleanPoly.length-1].y)**2) > 1e-4) {
-                    cleanPoly.push(pt);
-                }
-            });
-
-            if (cleanPoly.length >= 3) {
-                const area = getPolygonSignedArea(cleanPoly);
-                if (Math.abs(area) > 1e-4) {
-                    closedLoops.push({
-                        chain: chain,
-                        poly: cleanPoly,
-                        area: area,
-                        isCCW: area > 0,
-                        isInner: false,
-                        isClosed: isClosed
-                    });
-                }
-            }
-        });
-
-        closedLoops.forEach((loop, idx) => {
-            if (!loop.isClosed) return;
-            const poly = loop.poly;
-            const V0 = poly[0];
-            const V1 = poly[1];
-            let dx = V1.x - V0.x;
-            let dy = V1.y - V0.y;
-            let len = Math.sqrt(dx*dx + dy*dy);
-            let nx = 0, ny = 0;
-            if (len > 1e-6) {
-                if (loop.isCCW) {
-                    nx = dy / len; ny = -dx / len;
-                } else {
-                    nx = -dy / len; ny = dx / len;
-                }
-            }
-            const testPt = { x: V0.x - nx * 0.1, y: V0.y - ny * 0.1 };
-
-            let containmentCount = 0;
-            closedLoops.forEach((otherLoop, otherIdx) => {
-                if (!otherLoop.isClosed || idx === otherIdx) return;
-                if (isPointInPolygon(testPt, otherLoop.poly)) {
-                    containmentCount++;
-                }
-            });
-
-            loop.isInner = (containmentCount % 2 === 1);
-        });
-
-        const workpiecePath = cloneSegments(pathData);
-        const newToolPath = cloneSegments(pathData);
-
-        const mapChainToClone = (origChain, cloneList) => {
-            return origChain.map(origSeg => {
-                const origIdx = pathData.indexOf(origSeg);
-                return cloneList[origIdx];
-            });
-        };
-
-        closedLoops.forEach(loop => {
-            const workpieceChain = mapChainToClone(loop.chain, workpiecePath);
-            const toolChain = mapChainToClone(loop.chain, newToolPath);
-
-            const d1 = loop.isInner ? R_orig : -R_orig;
-            const d2 = loop.isInner ? -R_new : R_new;
-
-            applySingleOffsetChain(workpieceChain, loop, d1);
-
-            workpieceChain.forEach((wpSeg, sIdx) => {
-                toolChain[sIdx].from = { ...wpSeg.from };
-                toolChain[sIdx].to = { ...wpSeg.to };
-                toolChain[sIdx].I = wpSeg.I;
-                toolChain[sIdx].J = wpSeg.J;
-                toolChain[sIdx].R = wpSeg.R;
-                toolChain[sIdx].type = wpSeg.type;
-            });
-
-            applySingleOffsetChain(toolChain, loop, d2);
-        });
-
-        propagateOffsets(pathData, workpiecePath);
-        propagateOffsets(pathData, newToolPath);
-
-        return { workpiecePath, newToolPath };
     }
 
     function applyThicknessAdjustment(pathData) {
@@ -1730,13 +1230,13 @@
                             rebuiltSegments.push(finalLift);
                         }
                     } else {
-                        rebuiltSegments.push(...block.segments);
+                        for (let k = 0; k < block.segments.length; k++) rebuiltSegments.push(block.segments[k]);
                     }
                 } else {
-                    rebuiltSegments.push(...block.segments);
+                    for (let k = 0; k < block.segments.length; k++) rebuiltSegments.push(block.segments[k]);
                 }
             } else {
-                rebuiltSegments.push(...block.segments);
+                for (let k = 0; k < block.segments.length; k++) rebuiltSegments.push(block.segments[k]);
             }
         });
 
@@ -1767,16 +1267,7 @@
         });
     }
 
-    function getDistanceToArc(pt, arcSeg) {
-        if (!arcSeg) return Infinity;
-        const center = findArcCenter(arcSeg.from, arcSeg.to, arcSeg.I, arcSeg.J, arcSeg.R, arcSeg.type === 'G2');
-        if (!center) return Infinity;
-        const r = Math.sqrt((arcSeg.from.x - center.x)**2 + (arcSeg.from.y - center.y)**2);
-        const ptDistToCenter = Math.sqrt((pt.x - center.x)**2 + (pt.y - center.y)**2);
-        return Math.abs(ptDistToCenter - r);
-    }
-
-    function splitSegmentWithTabs(seg, tabs, stepdown, R, arcSegs) {
+    function splitSegmentWithTabs(seg, tabs, stepdown, R) {
         if (seg.type !== 'G1') return [seg];
 
         const dx = seg.to.x - seg.from.x;
@@ -1889,6 +1380,21 @@
         if (!tabEnable) return pathData;
 
         const arcSegs = pathData.filter(seg => seg.type === 'G2' || seg.type === 'G3');
+        // 圓弧的圓心與半徑只算一次 (原本每次比對都重新計算)
+        const arcInfos = [];
+        arcSegs.forEach(arc => {
+            const c = findArcCenter(arc.from, arc.to, arc.I, arc.J, arc.R, arc.type === 'G2');
+            if (!c) return;
+            arcInfos.push({ cx: c.x, cy: c.y, r: Math.sqrt((arc.from.x - c.x)**2 + (arc.from.y - c.y)**2) });
+        });
+        const nearAnyArc = (a, b) => {
+            for (let k = 0; k < arcInfos.length; k++) {
+                const ai = arcInfos[k];
+                if (Math.abs(Math.sqrt((a.x - ai.cx)**2 + (a.y - ai.cy)**2) - ai.r) < 0.5 ||
+                    Math.abs(Math.sqrt((b.x - ai.cx)**2 + (b.y - ai.cy)**2) - ai.r) < 0.5) return true;
+            }
+            return false;
+        };
         const toolDia = parseFloat(document.getElementById('toolDiaInput')?.value) || 3.175;
         const tabWidth = toolDia + 6;
         const R = tabWidth / 2;
@@ -1953,15 +1459,7 @@
                         y: cand.seg.from.y + u2 * (cand.seg.to.y - cand.seg.from.y)
                     };
 
-                    let nearArc = false;
-                    if (arcSegs && arcSegs.length > 0) {
-                        for (const arc of arcSegs) {
-                            if (getDistanceToArc(pt1, arc) < 0.5 || getDistanceToArc(pt2, arc) < 0.5) {
-                                nearArc = true;
-                                break;
-                            }
-                        }
-                    }
+                    const nearArc = nearAnyArc(pt1, pt2);
 
                     let foundSafeOffset = !nearArc;
                     if (!foundSafeOffset) {
@@ -1983,15 +1481,7 @@
                                 y: cand.seg.from.y + testU2 * (cand.seg.to.y - cand.seg.from.y)
                             };
 
-                            let testNearArc = false;
-                            if (arcSegs && arcSegs.length > 0) {
-                                for (const arc of arcSegs) {
-                                    if (getDistanceToArc(testPt1, arc) < 0.5 || getDistanceToArc(testPt2, arc) < 0.5) {
-                                        testNearArc = true;
-                                        break;
-                                    }
-                                }
-                            }
+                            const testNearArc = nearAnyArc(testPt1, testPt2);
 
                             if (!testNearArc) {
                                 ptMid.x = cand.seg.from.x + tCenter * (cand.seg.to.x - cand.seg.from.x);
@@ -2023,14 +1513,14 @@
                 currentRun.forEach(seg => {
                     const isFinalPass = Math.abs(seg.to.z - Z_deepest) < 0.01;
                     if (isFinalPass && tabs.length > 0 && seg.type !== 'G2' && seg.type !== 'G3') {
-                        const splitParts = splitSegmentWithTabs(seg, tabs, stepdown, R, arcSegs);
-                        result.push(...splitParts);
+                        const splitParts = splitSegmentWithTabs(seg, tabs, stepdown, R);
+                        for (let k = 0; k < splitParts.length; k++) result.push(splitParts[k]);
                     } else {
                         result.push(seg);
                     }
                 });
             } else {
-                result.push(...currentRun);
+                for (let k = 0; k < currentRun.length; k++) result.push(currentRun[k]);
             }
 
             currentRun = [];
@@ -2082,6 +1572,8 @@
         const offY = parseFloat(document.getElementById('offsetY').value) || 0;
         const rotRad = (parseFloat(document.getElementById('rotationInput').value) || 0) * Math.PI / 180;
         const res = parseFloat(document.getElementById('resInput').value) || 0.1;
+        const cosR = Math.cos(rotRad), sinR = Math.sin(rotRad);
+        const rHeight = getRetractHeight();
 
         const feedrateEnable = document.getElementById('feedrateEnable') && document.getElementById('feedrateEnable').checked;
         const targetFeedrate = parseFloat(document.getElementById('targetFeedrateInput').value) || 1200;
@@ -2091,7 +1583,6 @@
 
         segments.forEach((seg, idx) => {
             let fZ = seg.to.z;
-            const rHeight = getRetractHeight();
             
             if (fZ > 0.0001) {
                 fZ = rHeight;
@@ -2101,8 +1592,8 @@
             if (seg.isStartOrEndHome) {
                 fX = 0; fY = 0;
             } else {
-                fX = (seg.to.x * Math.cos(rotRad) - seg.to.y * Math.sin(rotRad)) * scale + offX;
-                fY = (seg.to.x * Math.sin(rotRad) + seg.to.y * Math.cos(rotRad)) * scale + offY;
+                fX = (seg.to.x * cosR - seg.to.y * sinR) * scale + offX;
+                fY = (seg.to.x * sinR + seg.to.y * cosR) * scale + offY;
             }
 
             const dXY = state.lastX !== null ? Math.sqrt((fX - state.lastX)**2 + (fY - state.lastY)**2) : Infinity;
@@ -2132,8 +1623,8 @@
             if (seg.isStartOrEndHome) {
                 fFromX = 0; fFromY = 0;
             } else {
-                fFromX = (seg.from.x * Math.cos(rotRad) - seg.from.y * Math.sin(rotRad)) * scale + offX;
-                fFromY = (seg.from.y * Math.sin(rotRad) + seg.from.y * Math.cos(rotRad)) * scale + offY;
+                fFromX = (seg.from.x * cosR - seg.from.y * sinR) * scale + offX;
+                fFromY = (seg.from.x * sinR + seg.from.y * cosR) * scale + offY;
             }
 
             const segmentPhysicalXYChanged = state.lastX === null || Math.sqrt((fX - fFromX)**2 + (fY - fFromY)**2) > 0.0001;
@@ -2155,8 +1646,8 @@
                 if (seg.I !== null || seg.J !== null) {
                     const rawI = seg.I || 0;
                     const rawJ = seg.J || 0;
-                    let fI = (rawI * Math.cos(rotRad) - rawJ * Math.sin(rotRad)) * scale;
-                    let fJ = (rawI * Math.sin(rotRad) + rawJ * Math.cos(rotRad)) * scale;
+                    let fI = (rawI * cosR - rawJ * sinR) * scale;
+                    let fJ = (rawI * sinR + rawJ * cosR) * scale;
                     newlineParts.push('I' + formatNum(fI, 4));
                     newlineParts.push('J' + formatNum(fJ, 4));
                 }
@@ -2222,86 +1713,6 @@
         return gcodeLines;
     }
 
-    function getActiveToolDiameter() {
-        const toolChangeEnable = document.getElementById('toolChangeEnable') && document.getElementById('toolChangeEnable').checked;
-        const tabEnable = document.getElementById('tabEnable') && document.getElementById('tabEnable').checked;
-        
-        if (toolChangeEnable) {
-            return parseFloat(document.getElementById('newToolDiaInput').value) || 3.175;
-        } else if (tabEnable) {
-            return parseFloat(document.getElementById('toolDiaInput').value) || 3.175;
-        } else {
-            return parseFloat(document.getElementById('origToolDiaInput').value) || 6.35;
-        }
-    }
-
-    function generateSweptRibbonGeometry(points, width) {
-        const vertices = [];
-        const indices = [];
-        const halfWidth = width / 2;
-
-        if (points.length < 2) return null;
-
-        let totalXYDist = 0;
-        for (let i = 1; i < points.length; i++) {
-            totalXYDist += Math.sqrt((points[i].x - points[i-1].x)**2 + (points[i].y - points[i-1].y)**2);
-        }
-        if (totalXYDist < 1e-4) {
-            return null; 
-        }
-
-        const normals = [];
-        for (let i = 0; i < points.length; i++) {
-            let dir = new THREE.Vector3();
-            if (i === 0) {
-                dir.subVectors(points[1], points[0]);
-            } else if (i === points.length - 1) {
-                dir.subVectors(points[i], points[i-1]);
-            } else {
-                const d1 = new THREE.Vector3().subVectors(points[i], points[i-1]).normalize();
-                const d2 = new THREE.Vector3().subVectors(points[i+1], points[i]).normalize();
-                dir.addVectors(d1, d2);
-            }
-            dir.z = 0; 
-            dir.normalize();
-            
-            if (dir.lengthSq() < 1e-6) {
-                dir.set(1, 0, 0);
-            }
-            
-            const norm = new THREE.Vector3(-dir.y, dir.x, 0).normalize();
-            normals.push(norm);
-        }
-
-        for (let i = 0; i < points.length; i++) {
-            const p = points[i];
-            const norm = normals[i];
-            
-            const leftPt = new THREE.Vector3().addScaledVector(norm, halfWidth).add(p);
-            const rightPt = new THREE.Vector3().addScaledVector(norm, -halfWidth).add(p);
-            
-            vertices.push(leftPt.x, leftPt.y, leftPt.z);
-            vertices.push(rightPt.x, rightPt.y, rightPt.z);
-        }
-
-        for (let i = 0; i < points.length - 1; i++) {
-            const currLeft = i * 2;
-            const currRight = i * 2 + 1;
-            const nextLeft = (i + 1) * 2;
-            const nextRight = (i + 1) * 2 + 1;
-
-            indices.push(currLeft, currRight, nextLeft);
-            indices.push(currRight, nextRight, nextLeft);
-        }
-
-        const geometry = new THREE.BufferGeometry();
-        geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
-        geometry.setIndex(indices);
-        geometry.computeVertexNormals();
-
-        return geometry;
-    }
-
     function processAndPreview() {
         if (!originalGcode) return;
         const scale = parseFloat(document.getElementById('scaleInput').value) || 1;
@@ -2311,13 +1722,16 @@
         const res = parseFloat(document.getElementById('resInput').value) || 0.1;
 
         let pathData = parseGcode(originalGcode);
+        const cosR = Math.cos(rotRad), sinR = Math.sin(rotRad);
 
         pathData = applyThicknessAdjustment(pathData);
         pathData = applyFeedrateAdjustment(pathData);
         pathData = applyTabsToPaths(pathData);
 
-        if (gcodeGroup) scene.remove(gcodeGroup);
+        if (gcodeGroup) { scene.remove(gcodeGroup); disposeObject(gcodeGroup); }
         gcodeGroup = new THREE.Group();
+        // 依顏色把所有線段合併成 3 個 LineSegments (原本每段一個 Line，檔案大時會有數萬個繪製呼叫)
+        const rapidVerts = [], cutVerts = [], tabVerts = [];
 
         let totalDist = 0, totalTime = 0, lastP = { x: 0, y: 0, z: 0 }, isF = true;
 
@@ -2326,8 +1740,8 @@
                 return { x: 0, y: 0, z: p.z };
             }
             return {
-                x: (p.x * Math.cos(rotRad) - p.y * Math.sin(rotRad)) * scale + offX,
-                y: (p.x * Math.sin(rotRad) + p.y * Math.cos(rotRad)) * scale + offY,
+                x: (p.x * cosR - p.y * sinR) * scale + offX,
+                y: (p.x * sinR + p.y * cosR) * scale + offY,
                 z: p.z
             };
         };
@@ -2360,20 +1774,27 @@
                     segD += points[i].distanceTo(points[i-1]);
                 }
             } else {
-                points = [new THREE.Vector3(p1.x, p1.y, p1.z), new THREE.Vector3(p2.x, p2.y, p2.z)];
+                points = [p1, p2];
                 segD = Math.sqrt((p2.x - p1.x)**2 + (p2.y - p1.y)**2 + (p2.z - p1.z)**2);
             }
 
             totalDist += segD;
             if (seg.f > 0) totalTime += segD / (seg.f / 60);
 
-            let color = (seg.type === 'G0') ? 0x3b82f6 : (seg.isTab ? 0xf59e0b : 0x10b981);
-
-            const geo = new THREE.BufferGeometry().setFromPoints(points);
-            const lineMat = new THREE.LineBasicMaterial({ color: color, linewidth: seg.isTab ? 3 : 1 });
-            gcodeGroup.add(new THREE.Line(geo, lineMat));
+            const bucket = (seg.type === 'G0') ? rapidVerts : (seg.isTab ? tabVerts : cutVerts);
+            for (let i = 1; i < points.length; i++) {
+                const a = points[i-1], b = points[i];
+                bucket.push(a.x, a.y, a.z, b.x, b.y, b.z);
+            }
 
             lastP = { ...p2 }; isF = false;
+        });
+
+        [[rapidVerts, 0x3b82f6], [cutVerts, 0x10b981], [tabVerts, 0xf59e0b]].forEach(([verts, color]) => {
+            if (!verts.length) return;
+            const geo = new THREE.BufferGeometry();
+            geo.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+            gcodeGroup.add(new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color: color })));
         });
 
         // 根據加工路徑範圍動態調整底面格線的大小與中心位置
@@ -2388,6 +1809,9 @@
         });
 
         if (isFinite(minX) && isFinite(maxX) && isFinite(minY) && isFinite(maxY)) {
+            // 格線範圍必須同時涵蓋「路徑」與「座標原點」，才看得到兩者的相對位置
+            minX = Math.min(minX, 0); maxX = Math.max(maxX, 0);
+            minY = Math.min(minY, 0); maxY = Math.max(maxY, 0);
             const spanX = maxX - minX;
             const spanY = maxY - minY;
             const maxSpan = Math.max(spanX, spanY, 50);
@@ -2396,8 +1820,9 @@
             // 確保總邊長為 100mm 的倍數，並將網格數量設定為 currentGridSize / 50，確保每一格精確為 50mm
             currentGridSize = Math.max(200, Math.ceil(rawSize / 100) * 100);
             currentGridDivisions = currentGridSize / 50;
-            currentGridCenterX = (minX + maxX) / 2;
-            currentGridCenterY = (minY + maxY) / 2;
+            // 格線中心對齊 50mm 的倍數，使格線與座標原點對齊 (而不是跟著路徑中心跑)
+            currentGridCenterX = Math.round(((minX + maxX) / 2) / 50) * 50;
+            currentGridCenterY = Math.round(((minY + maxY) / 2) / 50) * 50;
 
             updateThreeGrid();
         }
@@ -2405,6 +1830,7 @@
         displayStats(totalTime, totalDist);
         scene.add(gcodeGroup);
         document.getElementById('downloadBtn').disabled = false;
+        requestRender();
     }
 
     function generateGcode() {
@@ -2437,21 +1863,29 @@
             range: range,
             segments: []
         }));
-        const nonContourSegments = [];
+
+        // 每一行 G-code 屬於哪一個輪廓 (多個範圍重疊時，取陣列中最先符合者，與原邏輯一致)
+        const ownerOfLine = new Int32Array(lines.length).fill(-1);
+        processedContours.forEach((pc, ci) => {
+            const lo = Math.max(0, pc.range.start), hi = Math.min(lines.length - 1, pc.range.end);
+            for (let l = lo; l <= hi; l++) if (ownerOfLine[l] === -1) ownerOfLine[l] = ci;
+        });
+        // 非輪廓線段依行號建立索引，避免每一行都掃描整個陣列
+        const nonContourByLine = new Map();
 
         pathData.forEach(seg => {
             let mapped = false;
             if (seg.lineIdx !== undefined) {
-                for (let pc of processedContours) {
-                    if (seg.lineIdx >= pc.range.start && seg.lineIdx <= pc.range.end) {
-                        pc.segments.push(seg);
-                        mapped = true;
-                        break;
-                    }
+                const ci = (seg.lineIdx >= 0 && seg.lineIdx < lines.length) ? ownerOfLine[seg.lineIdx] : -1;
+                if (ci !== -1) {
+                    processedContours[ci].segments.push(seg);
+                    mapped = true;
                 }
             }
-            if (!mapped) {
-                nonContourSegments.push(seg);
+            if (!mapped && seg.lineIdx !== undefined) {
+                let arr = nonContourByLine.get(seg.lineIdx);
+                if (!arr) { arr = []; nonContourByLine.set(seg.lineIdx, arr); }
+                arr.push(seg);
             }
         });
 
@@ -2492,28 +1926,22 @@
                 }
             }
 
-            let activeContour = null;
-            for (let pc of processedContours) {
-                if (i >= pc.range.start && i <= pc.range.end) {
-                    activeContour = pc;
-                    break;
-                }
-            }
+            const activeContour = ownerOfLine[i] !== -1 ? processedContours[ownerOfLine[i]] : null;
 
             if (activeContour) {
                 if (i === activeContour.range.start) {
                     const compiledLines = compileSegmentsToGcode(activeContour.segments, compileState);
-                    output.push(...compiledLines);
+                    for (let k = 0; k < compiledLines.length; k++) output.push(compiledLines[k]);
                 }
                 continue;
             }
 
             const isMovementCmd = /G0|G1|G2|G3|X|Y|Z/i.test(cmd);
             if (isMovementCmd) {
-                const matches = nonContourSegments.filter(s => s.lineIdx === i);
+                const matches = nonContourByLine.get(i) || [];
                 if (matches.length > 0) {
                     const compiled = compileSegmentsToGcode(matches, compileState);
-                    output.push(...compiled);
+                    for (let k = 0; k < compiled.length; k++) output.push(compiled[k]);
                 } else {
                     output.push(line);
                 }
@@ -2547,25 +1975,27 @@
         }
 
         const cleanOutput = [];
+        let normLast = null; // 已輸出的最後一行 (正規化後)，避免每次重複對上一行做字串處理
         for (let i = 0; i < output.length; i++) {
             const currentLine = output[i].trim();
             
             if (currentLine === "") {
-                if (cleanOutput.length > 0 && cleanOutput[cleanOutput.length - 1].trim() === "") {
+                if (cleanOutput.length > 0 && normLast === "") {
                     continue; 
                 }
                 cleanOutput.push(output[i]);
+                normLast = "";
                 continue;
             }
             
             const normCurrent = currentLine.replace(/\s+/g, ' ').toUpperCase();
-            const normLast = cleanOutput.length > 0 ? cleanOutput[cleanOutput.length - 1].trim().replace(/\s+/g, ' ').toUpperCase() : null;
             
             if (normCurrent === normLast) {
                 continue; 
             }
             
             cleanOutput.push(output[i]);
+            normLast = normCurrent;
         }
 
         return cleanOutput.join('\n');
@@ -2583,7 +2013,7 @@
                 
                 const loader = new THREE.TextureLoader();
                 loader.load(e.target.result, function(texture) {
-                    if (refMesh) scene.remove(refMesh);
+                    if (refMesh) { scene.remove(refMesh); disposeObject(refMesh); }
 
                     const geo = new THREE.PlaneGeometry(1, 1);
                     const mat = new THREE.MeshBasicMaterial({
@@ -2599,6 +2029,7 @@
 
                     updateImageDimensions();
                     scene.add(refMesh);
+                    requestRender();
 
                     document.getElementById('imgControls').classList.remove('hidden');
                 });
@@ -2612,6 +2043,7 @@
         if (!refMesh) return;
         const width = parseFloat(document.getElementById('imgWidthInput').value) || 100;
         refMesh.scale.set(width, width * refAspect, 1);
+        requestRender();
     }
 
     document.getElementById('fileInput').addEventListener('change', e => {
@@ -2623,6 +2055,7 @@
         if (cameraTarget) cameraTarget.set(0, 0, 0);
         if (camera) camera.position.set(200, -200, 200);
         if (camera && cameraTarget) camera.lookAt(cameraTarget);
+        requestRender();
 
         const r = new FileReader(); 
         r.onload = ev => { 
@@ -2675,6 +2108,7 @@
         document.getElementById('opacityVal').innerText = val.toFixed(2);
         if (refMesh) {
             refMesh.material.opacity = val;
+            requestRender();
         }
     });
 
@@ -2688,8 +2122,8 @@
         processAndPreview(); 
     });
 
-    document.getElementById('targetThickInput').addEventListener('input', processAndPreview);
-    document.getElementById('targetLayersInput').addEventListener('input', processAndPreview);
+    document.getElementById('targetThickInput').addEventListener('input', scheduleProcess);
+    document.getElementById('targetLayersInput').addEventListener('input', scheduleProcess);
 
     document.getElementById('feedrateEnable').addEventListener('change', e => {
         const feedrateControls = document.getElementById('feedrateControls');
@@ -2701,8 +2135,8 @@
         processAndPreview(); 
     });
 
-    document.getElementById('targetFeedrateInput').addEventListener('input', processAndPreview);
-    document.getElementById('targetZFeedrateInput').addEventListener('input', processAndPreview);
+    document.getElementById('targetFeedrateInput').addEventListener('input', scheduleProcess);
+    document.getElementById('targetZFeedrateInput').addEventListener('input', scheduleProcess);
 
     document.getElementById('retractEnable').addEventListener('change', e => {
         const retractControls = document.getElementById('retractControls');
@@ -2714,7 +2148,7 @@
         processAndPreview(); 
     });
 
-    document.getElementById('retractHeightInput').addEventListener('input', processAndPreview);
+    document.getElementById('retractHeightInput').addEventListener('input', scheduleProcess);
 
     document.getElementById('tabEnable').addEventListener('change', e => {
         const tabControls = document.getElementById('tabControls');
@@ -2726,7 +2160,7 @@
         processAndPreview(); 
     });
 
-    document.getElementById('toolDiaInput').addEventListener('input', processAndPreview);
+    document.getElementById('toolDiaInput').addEventListener('input', scheduleProcess);
     document.getElementById('applyBtn').addEventListener('click', processAndPreview);
     
     document.getElementById('centerBtn').addEventListener('click', () => {
@@ -2755,6 +2189,7 @@
             if (cameraTarget) cameraTarget.set(0, 0, 0);
             if (camera) camera.position.set(200, -200, 200);
             if (camera && cameraTarget) camera.lookAt(cameraTarget);
+            requestRender();
 
             processAndPreview();
         }
@@ -2762,14 +2197,16 @@
 
     document.getElementById('downloadBtn').addEventListener('click', () => {
         const b = new Blob([generateGcode()], { type: 'text/plain' });
-        const a = document.createElement('a'); a.href = URL.createObjectURL(b);
+        const a = document.createElement('a'); const blobUrl = URL.createObjectURL(b); a.href = blobUrl;
         a.download = `${originalFileName}_re.gcode`; a.click();
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
     });
 
     window.addEventListener('resize', () => {
         const c = document.getElementById('preview-container');
         camera.aspect = c.clientWidth / c.clientHeight; camera.updateProjectionMatrix();
         renderer.setSize(c.clientWidth, c.clientHeight);
+        requestRender();
     });
 
     window.onload = () => {
