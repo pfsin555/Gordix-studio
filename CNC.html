@@ -123,24 +123,26 @@
                     <div class="space-y-4">
                         <div>
                             <label for="file-input" class="file-custom-label">
-                                <span id="file-label-text" data-i18n="chooseFile">選擇檔案</span>
+                                <span data-i18n="chooseFile">選擇檔案</span>
                             </label>
                             <input type="file" id="file-input" accept="image/*,.svg,.dxf">
                             <p id="file-name-display" class="text-[10px] text-slate-400 dark:text-slate-500 mt-2 truncate text-center" data-i18n="noFile">尚未選擇任何檔案</p>
                         </div>
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-[10px] text-slate-500 dark:text-slate-400 font-bold mb-1" data-i18n="targetWidth">整體寬 (mm)</label>
-                                <input type="number" id="target-width" value="100">
+                        <div>
+                            <label class="block text-[10px] text-slate-500 dark:text-slate-400 font-bold mb-1" data-i18n="targetWidth">整體寬 (mm)</label>
+                            <input type="number" id="target-width" value="100">
+                        </div>
+                        <div id="threshold-container">
+                            <div class="flex justify-between items-center mb-1">
+                                <label class="text-[10px] text-slate-500 dark:text-slate-400 font-bold" for="threshold" data-i18n="threshold">黑白門檻</label>
+                                <span id="threshold-val" class="text-[10px] font-mono font-bold text-orange-500">128</span>
                             </div>
-                            <div id="threshold-container">
-                                <label class="block text-[10px] text-slate-500 dark:text-slate-400 font-bold mb-1" data-i18n="threshold">黑白門檻</label>
-                                <input type="number" id="threshold" value="128" min="0" max="255">
-                            </div>
+                            <input type="range" id="threshold" min="0" max="255" step="1" value="128" class="accent-orange-600">
                         </div>
                         <div>
                             <div class="flex justify-between items-center mb-1">
-                                <label class="text-[10px] text-slate-500 dark:text-slate-400 font-bold" data-i18n="smoothness">平滑簡化度</label>
+                                <label class="text-[10px] text-slate-500 dark:text-slate-400 font-bold" for="smooth-range" data-i18n="smoothness">平滑簡化度</label>
+                                <span id="smooth-val" class="text-[10px] font-mono font-bold text-orange-500">0.10</span>
                             </div>
                             <input type="range" id="smooth-range" min="0.01" max="2.0" step="0.01" value="0.1" class="accent-orange-600">
                             <div class="flex justify-between items-center text-[9px] text-slate-400 dark:text-slate-500 mt-1 font-medium">
@@ -315,7 +317,9 @@
             const path = []; let cx = sx, cy = sy;
             const dirs = [[0,-1],[1,-1],[1,0],[1,1],[0,1],[-1,1],[-1,0],[-1,-1]];
             let d = 7;
-            for(let i=0; i<30000; i++){
+            // 步數上限依圖片大小決定 (原本固定 30000，較長的輪廓會被截斷)；仍保留上限以防異常情況無限迴圈
+            const maxSteps = Math.max(30000, Math.min(w * h * 2, 2000000));
+            for(let i=0; i<maxSteps; i++){
                 visited[cy*w+cx] = 1; path.push({x:cx, y:cy});
                 let found = false;
                 for(let j=0; j<8; j++){
@@ -328,33 +332,49 @@
         }
 
         function laplacianSmooth(points, iterations = 3) {
-            if (points.length < 3) return points;
-            let current = JSON.parse(JSON.stringify(points));
+            const n = points.length;
+            if (n < 3) return points;
+            // 以兩組緩衝區交替運算，避免每輪都深拷貝整條路徑
+            let current = new Array(n), next = new Array(n);
+            for (let i = 0; i < n; i++) {
+                current[i] = { x: points[i].x, y: points[i].y };
+                next[i] = { x: points[i].x, y: points[i].y };
+            }
             for (let iter = 0; iter < iterations; iter++) {
-                let next = JSON.parse(JSON.stringify(current));
-                for (let i = 1; i < current.length - 1; i++) {
+                for (let i = 1; i < n - 1; i++) {
                     next[i].x = 0.5 * current[i].x + 0.25 * (current[i - 1].x + current[i + 1].x);
                     next[i].y = 0.5 * current[i].y + 0.25 * (current[i - 1].y + current[i + 1].y);
                 }
-                current = next;
+                const t = current; current = next; next = t;
+                // 端點在每輪中不變，next 的端點已與 current 相同
             }
             return current;
         }
 
         // DP 折線簡化演算法
         function simplifyPath(points, tolerance) {
-            if (points.length <= 2) return points;
-            let maxSqDist = 0, index = 0;
-            for (let i = 1; i < points.length - 1; i++) {
-                const sqDist = getSqSegDist(points[i], points[0], points[points.length - 1]);
-                if (sqDist > maxSqDist) { index = i; maxSqDist = sqDist; }
+            const n = points.length;
+            if (n <= 2) return points;
+            const tol2 = tolerance * tolerance;
+            const keep = new Uint8Array(n);
+            keep[0] = 1; keep[n - 1] = 1;
+            const stack = [0, n - 1];
+            while (stack.length) {
+                const hi = stack.pop(), lo = stack.pop();
+                if (hi - lo < 2) continue;
+                let maxSqDist = 0, index = lo;
+                for (let i = lo + 1; i < hi; i++) {
+                    const sqDist = getSqSegDist(points[i], points[lo], points[hi]);
+                    if (sqDist > maxSqDist) { index = i; maxSqDist = sqDist; }
+                }
+                if (maxSqDist > tol2) {
+                    keep[index] = 1;
+                    stack.push(lo, index, index, hi);
+                }
             }
-            if (maxSqDist > tolerance * tolerance) {
-                const res1 = simplifyPath(points.slice(0, index + 1), tolerance);
-                const res2 = simplifyPath(points.slice(index), tolerance);
-                return res1.slice(0, res1.length - 1).concat(res2);
-            }
-            return [points[0], points[points.length - 1]];
+            const out = [];
+            for (let i = 0; i < n; i++) if (keep[i]) out.push(points[i]);
+            return out;
         }
 
         function getSqSegDist(p, p1, p2) {
@@ -372,7 +392,7 @@
             if (path.length < 2) return path;
             let filtered = [path[0]], lastPt = path[0];
             for (let i = 1; i < path.length; i++) {
-                const pt = path[i], dist = Math.sqrt(Math.pow(pt.x - lastPt.x, 2) + Math.pow(pt.y - lastPt.y, 2));
+                const pt = path[i], ddx = pt.x - lastPt.x, ddy = pt.y - lastPt.y, dist = Math.sqrt(ddx * ddx + ddy * ddy);
                 if (dist >= resolution || i === path.length - 1) { filtered.push(pt); lastPt = pt; }
             }
             return filtered;
@@ -409,31 +429,6 @@
                 y: (partA._bounds.minY + partA._bounds.maxY) / 2
             };
             return isPointInPolygon(centerPt, partB.rawPath);
-        }
-
-        // --- 橋位 (TAB) 計算與智慧段切分演算法 ---
-        function subdividePath(path, maxLen = 0.5) {
-            if (path.length < 2) return path;
-            const result = [path[0]];
-            for (let i = 0; i < path.length - 1; i++) {
-                const p1 = path[i];
-                const p2 = path[i + 1];
-                const dx = p2.x - p1.x;
-                const dy = p2.y - p1.y;
-                const len = Math.sqrt(dx * dx + dy * dy);
-                if (len > maxLen) {
-                    const divisions = Math.ceil(len / maxLen);
-                    for (let j = 1; j < divisions; j++) {
-                        const t = j / divisions;
-                        result.push({
-                            x: p1.x + dx * t,
-                            y: p1.y + dy * t
-                        });
-                    }
-                }
-                result.push(p2);
-            }
-            return result;
         }
 
         // 計算點到線段的最短距離，供 insertTabsIntoPath 判斷相交
@@ -607,8 +602,6 @@
                 groupContainmentOpt: "依內外關係分組",
                 groupLayerOpt: "依圖層分組",
                 layerPrefix: "圖層",
-                internalParts: "內部零件",
-                externalParts: "外部零件",
                 quickApply: "快速套用",
                 depthLevel: "深度階層"
             },
@@ -657,8 +650,6 @@
                 groupContainmentOpt: "Group by Containment",
                 groupLayerOpt: "Group by Layer",
                 layerPrefix: "Layer",
-                internalParts: "Inner Shape",
-                externalParts: "Outer Shape",
                 quickApply: "Quick Apply",
                 depthLevel: "Nesting Depth"
             }
@@ -764,9 +755,7 @@
         };
 
         // --- 核心解析流程 ---
-        document.getElementById('process-img-btn').onclick = async () => {
-            if(!rawFileData) return;
-            
+        async function doProcess() {
             const targetW = parseFloat(document.getElementById('target-width').value);
             const smoothTol = parseFloat(document.getElementById('smooth-range').value);
             
@@ -784,220 +773,268 @@
             if (vectorPaths.length > 0) {
                 processVectorIntoParts(vectorPaths);
             }
-        };
+        }
+
+        // 解析進行中又有新的調整時，只記下「需要再跑一次」，結束後以最新參數重跑，避免重疊執行
+        let processing = false, processPending = false;
+        async function runProcess() {
+            if (!rawFileData) return;
+            if (processing) { processPending = true; return; }
+            processing = true;
+            try {
+                do {
+                    processPending = false;
+                    await doProcess();
+                } while (processPending);
+            } finally {
+                processing = false;
+            }
+        }
+        document.getElementById('process-img-btn').onclick = runProcess;
+
+        // --- 即時預覽：拖曳「黑白門檻」「平滑簡化度」時立即重新解析 ---
+        let liveRaf = 0;
+        function scheduleLiveProcess() {
+            if (!rawFileData || liveRaf) return;
+            liveRaf = requestAnimationFrame(() => {
+                liveRaf = 0;
+                runProcess();
+            });
+        }
+        const thresholdEl = document.getElementById('threshold');
+        const thresholdValEl = document.getElementById('threshold-val');
+        const smoothEl = document.getElementById('smooth-range');
+        const smoothValEl = document.getElementById('smooth-val');
+        thresholdEl.addEventListener('input', () => {
+            thresholdValEl.textContent = thresholdEl.value;
+            scheduleLiveProcess();
+        });
+        smoothEl.addEventListener('input', () => {
+            smoothValEl.textContent = parseFloat(smoothEl.value).toFixed(2);
+            scheduleLiveProcess();
+        });
 
         // --- 點陣圖處理 ---
-        async function parseBitmap(dataUrl, targetW, smoothTol) {
+        // 解碼後的像素資料依圖片快取，拖曳門檻時不必重複解碼圖片
+        let bitmapCache = { url: null, w: 0, h: 0, data: null };
+        function loadBitmapPixels(dataUrl) {
+            if (bitmapCache.url === dataUrl && bitmapCache.data) return Promise.resolve(bitmapCache);
             return new Promise((resolve) => {
                 const img = new Image();
                 img.onload = () => {
                     const canvas = document.getElementById('hidden-canvas');
                     const ctx = canvas.getContext('2d');
-                    const threshold = parseInt(document.getElementById('threshold').value);
                     canvas.width = img.width; canvas.height = img.height;
                     ctx.drawImage(img, 0, 0);
                     const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                    const w = canvas.width, h = canvas.height;
-                    const visited = new Uint8Array(w * h);
-                    const mmScale = targetW / w;
-
-                    const isBlack = (x, y) => {
-                        if(x < 1 || y < 1 || x >= w-1 || y >= h-1) return false;
-                        const i = (y * w + x) * 4;
-                        const gray = imgData.data[i] * 0.299 + imgData.data[i+1] * 0.587 + imgData.data[i+2] * 0.114;
-                        return gray < threshold;
-                    };
-
-                    let paths = [];
-                    for(let y=1; y<h-1; y++){
-                        for(let x=1; x<w-1; x++){
-                            if(isBlack(x,y) && !visited[y*w+x]){
-                                let edge = false;
-                                for(let dy=-1; dy<=1; dy++) for(let dx=-1; dx<=1; dx++) if(!isBlack(x+dx, y+dy)) edge = true;
-                                if(edge){
-                                    const path = tracePath(x, y, w, h, isBlack, visited);
-                                    if(path.length > 10){
-                                        const mmPoints = path.map(p => ({ x: p.x * mmScale, y: (h - p.y) * mmScale }));
-                                        const smoothed = laplacianSmooth(mmPoints, 3);
-                                        paths.push(simplifyPath(smoothed, smoothTol));
-                                    }
-                                } else visited[y*w+x] = 1;
-                            }
-                        }
-                    }
-                    resolve(paths);
+                    bitmapCache = { url: dataUrl, w: canvas.width, h: canvas.height, data: imgData.data };
+                    resolve(bitmapCache);
                 };
                 img.src = dataUrl;
             });
         }
 
-        // --- SVG 向量解析與圖層讀取 ---
-        function splitSVGPathToSubpaths(dAttr) {
-            if (!dAttr) return [];
-            
-            const cmdRegex = /([a-zA-Z])([^a-zA-Z]*)/g;
-            let match;
-            const commands = [];
-            
-            function parseNumbers(str) {
-                if (!str) return [];
-                const matches = str.match(/[-+]?(?:\d*\.\d+|\d+)(?:[eE][-+]?\d+)?/g);
-                return matches ? matches.map(Number) : [];
+        async function parseBitmap(dataUrl, targetW, smoothTol) {
+            const { w, h, data: src } = await loadBitmapPixels(dataUrl);
+            const threshold = parseInt(document.getElementById('threshold').value);
+            const visited = new Uint8Array(w * h);
+            const mmScale = targetW / w;
+
+            // 預先計算黑白遮罩 (邊界一圈視為非黑)，之後只需查表
+            const mask = new Uint8Array(w * h);
+            for (let y = 1; y < h - 1; y++) {
+                for (let x = 1; x < w - 1; x++) {
+                    const i = (y * w + x) * 4;
+                    if (src[i] * 0.299 + src[i+1] * 0.587 + src[i+2] * 0.114 < threshold) mask[y * w + x] = 1;
+                }
             }
+            const isBlack = (x, y) => {
+                if(x < 1 || y < 1 || x >= w-1 || y >= h-1) return false;
+                return mask[y * w + x] === 1;
+            };
 
-            while ((match = cmdRegex.exec(dAttr)) !== null) {
-                commands.push({
-                    cmd: match[1],
-                    args: parseNumbers(match[2]),
-                    rawArgs: match[2]
-                });
-            }
-
-            if (commands.length === 0) return [];
-
-            let currentX = 0, currentY = 0;
-            let startX = 0, startY = 0;
-            const subpathStrings = [];
-            let currentSubpathTokens = [];
-
-            commands.forEach(item => {
-                let { cmd, args, rawArgs } = item;
-                const upper = cmd.toUpperCase();
-                const isRel = (cmd === cmd.toLowerCase());
-
-                if (upper === 'M') {
-                    if (currentSubpathTokens.length > 0) {
-                        subpathStrings.push(currentSubpathTokens.join(' '));
-                        currentSubpathTokens = [];
-                    }
-
-                    if (args.length >= 2) {
-                        let firstX = isRel ? currentX + args[0] : args[0];
-                        let firstY = isRel ? currentY + args[1] : args[1];
-
-                        currentX = firstX;
-                        currentY = firstY;
-                        startX = firstX;
-                        startY = firstY;
-
-                        let tokenStr = `M ${firstX} ${firstY}`;
-
-                        if (args.length > 2) {
-                            const extraArgs = args.slice(2);
-                            if (isRel) {
-                                tokenStr += ` l ${extraArgs.join(' ')}`;
-                                for (let i = 0; i < extraArgs.length; i += 2) {
-                                    if (i + 1 < extraArgs.length) {
-                                        currentX += extraArgs[i];
-                                        currentY += extraArgs[i + 1];
-                                    }
-                                }
-                            } else {
-                                tokenStr += ` L ${extraArgs.join(' ')}`;
-                                if (extraArgs.length >= 2) {
-                                    currentX = extraArgs[extraArgs.length - 2];
-                                    currentY = extraArgs[extraArgs.length - 1];
-                                }
+            let paths = [];
+            for(let y=1; y<h-1; y++){
+                for(let x=1; x<w-1; x++){
+                    const idx = y * w + x;
+                    if(mask[idx] === 1 && !visited[idx]){
+                        const edge = mask[idx - 1] === 0 || mask[idx + 1] === 0 ||
+                                     mask[idx - w] === 0 || mask[idx + w] === 0 ||
+                                     mask[idx - w - 1] === 0 || mask[idx - w + 1] === 0 ||
+                                     mask[idx + w - 1] === 0 || mask[idx + w + 1] === 0;
+                        if(edge){
+                            const path = tracePath(x, y, w, h, isBlack, visited);
+                            if(path.length > 10){
+                                const mmPoints = path.map(p => ({ x: p.x * mmScale, y: (h - p.y) * mmScale }));
+                                const smoothed = laplacianSmooth(mmPoints, 3);
+                                paths.push(simplifyPath(smoothed, smoothTol));
                             }
-                        }
-                        currentSubpathTokens.push(tokenStr);
-                    }
-                } else {
-                    currentSubpathTokens.push(`${cmd}${rawArgs}`);
-
-                    if (upper === 'Z') {
-                        currentX = startX;
-                        currentY = startY;
-                    } else if (upper === 'L') {
-                        if (args.length >= 2) {
-                            if (isRel) {
-                                for (let i = 0; i < args.length; i += 2) {
-                                    if (i + 1 < args.length) {
-                                        currentX += args[i];
-                                        currentY += args[i + 1];
-                                    }
-                                }
-                            } else {
-                                currentX = args[args.length - 2];
-                                currentY = args[args.length - 1];
-                            }
-                        }
-                    } else if (upper === 'H') {
-                        if (args.length >= 1) {
-                            if (isRel) args.forEach(val => currentX += val);
-                            else currentX = args[args.length - 1];
-                        }
-                    } else if (upper === 'V') {
-                        if (args.length >= 1) {
-                            if (isRel) args.forEach(val => currentY += val);
-                            else currentY = args[args.length - 1];
-                        }
-                    } else if (upper === 'C') {
-                        if (args.length >= 6) {
-                            if (isRel) {
-                                for (let i = 0; i < args.length; i += 6) {
-                                    if (i + 5 < args.length) {
-                                        currentX += args[i + 4];
-                                        currentY += args[i + 5];
-                                    }
-                                }
-                            } else {
-                                currentX = args[args.length - 2];
-                                currentY = args[args.length - 1];
-                            }
-                        }
-                    } else if (upper === 'S' || upper === 'Q') {
-                        if (args.length >= 4) {
-                            if (isRel) {
-                                for (let i = 0; i < args.length; i += 4) {
-                                    if (i + 3 < args.length) {
-                                        currentX += args[i + 2];
-                                        currentY += args[i + 3];
-                                    }
-                                }
-                            } else {
-                                currentX = args[args.length - 2];
-                                currentY = args[args.length - 1];
-                            }
-                        }
-                    } else if (upper === 'T') {
-                        if (args.length >= 2) {
-                            if (isRel) {
-                                for (let i = 0; i < args.length; i += 2) {
-                                    if (i + 1 < args.length) {
-                                        currentX += args[i];
-                                        currentY += args[i + 1];
-                                    }
-                                }
-                            } else {
-                                currentX = args[args.length - 2];
-                                currentY = args[args.length - 1];
-                            }
-                        }
-                    } else if (upper === 'A') {
-                        if (args.length >= 7) {
-                            if (isRel) {
-                                for (let i = 0; i < args.length; i += 7) {
-                                    if (i + 6 < args.length) {
-                                        currentX += args[i + 5];
-                                        currentY += args[i + 6];
-                                    }
-                                }
-                            } else {
-                                currentX = args[args.length - 2];
-                                currentY = args[args.length - 1];
-                            }
-                        }
+                        } else visited[idx] = 1;
                     }
                 }
-            });
+            }
+            return paths;
+        }
 
-            if (currentSubpathTokens.length > 0) {
-                subpathStrings.push(currentSubpathTokens.join(' '));
+        // --- SVG 向量解析與圖層讀取 ---
+        // 將 SVG path 的 d 屬性展開成折線 (每個子路徑一條)。
+        // 直線段只取端點，曲線 (C/S/Q/T/A) 依 spacing 取樣，且每段終點一律使用精確座標，
+        // 因此轉角不會像「沿總長度等距取樣」那樣被削掉。
+        function flattenSVGPath(d, spacing) {
+            const result = [];
+            if (!d) return result;
+            const NUM = /[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?/y;
+            const cmdRe = /([MmLlHhVvCcSsQqTtAaZz])([^MmLlHhVvCcSsQqTtAaZz]*)/g;
+            const clampN = n => Math.max(8, Math.min(20000, Math.ceil(n)));
+
+            let cx = 0, cy = 0, sx = 0, sy = 0;
+            let cur = null;                 // 目前子路徑的點
+            let lastCubic = null;           // 上一段三次曲線第二控制點 (供 S 反射)
+            let lastQuad = null;            // 上一段二次曲線控制點 (供 T 反射)
+
+            const flush = () => { if (cur && cur.length > 1) result.push(cur); cur = null; };
+            const ensure = () => { if (!cur) cur = [{ x: cx, y: cy }]; };
+            const lineTo = (x, y) => { ensure(); cur.push({ x, y }); cx = x; cy = y; };
+
+            function cubicTo(x1, y1, x2, y2, x, y) {
+                ensure();
+                const est = Math.hypot(x1 - cx, y1 - cy) + Math.hypot(x2 - x1, y2 - y1) + Math.hypot(x - x2, y - y2);
+                const n = clampN(est / spacing);
+                const x0 = cx, y0 = cy;
+                for (let i = 1; i < n; i++) {
+                    const t = i / n, u = 1 - t;
+                    const a = u * u * u, b = 3 * u * u * t, c = 3 * u * t * t, e = t * t * t;
+                    cur.push({ x: a * x0 + b * x1 + c * x2 + e * x, y: a * y0 + b * y1 + c * y2 + e * y });
+                }
+                cur.push({ x, y });
+                cx = x; cy = y;
+            }
+            function quadTo(x1, y1, x, y) {
+                ensure();
+                const est = Math.hypot(x1 - cx, y1 - cy) + Math.hypot(x - x1, y - y1);
+                const n = clampN(est / spacing);
+                const x0 = cx, y0 = cy;
+                for (let i = 1; i < n; i++) {
+                    const t = i / n, u = 1 - t;
+                    cur.push({ x: u * u * x0 + 2 * u * t * x1 + t * t * x, y: u * u * y0 + 2 * u * t * y1 + t * t * y });
+                }
+                cur.push({ x, y });
+                cx = x; cy = y;
+            }
+            function arcTo(rx, ry, rotDeg, large, sweep, x, y) {
+                const x0 = cx, y0 = cy;
+                if (x0 === x && y0 === y) return;
+                rx = Math.abs(rx); ry = Math.abs(ry);
+                if (rx === 0 || ry === 0) { lineTo(x, y); return; }
+                const phi = (rotDeg % 360) * Math.PI / 180, cosP = Math.cos(phi), sinP = Math.sin(phi);
+                const dx2 = (x0 - x) / 2, dy2 = (y0 - y) / 2;
+                const x1p = cosP * dx2 + sinP * dy2, y1p = -sinP * dx2 + cosP * dy2;
+                const lam = (x1p * x1p) / (rx * rx) + (y1p * y1p) / (ry * ry);
+                if (lam > 1) { const k = Math.sqrt(lam); rx *= k; ry *= k; }
+                const rx2 = rx * rx, ry2 = ry * ry;
+                let num = rx2 * ry2 - rx2 * y1p * y1p - ry2 * x1p * x1p;
+                const den = rx2 * y1p * y1p + ry2 * x1p * x1p;
+                let co = den === 0 ? 0 : Math.sqrt(Math.max(0, num / den));
+                if (large === sweep) co = -co;
+                const cxp = co * (rx * y1p / ry), cyp = co * -(ry * x1p / rx);
+                const ccx = cosP * cxp - sinP * cyp + (x0 + x) / 2;
+                const ccy = sinP * cxp + cosP * cyp + (y0 + y) / 2;
+                const ang = (ux, uy, vx, vy) => {
+                    const a = Math.atan2(ux * vy - uy * vx, ux * vx + uy * vy);
+                    return a;
+                };
+                const th1 = ang(1, 0, (x1p - cxp) / rx, (y1p - cyp) / ry);
+                let dth = ang((x1p - cxp) / rx, (y1p - cyp) / ry, (-x1p - cxp) / rx, (-y1p - cyp) / ry);
+                if (!sweep && dth > 0) dth -= 2 * Math.PI;
+                else if (sweep && dth < 0) dth += 2 * Math.PI;
+                ensure();
+                const n = clampN(Math.max(rx, ry) * Math.abs(dth) / spacing);
+                for (let i = 1; i < n; i++) {
+                    const th = th1 + dth * i / n;
+                    const ex = rx * Math.cos(th), ey = ry * Math.sin(th);
+                    cur.push({ x: cosP * ex - sinP * ey + ccx, y: sinP * ex + cosP * ey + ccy });
+                }
+                cur.push({ x, y });
+                cx = x; cy = y;
             }
 
-            return subpathStrings;
+            let m;
+            while ((m = cmdRe.exec(d)) !== null) {
+                const cmd = m[1], upper = cmd.toUpperCase(), rel = cmd !== upper, str = m[2];
+                let pos = 0;
+                const more = () => { while (pos < str.length && /[\s,]/.test(str[pos])) pos++; return pos < str.length; };
+                const num = () => { more(); NUM.lastIndex = pos; const r = NUM.exec(str); if (!r) { pos = str.length; return NaN; } pos = NUM.lastIndex; return parseFloat(r[0]); };
+                const flag = () => { more(); const c = str[pos]; if (c === '0' || c === '1') { pos++; return c === '1'; } pos = str.length; return false; };
+
+                if (upper === 'Z') {
+                    if (cur && (cx !== sx || cy !== sy)) lineTo(sx, sy);
+                    flush();
+                    cx = sx; cy = sy;
+                    lastCubic = lastQuad = null;
+                    continue;
+                }
+                let first = true;
+                while (more()) {
+                    if (upper === 'M') {
+                        let x = num(), y = num();
+                        if (isNaN(x) || isNaN(y)) break;
+                        if (rel) { x += cx; y += cy; }
+                        if (first) {
+                            flush();
+                            cx = x; cy = y; sx = x; sy = y;
+                            cur = [{ x, y }];
+                            first = false;
+                        } else {
+                            lineTo(x, y);      // M 之後多餘的座標視為 L
+                        }
+                        lastCubic = lastQuad = null;
+                    } else if (upper === 'L') {
+                        let x = num(), y = num(); if (isNaN(x) || isNaN(y)) break;
+                        if (rel) { x += cx; y += cy; }
+                        lineTo(x, y); lastCubic = lastQuad = null;
+                    } else if (upper === 'H') {
+                        let x = num(); if (isNaN(x)) break;
+                        if (rel) x += cx;
+                        lineTo(x, cy); lastCubic = lastQuad = null;
+                    } else if (upper === 'V') {
+                        let y = num(); if (isNaN(y)) break;
+                        if (rel) y += cy;
+                        lineTo(cx, y); lastCubic = lastQuad = null;
+                    } else if (upper === 'C') {
+                        let x1 = num(), y1 = num(), x2 = num(), y2 = num(), x = num(), y = num();
+                        if ([x1, y1, x2, y2, x, y].some(isNaN)) break;
+                        if (rel) { x1 += cx; y1 += cy; x2 += cx; y2 += cy; x += cx; y += cy; }
+                        cubicTo(x1, y1, x2, y2, x, y); lastCubic = { x: x2, y: y2 }; lastQuad = null;
+                    } else if (upper === 'S') {
+                        let x2 = num(), y2 = num(), x = num(), y = num();
+                        if ([x2, y2, x, y].some(isNaN)) break;
+                        if (rel) { x2 += cx; y2 += cy; x += cx; y += cy; }
+                        const x1 = lastCubic ? 2 * cx - lastCubic.x : cx, y1 = lastCubic ? 2 * cy - lastCubic.y : cy;
+                        cubicTo(x1, y1, x2, y2, x, y); lastCubic = { x: x2, y: y2 }; lastQuad = null;
+                    } else if (upper === 'Q') {
+                        let x1 = num(), y1 = num(), x = num(), y = num();
+                        if ([x1, y1, x, y].some(isNaN)) break;
+                        if (rel) { x1 += cx; y1 += cy; x += cx; y += cy; }
+                        quadTo(x1, y1, x, y); lastQuad = { x: x1, y: y1 }; lastCubic = null;
+                    } else if (upper === 'T') {
+                        let x = num(), y = num(); if (isNaN(x) || isNaN(y)) break;
+                        if (rel) { x += cx; y += cy; }
+                        const x1 = lastQuad ? 2 * cx - lastQuad.x : cx, y1 = lastQuad ? 2 * cy - lastQuad.y : cy;
+                        quadTo(x1, y1, x, y); lastQuad = { x: x1, y: y1 }; lastCubic = null;
+                    } else if (upper === 'A') {
+                        const rx = num(), ry = num(), rot = num(), large = flag(), sweep = flag();
+                        let x = num(), y = num();
+                        if ([rx, ry, rot, x, y].some(isNaN)) break;
+                        if (rel) { x += cx; y += cy; }
+                        arcTo(rx, ry, rot, large, sweep, x, y); lastCubic = lastQuad = null;
+                    } else break;
+                }
+            }
+            flush();
+            // 過濾長度為 0 的退化子路徑
+            return result.filter(sp => sp.some(pt => pt.x !== sp[0].x || pt.y !== sp[0].y));
         }
+
 
         function parseSVG(svgString, targetW, smoothTol) {
             const parser = new DOMParser();
@@ -1052,30 +1089,16 @@
                 if (type === 'path') {
                     const dAttr = el.getAttribute('d');
                     if (dAttr) {
-                        // 精確解析並將相對子路徑 (m) 轉為絕對座標 (M)，防範座標扭曲拉線
-                        const subpaths = splitSVGPathToSubpaths(dAttr);
-                        subpaths.forEach(subD => {
-                            const tempPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
-                            tempPath.setAttribute("d", subD);
-                            svgEl.appendChild(tempPath);
-                            let len = 0;
-                            try { len = tempPath.getTotalLength(); } catch(e) { len = 0; }
-                            
-                            if (len > 0) {
-                                const segments = Math.max(10, Math.ceil(len / (smoothTol * 5)));
-                                const pts = [];
-                                for (let i = 0; i <= segments; i++) {
-                                    const p = tempPath.getPointAtLength(i * len / segments);
-                                    pts.push(transformPoint(p.x, p.y));
-                                }
-                                if (pts.length > 1) {
-                                    paths.push({
-                                        points: simplifyPath(pts, smoothTol),
-                                        layer: layerName
-                                    });
-                                }
+                        // 直接在 JS 內展開 path (轉角使用精確端點，曲線依解析度取樣)，不再借用 DOM 沿長度取樣
+                        const subpaths = flattenSVGPath(dAttr, Math.max(smoothTol * 5, 1e-3));
+                        subpaths.forEach(sp => {
+                            const pts = sp.map(pt => transformPoint(pt.x, pt.y));
+                            if (pts.length > 1) {
+                                paths.push({
+                                    points: simplifyPath(pts, smoothTol),
+                                    layer: layerName
+                                });
                             }
-                            svgEl.removeChild(tempPath);
                         });
                     }
                 } else {
@@ -1183,30 +1206,29 @@
         }
 
         // --- 計算與快取零件的 Bounding Box 以及 嵌套深度 (Nesting Depth) ---
+        // 嵌套深度只與 rawPath 有關 (載入檔案後 rawPath 不再變動)，因此以旗標快取，避免每次重繪清單都重算 O(n²)
+        let nestingDirty = true;
         function updateAllNestingDepths() {
+            if (!nestingDirty) return;
+            nestingDirty = false;
             parts.forEach(p => {
                 let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-                p.rawPath.forEach(pt => {
-                    minX = Math.min(minX, pt.x); maxX = Math.max(maxX, pt.x);
-                    minY = Math.min(minY, pt.y); maxY = Math.max(maxY, pt.y);
-                });
+                const rp = p.rawPath;
+                for (let k = 0; k < rp.length; k++) {
+                    const pt = rp[k];
+                    if (pt.x < minX) minX = pt.x; if (pt.x > maxX) maxX = pt.x;
+                    if (pt.y < minY) minY = pt.y; if (pt.y > maxY) maxY = pt.y;
+                }
                 p._bounds = { minX, maxX, minY, maxY };
             });
 
-            // 運算零件之間的包絡關係 (每個零件被哪些容器包裹著)
-            const containers = parts.map((p, i) => {
-                const list = [];
-                parts.forEach((other, j) => {
-                    if (i !== j && isPartInsideOther(p, other)) {
-                        list.push(j);
-                    }
-                });
-                return list;
-            });
-
-            // 將嵌套深度（也就是被幾層容器完全包覆）紀錄於各個 Part 物件中
+            // 運算零件之間的包絡關係 (每個零件被幾層容器包裹)
             parts.forEach((p, i) => {
-                p.nestingDepth = containers[i].length;
+                let depth = 0;
+                for (let j = 0; j < parts.length; j++) {
+                    if (i !== j && isPartInsideOther(p, parts[j])) depth++;
+                }
+                p.nestingDepth = depth;
             });
         }
 
@@ -1223,7 +1245,7 @@
 
             parts = vectorPaths.map((p, idx) => {
                 let pMinX = Infinity, pMaxX = -Infinity, pMinY = Infinity, pMaxY = -Infinity;
-                p.points.forEach(pt => { pMinX = Math.min(pMinX, pt.x); pMaxX = Math.max(pMaxX, pt.x); pMinY = Math.min(pMinY, pt.y); pMaxY = Math.max(gMaxY, pt.y); });
+                p.points.forEach(pt => { pMinX = Math.min(pMinX, pt.x); pMaxX = Math.max(pMaxX, pt.x); pMinY = Math.min(pMinY, pt.y); pMaxY = Math.max(pMaxY, pt.y); });
                 
                 const centeredPath = p.points.map(pt => ({ x: pt.x - gCx, y: pt.y - gCy }));
                 
@@ -1244,7 +1266,8 @@
                 };
             });
 
-            // 計算所有零件的包絡深度
+            // 計算所有零件的包絡深度 (新零件組，需重算)
+            nestingDirty = true;
             updateAllNestingDepths();
 
             selectedIndices.clear(); 
@@ -1262,16 +1285,32 @@
         renderer.setSize(container.clientWidth, container.clientHeight);
         updateRendererBg(); 
         container.appendChild(renderer.domElement);
+        camera.up.set(0, 0, 1); // 必須在建立 OrbitControls 之前設定
         const controls = new THREE.OrbitControls(camera, renderer.domElement);
-        camera.position.set(0, 0, 200);
+        // 初始視角：等角視圖 (從 +X、-Y、+Z 方向看向原點，仰角約 35.26°、方位角 45°)；
+        // Z 軸朝上，所以旋轉視角時是繞著 Z 軸轉
+        const ISO_DIST = 250, ISO_K = ISO_DIST / Math.sqrt(3);
+        camera.position.set(ISO_K, -ISO_K, ISO_K);
 
-        function animate() { requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); }
-        animate();
+        // 依需求渲染：只有視角改變、內容更新、視窗縮放時才重繪，閒置時不佔用 GPU/CPU
+        let renderQueued = false;
+        function requestRender() {
+            if (renderQueued) return;
+            renderQueued = true;
+            requestAnimationFrame(() => {
+                renderQueued = false;
+                renderer.render(scene, camera);
+            });
+        }
+        controls.addEventListener('change', requestRender);
+        controls.update();
+        requestRender();
 
         window.addEventListener('resize', () => {
             camera.aspect = container.clientWidth / container.clientHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(container.clientWidth, container.clientHeight);
+            requestRender();
         });
 
         // --- 零件分組邏輯核心 ---
@@ -1422,7 +1461,7 @@
         }
 
         // --- 單個零件的平鋪卡片繪製輔助 (無樹狀嵌套、無深度 marginLeft 縮排) ---
-        function renderTreeNode(i, depth, selectedIndices) {
+        function renderTreeNode(i, selectedIndices) {
             const p = parts[i];
             const isSelected = selectedIndices.has(i);
             let methodText = i18n[currentLang].notApplied;
@@ -1502,7 +1541,7 @@
             if (!groups) {
                 // 不分組呈現
                 parts.forEach((p, i) => {
-                    const div = renderTreeNode(i, 0, selectedIndices);
+                    const div = renderTreeNode(i, selectedIndices);
                     list.appendChild(div);
                 });
             } else {
@@ -1635,7 +1674,7 @@
 
                         // 全部採用扁平卡片並列 (不做樹狀階層結構)
                         indices.forEach(i => {
-                            const div = renderTreeNode(i, 0, selectedIndices);
+                            const div = renderTreeNode(i, selectedIndices);
                             childrenContainer.appendChild(div);
                         });
                         
@@ -1877,7 +1916,7 @@
                 }
             }
             const optimizedPaths = [];
-            segmentGroups.forEach((group, idx) => {
+            segmentGroups.forEach(group => {
                 let reverse = false;
                 group.forEach(path => {
                     if (path.length >= 2) {
@@ -1902,8 +1941,34 @@
         }
 
         // --- 3D 渲染更新 ---
+        // 釋放舊場景物件的 GPU 資源 (原本只從場景移除而未 dispose，會持續累積記憶體)
+        function disposeSceneChildren() {
+            const old = scene.children.slice();
+            const geos = new Set(), mats = new Set();
+            old.forEach(obj => {
+                if (obj.geometry) geos.add(obj.geometry);
+                if (obj.material) (Array.isArray(obj.material) ? obj.material : [obj.material]).forEach(m => mats.add(m));
+            });
+            geos.forEach(g => g.dispose());
+            mats.forEach(m => m.dispose());
+            if (old.length) scene.remove.apply(scene, old);
+        }
+
+        function makeLineGeometry(pts, z, zArr) {
+            const n = pts.length;
+            const arr = new Float32Array(n * 3);
+            for (let i = 0; i < n; i++) {
+                arr[i * 3] = pts[i].x;
+                arr[i * 3 + 1] = pts[i].y;
+                arr[i * 3 + 2] = zArr ? zArr[i] : z;
+            }
+            const g = new THREE.BufferGeometry();
+            g.setAttribute('position', new THREE.BufferAttribute(arr, 3));
+            return g;
+        }
+
         function update3D() {
-            while(scene.children.length > 0) scene.remove(scene.children[0]);
+            disposeSceneChildren();
             
             const isDark = document.documentElement.classList.contains('dark');
             const gridColor1 = isDark ? 0x334155 : 0xcbd5e1;
@@ -1914,11 +1979,13 @@
             let hasVisibleParts = false;
             parts.forEach(p => {
                 if(!p.visible) return;
-                p.rawPath.forEach(pt => {
-                    minX = Math.min(minX, pt.x); maxX = Math.max(maxX, pt.x);
-                    minY = Math.min(minY, pt.y); maxY = Math.max(maxY, pt.y);
+                const rp = p.rawPath;
+                for (let k = 0; k < rp.length; k++) {
+                    const pt = rp[k];
+                    if (pt.x < minX) minX = pt.x; if (pt.x > maxX) maxX = pt.x;
+                    if (pt.y < minY) minY = pt.y; if (pt.y > maxY) maxY = pt.y;
                     hasVisibleParts = true;
-                });
+                }
             });
 
             let gridSize = 300; // 預設未載入或無零件時的網格大小
@@ -1938,15 +2005,18 @@
                 const isSelected = selectedIndices.has(idx);
                 const color = isSelected ? 0x22c55e : (isDark ? 0xFFFFFF : 0x475569);
                 const opacity = isSelected ? 0.8 : 0.5;
-                const geomOrig = new THREE.BufferGeometry().setFromPoints(p.rawPath.map(pt => new THREE.Vector3(pt.x, pt.y, 0)));
+                const geomOrig = makeLineGeometry(p.rawPath, 0);
                 scene.add(new THREE.LineLoop(geomOrig, new THREE.LineBasicMaterial({ color: color, opacity: opacity, transparent: true })));
                 if(p.toolpath && p.toolpath.length > 0) {
                     const cfg = p.jobConfig, passes = cfg.type === 'laser' ? 1 : Math.ceil(cfg.depth / cfg.step);
+                    const contourSet = (cfg.type === 'pocket' && p.pocketContourPaths) ? new Set(p.pocketContourPaths) : null;
+                    // 非橋位的路徑各層形狀相同，只差 Z 高度：幾何只建一次，以 position.z 位移後重複使用
+                    const flatGeoms = new Map();
                     for(let i=0; i<passes; i++){
                         const currentZ = cfg.type === 'laser' ? 0.2 : -(Math.min(cfg.depth, (i + 1) * cfg.step)) + 0.2;
                         const matTool = new THREE.LineBasicMaterial({ color: 0xfacc15, opacity: 1.0 - (i * 0.1), transparent: true });
                         p.toolpath.forEach(path => {
-                            const isContourPath = (cfg.type === 'outer' || cfg.type === 'inner' || (cfg.type === 'pocket' && p.pocketContourPaths && p.pocketContourPaths.includes(path)));
+                            const isContourPath = (cfg.type === 'outer' || cfg.type === 'inner' || (contourSet !== null && contourSet.has(path)));
                             const useTabThisPass = (cfg.useTab && (i === passes - 1) && isContourPath);
                             if (useTabThisPass) {
                                 const tabLength = 6 + (cfg.d || 0); // TAB 移動長度 = 6mm + 刀具直徑
@@ -1954,20 +2024,23 @@
                                 // 智慧型局部細分演算法：只細分鄰近 TAB 的地方，維持剩餘長路徑完整
                                 const subPath = insertTabsIntoPath(path, tabCenters, tabLength);
                                 const tabZVal = Math.min(0, currentZ + cfg.step);
-                                const points3D = subPath.map(pt => {
-                                    const z = isPointInTab(pt, tabCenters, tabLength) ? tabZVal : currentZ;
-                                    return new THREE.Vector3(pt.x, pt.y, z);
-                                });
-                                const geomTool = new THREE.BufferGeometry().setFromPoints(points3D);
-                                scene.add(new THREE.Line(geomTool, matTool));
+                                const zArr = new Float32Array(subPath.length);
+                                for (let k = 0; k < subPath.length; k++) {
+                                    zArr[k] = isPointInTab(subPath[k], tabCenters, tabLength) ? tabZVal : currentZ;
+                                }
+                                scene.add(new THREE.Line(makeLineGeometry(subPath, 0, zArr), matTool));
                             } else {
-                                const geomTool = new THREE.BufferGeometry().setFromPoints(path.map(pt => new THREE.Vector3(pt.x, pt.y, currentZ)));
-                                scene.add(new THREE.Line(geomTool, matTool));
+                                let geomTool = flatGeoms.get(path);
+                                if (!geomTool) { geomTool = makeLineGeometry(path, 0); flatGeoms.set(path, geomTool); }
+                                const line = new THREE.Line(geomTool, matTool);
+                                line.position.z = currentZ;
+                                scene.add(line);
                             }
                         });
                     }
                 }
             });
+            requestRender();
         }
 
         function updateStats() {
@@ -2341,9 +2414,11 @@
             gc.push("G0 X0 Y0");
             const blob = new Blob([gc.join('\n')], { type: 'text/plain' });
             const a = document.createElement('a'); 
-            a.href = URL.createObjectURL(blob); 
+            const blobUrl = URL.createObjectURL(blob);
+            a.href = blobUrl; 
             a.download = `${originalFileName}.gcode`; 
             a.click();
+            setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
         };
 
         // 啟動初始化語言與明暗主題圖示
