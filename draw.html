@@ -186,6 +186,19 @@
                 </section>
 
                 <!-- 影像處理 -->
+                <section class="p-4 bg-slate-100 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 space-y-2">
+                    <label class="flex items-center justify-between text-xs font-bold gap-3">
+                        <span id="i18n-label-single-line">單線模式（中心線）</span>
+                        <input type="checkbox" id="single-line-mode" class="w-4 h-4 accent-blue-500 rounded">
+                    </label>
+                    <div id="single-line-width-settings" class="space-y-2 opacity-30">
+                        <label for="single-line-width" class="flex justify-between text-[10px] text-slate-500 dark:text-slate-400 font-bold">
+                            <span id="i18n-label-single-line-width">單線寬度上限</span>
+                            <span><input id="single-line-width" type="number" min="1" max="1000" step="1" value="12" disabled class="w-16 p-1 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 text-right"> px</span>
+                        </label>
+                    </div>
+                    <p id="i18n-single-line-tip" class="text-[10px] text-slate-500 dark:text-slate-400">以原圖像素估算相連黑色區域的最大線寬：不超過上限取中心線，超過則沿黑白邊界描線（含外框與內孔）。調大可將更粗的線轉為單線。啟用時暫停填滿；SVG / DXF 保留原有路徑。</p>
+                </section>
                 <section class="p-4 bg-slate-100 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 space-y-4 transition-colors duration-300">
                     <div>
                         <div class="flex justify-between text-[10px] text-slate-500 dark:text-slate-400 none font-black mb-2 tracking-widest">
@@ -388,6 +401,9 @@
                 labelFeed: "工作走速 (F)",
                 labelThreshold: "黑白門檻",
                 labelNoise: "雜點過濾 (輪廓)",
+                labelSingleLine: "單線模式（中心線）",
+                labelSingleLineWidth: "單線寬度上限",
+                singleLineTip: "僅繪製線條中心線；啟用後可能增加處理時間",
                 labelSmooth: "曲線平滑度",
                 labelResolution: "解析度 (線段長)",
                 labelFillTitle: "填滿設定 (Hatch)",
@@ -432,6 +448,9 @@
                 labelFeed: "Feed Rate (F)",
                 labelThreshold: "Threshold",
                 labelNoise: "Noise Filter (Contour)",
+                labelSingleLine: "Single-line mode (centerline)",
+                labelSingleLineWidth: "Maximum stroke width",
+                singleLineTip: "Traces only the centerlines of strokes. Enabling this option may increase processing time.",
                 labelSmooth: "Path Smoothing",
                 labelResolution: "Resolution (Step)",
                 labelFillTitle: "Fill Settings (Hatch)",
@@ -508,6 +527,9 @@
 
         function updateUI() {
             const data = i18n[currentLang];
+            document.getElementById('i18n-label-single-line').innerText = data.labelSingleLine;
+            document.getElementById('i18n-single-line-tip').innerText = data.singleLineTip;
+            document.getElementById('i18n-label-single-line-width').innerText = data.labelSingleLineWidth;
             document.getElementById('i18n-title').innerText = data.title;
             document.getElementById('i18n-label-pen-diam').innerText = data.labelPenDiam;
             document.getElementById('i18n-label-source').innerText = data.labelSource;
@@ -596,6 +618,8 @@
         const contourGroup = document.getElementById('contour-group');
         const gridGroup = document.getElementById('grid-group');
         
+        const singleLineMode = document.getElementById('single-line-mode');
+        const singleLineWidth = document.getElementById('single-line-width');
         const thresholdSlider = document.getElementById('threshold-slider');
         const thresholdValText = document.getElementById('threshold-val-text');
         const noiseSlider = document.getElementById('noise-slider');
@@ -651,6 +675,23 @@
                 }, 150);
             }
         }
+
+        singleLineWidth.oninput = () => { if (singleLineMode.checked && !isSvgSource) triggerLiveProcess(); };
+        singleLineWidth.onchange = () => {
+            singleLineWidth.value = Math.min(1000, Math.max(1, Math.round(Number(singleLineWidth.value) || 12)));
+            if (singleLineMode.checked && !isSvgSource) triggerLiveProcess();
+        };
+        singleLineMode.onchange = () => {
+            singleLineWidth.disabled = !singleLineMode.checked;
+            document.getElementById('single-line-width-settings').classList.toggle('opacity-30', !singleLineMode.checked);
+            fillEnable.disabled = singleLineMode.checked;
+            legendFillBox.style.display = fillEnable.checked && !singleLineMode.checked ? "flex" : "none";
+            toggleGrayscalePowerUI();
+            fillGroup.style.opacity = fillEnable.checked && !singleLineMode.checked ? "1" : "0.3";
+            fillGroup.style.pointerEvents = fillEnable.checked && !singleLineMode.checked ? "auto" : "none";
+            updateDownloadFileName();
+            triggerLiveProcess();
+        };
 
         thresholdSlider.oninput = () => {
             thresholdValText.innerText = thresholdSlider.value;
@@ -862,7 +903,7 @@
             }
 
             // 當放開點擊且位移極小 (點擊動作而非拖曳平移) 時，觸發個別圖形填滿開關
-            if (fillEnable.checked && pointerDownPos) {
+            if (fillEnable.checked && !singleLineMode.checked && pointerDownPos) {
                 const dist = Math.hypot(e.clientX - pointerDownPos.x, e.clientY - pointerDownPos.y);
                 if (dist < 5) {
                     const elem = document.elementFromPoint(e.clientX, e.clientY);
@@ -1414,7 +1455,7 @@
         }
 
         function updateDownloadFileName() {
-            const suffix = fillEnable.checked ? "_F" : "_O";
+            const suffix = singleLineMode.checked ? "_SL" : (fillEnable.checked ? "_F" : "_O");
             const ext = outputMode === "gcode" ? ".gcode" : ".svg";
             filenameLabel.innerText = `${originalFileName}${suffix}${ext}`;
         }
@@ -1431,7 +1472,7 @@
         });
 
         function toggleGrayscalePowerUI() {
-            if (grayscaleFillCheckbox.checked && fillEnable.checked) {
+            if (grayscaleFillCheckbox.checked && fillEnable.checked && !singleLineMode.checked) {
                 grayscalePowerContainer.classList.remove('hidden');
             } else {
                 grayscalePowerContainer.classList.add('hidden');
@@ -1446,7 +1487,8 @@
             const imageData = pCtx.getImageData(0, 0, previewCanvas.width, previewCanvas.height);
             const data = imageData.data;
             for (let i = 0; i < data.length; i += 4) {
-                const b = (data[i] * 0.299 + data[i+1] * 0.587 + data[i+2] * 0.114);
+                const alpha = data[i+3] / 255;
+                const b = (data[i] * 0.299 + data[i+1] * 0.587 + data[i+2] * 0.114) * alpha + 255 * (1 - alpha);
                 const v = b < threshold ? 0 : 255;
                 data[i] = data[i+1] = data[i+2] = v;
                 data[i+3] = 255;
@@ -1585,6 +1627,191 @@
             const tail = Math.hypot(endP.x - last.x, endP.y - last.y);
             if (tail > 1e-6) res.push(endP); // 確保終點(閉合路徑的回到起點)存在
             return res;
+        }
+
+        // Classify connected ink regions by their maximum estimated local width.
+        // Distance to background measures stroke thickness, not bounding-box size,
+        // so large calendar frames can still be treated as thin strokes.
+        function traceHybridLines(mask, width, height, noiseMin, widthLimit) {
+            const w = width + 2, h = height + 2;
+            const distance = new Float32Array(w*h);
+            const diagonal = Math.SQRT2;
+            for (let y=0; y<height; y++) for (let x=0; x<width; x++)
+                if (mask[y*width+x]) distance[(y+1)*w+x+1] = w+h;
+            for (let y=1; y<h-1; y++) for (let x=1; x<w-1; x++) {
+                const i=y*w+x;
+                if (distance[i]) distance[i]=Math.min(distance[i], distance[i-1]+1,
+                    distance[i-w]+1, distance[i-w-1]+diagonal, distance[i-w+1]+diagonal);
+            }
+            for (let y=h-2; y>0; y--) for (let x=w-2; x>0; x--) {
+                const i=y*w+x;
+                if (distance[i]) distance[i]=Math.min(distance[i], distance[i+1]+1,
+                    distance[i+w]+1, distance[i+w-1]+diagonal, distance[i+w+1]+diagonal);
+            }
+            const seen = new Uint8Array(w*h), thin = new Uint8Array(width*height),
+                  blocks = new Uint8Array(width*height);
+            const offsets = [-w-1,-w,-w+1,-1,1,w-1,w,w+1];
+            for (let y=1; y<h-1; y++) for (let x=1; x<w-1; x++) {
+                const start=y*w+x;
+                if (!distance[start] || seen[start]) continue;
+                const component=[start]; seen[start]=1;
+                let maxRadius=0;
+                for (let k=0; k<component.length; k++) {
+                    const i=component[k]; maxRadius=Math.max(maxRadius,distance[i]);
+                    for (const d of offsets) {
+                        const j=i+d;
+                        if (distance[j] && !seen[j]) {seen[j]=1; component.push(j);}
+                    }
+                }
+                if (component.length <= noiseMin) continue;
+                const destination = 2*maxRadius-1 > widthLimit ? blocks : thin;
+                for (const i of component) destination[(Math.floor(i/w)-1)*width+i%w-1]=1;
+            }
+            return traceCenterlines(thin,width,height,0).concat(traceBlockOutlines(blocks,width,height));
+        }
+
+        // Walk every black/white boundary, including exterior and hole loops.
+        // Winding indicates the boundary side; both orientations must be kept.
+        function traceBlockOutlines(mask,w,h) {
+            const stride=w+1, edges=[], outgoing=new Map();
+            const add=(x,y,dx,dy,dir)=>{
+                const start=y*stride+x, end=(y+dy)*stride+x+dx;
+                const edge={start,end,dir,used:false};edges.push(edge);
+                if (!outgoing.has(start)) outgoing.set(start,[]);
+                outgoing.get(start).push(edge);
+            };
+            for(let y=0;y<h;y++) for(let x=0;x<w;x++) {
+                const i=y*w+x;if(!mask[i]) continue;
+                if(y===0||!mask[i-w]) add(x,y,1,0,0);
+                if(x===w-1||!mask[i+1]) add(x+1,y,0,1,1);
+                if(y===h-1||!mask[i+w]) add(x+1,y+1,-1,0,2);
+                if(x===0||!mask[i-1]) add(x,y+1,0,-1,3);
+            }
+            const paths=[];
+            for(const first of edges) {
+                if(first.used) continue;
+                let edge=first,area=0;
+                const path=[{x:first.start%stride,y:Math.floor(first.start/stride)}];
+                while(edge&&!edge.used) {
+                    edge.used=true;
+                    const p=path[path.length-1],q={x:edge.end%stride,y:Math.floor(edge.end/stride)};
+                    area+=p.x*q.y-q.x*p.y;path.push(q);
+                    if(edge.end===first.start) break;
+                    const candidates=(outgoing.get(edge.end)||[]).filter(e=>!e.used);
+                    const rank=d=>d===1?0:d===0?1:d===3?2:3;
+                    candidates.sort((a,b)=>rank((a.dir-edge.dir+4)%4)-rank((b.dir-edge.dir+4)%4));
+                    edge=candidates[0];
+                }
+                if(Math.abs(area)>0&&path.length>3&&path[0].x===path.at(-1).x&&path[0].y===path.at(-1).y) {
+                    path.closed=true;paths.push(path);
+                }
+            }
+            return paths;
+        }
+
+        // Topology-preserving thinning, followed by graph traversal. Each graph
+        // edge is emitted once; junctions share endpoints and loops stay closed.
+        function traceCenterlines(source, width, height, noiseMin) {
+            const w = width + 2, h = height + 2, a = new Uint8Array(w * h);
+            for (let y = 0; y < height; y++)
+                a.set(source.subarray(y * width, (y + 1) * width), (y + 1) * w + 1);
+            const offsets = [-w, -w+1, 1, w+1, w, w-1, -1, -w-1];
+            // Filter whole ink components before thinning, so short branches at
+            // grid intersections are never removed by the noise slider.
+            const seen = new Uint8Array(a.length);
+            for (let i = w+1; i < a.length-w-1; i++) {
+                if (!a[i] || seen[i]) continue;
+                const component = [i]; seen[i] = 1;
+                for (let k = 0; k < component.length; k++) {
+                    for (const d of offsets) {
+                        const j = component[k] + d;
+                        if (a[j] && !seen[j]) { seen[j] = 1; component.push(j); }
+                    }
+                }
+                if (component.length <= noiseMin) for (const j of component) a[j] = 0;
+            }
+            let changed;
+            do {
+                changed = false;
+                for (let pass = 0; pass < 2; pass++) {
+                    const remove = [];
+                    for (let y = 1; y < h-1; y++) for (let x = 1; x < w-1; x++) {
+                        const i = y*w+x;
+                        if (!a[i]) continue;
+                        const p = offsets.map(d => a[i+d]);
+                        const count = p.reduce((sum, v) => sum+v, 0);
+                        if (count < 2 || count > 6) continue;
+                        let transitions = 0;
+                        for (let k = 0; k < 8; k++) if (!p[k] && p[(k+1)%8]) transitions++;
+                        if (transitions !== 1) continue;
+                        if (pass === 0 ? (p[0]*p[2]*p[4] || p[2]*p[4]*p[6])
+                                       : (p[0]*p[2]*p[6] || p[0]*p[4]*p[6])) continue;
+                        remove.push(i);
+                    }
+                    for (const i of remove) a[i] = 0;
+                    if (remove.length) changed = true;
+                }
+            } while (changed);
+            // Suppress diagonal shortcuts where a cardinal connection exists.
+            const neighbors = i => {
+                const result = [];
+                for (let k = 0; k < 8; k++) {
+                    const j = i + offsets[k];
+                    if (!a[j]) continue;
+                    if (k%2 && (a[i+offsets[(k+7)%8]] || a[i+offsets[(k+1)%8]])) continue;
+                    result.push(j);
+                }
+                return result;
+            };
+            const pixels = [], degree = new Uint8Array(a.length);
+            for (let i = w+1; i < a.length-w-1; i++) if (a[i]) {
+                pixels.push(i); degree[i] = neighbors(i).length;
+            }
+            const group = new Int32Array(a.length); group.fill(-1);
+            const nodes = [];
+            const point = i => ({x: i%w-0.5, y: Math.floor(i/w)-0.5});
+            // Collapse adjacent branch pixels into one shared junction.
+            for (const i of pixels) {
+                if (degree[i] === 2 || group[i] >= 0) continue;
+                const id = nodes.length, members = [i]; group[i] = id;
+                if (degree[i] > 2) for (let k = 0; k < members.length; k++) {
+                    for (const j of neighbors(members[k])) if (degree[j] > 2 && group[j] < 0) {
+                        group[j] = id; members.push(j);
+                    }
+                }
+                const center = members.reduce((p, j) => {
+                    const q = point(j); p.x += q.x/members.length; p.y += q.y/members.length; return p;
+                }, {x:0, y:0});
+                nodes.push({members, center});
+            }
+            const used = new Uint8Array(a.length);
+            const edgeIndex = (i,j) => offsets.indexOf(j-i);
+            const visited = (i,j) => used[i] & (1 << edgeIndex(i,j));
+            const mark = (i,j) => { used[i] |= 1 << edgeIndex(i,j); used[j] |= 1 << edgeIndex(j,i); };
+            const paths = [];
+            const walk = (start, next) => {
+                const startGroup = group[start];
+                const path = [startGroup >= 0 ? nodes[startGroup].center : point(start)];
+                let previous = start, current = next;
+                mark(previous, current);
+                while (true) {
+                    const id = group[current];
+                    path.push(id >= 0 ? nodes[id].center : point(current));
+                    if (id >= 0 || current === start) break;
+                    const nextPixel = neighbors(current).find(j => j !== previous && !visited(current,j));
+                    if (nextPixel === undefined) break;
+                    mark(current,nextPixel); previous = current; current = nextPixel;
+                }
+                path.closed = current === start || (startGroup >= 0 && group[current] === startGroup);
+                if (path.length > 1) paths.push(path);
+            };
+            for (const node of nodes) for (const i of node.members) for (const j of neighbors(i)) {
+                if (group[i] === group[j]) { mark(i,j); continue; }
+                if (!visited(i,j)) walk(i,j);
+            }
+            // Remaining degree-two components are isolated closed loops.
+            for (const i of pixels) for (const j of neighbors(i)) if (!visited(i,j)) walk(i,j);
+            return paths;
         }
 
         function traceContour(startX, startY, visited, isBlack, w, h) {
@@ -1784,7 +2011,15 @@
                 const segPxBitmap = parseFloat(segmentSlider.value) * mmToPx;
                 
                 finalContours = [];
-                for (let y = 1; y < h - 1; y++) {
+                if (singleLineMode.checked) {
+                    finalContours = traceHybridLines(mask, w, h, noiseMin, Math.min(1000, Math.max(1, Number(singleLineWidth.value) || 12))).map(raw => {
+                        let path = simplifyPath(raw, 0.5);
+                        path = smoothPathChaikin(path, smoothIters);
+                        path = resamplePath(path, segPxBitmap);
+                        path.closed = raw.closed;
+                        return path;
+                    });
+                } else for (let y = 1; y < h - 1; y++) {
                     const row = y * w;
                     for (let x = 1; x < w - 1; x++) {
                         const idx = row + x;
@@ -1836,7 +2071,7 @@
             // 僅篩選出使用者勾選/點選要填滿的輪廓
             const activeContours = finalContours.filter((_, idx) => selectedContourIndices.has(idx));
 
-            const rawHatchLines = fillEnable.checked ? generateFillLines(activeContours, parseFloat(fillAngleSelect.value), fillSpacing_mm * currentScale) : [];
+            const rawHatchLines = fillEnable.checked && !singleLineMode.checked ? generateFillLines(activeContours, parseFloat(fillAngleSelect.value), fillSpacing_mm * currentScale) : [];
             
             finalFillLines = [];
             const segPx = parseFloat(segmentSlider.value) * currentScale;
@@ -1935,13 +2170,13 @@
             contourGroup.innerHTML = finalContours.map((p, idx) => {
                 const isSelected = selectedContourIndices.has(idx);
                 const strokeColor = "#10b981";
-                const showFillBg = fillEnable.checked && isSelected;
+                const showFillBg = fillEnable.checked && !singleLineMode.checked && isSelected;
                 const fillColor = showFillBg ? "rgba(16, 185, 129, 0.15)" : "rgba(0, 0, 0, 0.001)";
-                const pointerEvents = fillEnable.checked ? "all" : "none";
-                const cursor = fillEnable.checked ? "pointer" : "default";
+                const pointerEvents = fillEnable.checked && !singleLineMode.checked ? "all" : "none";
+                const cursor = fillEnable.checked && !singleLineMode.checked ? "pointer" : "default";
                 let d = `M ${p[0].x} ${p[0].y}`;
                 for (let k = 1; k < p.length; k++) d += ` L ${p[k].x} ${p[k].y}`;
-                d += ' Z';
+                if (p.closed !== false) d += ' Z';
                 
                 return `<path d="${d}" data-index="${idx}" fill="${fillColor}" stroke="${strokeColor}" stroke-width="${showFillBg ? 1.8 : 1.2}" style="pointer-events: ${pointerEvents}; cursor: ${cursor}; transition: all 0.15s;" class="hover:stroke-amber-400 hover:stroke-2 hover:fill-amber-400/20" />`;
             }).join('');
@@ -2015,7 +2250,7 @@
                 };
             };
             let allPaths = [];
-            finalContours.forEach(path => allPaths.push(mkItem(path, null, true, false)));
+            finalContours.forEach(path => allPaths.push(mkItem(path, null, path.closed !== false, false)));
             finalFillLines.forEach(line => allPaths.push(mkItem(line.pts, line.powers, false, true)));
 
             let cx = 0, cy = 0; 
@@ -2083,7 +2318,7 @@
             let svgStr = `<svg xmlns="http://www.w3.org/2000/svg" width="${mmW}mm" height="${mmH}mm" viewBox="0 0 ${mmW} ${mmH}">\n`;
             
             finalContours.forEach(path => {
-                const d = path.map((p, i) => `${i === 0 ? 'M' : 'L'} ${(p.x * scale).toFixed(3)} ${(p.y * scale).toFixed(3)}`).join(' ') + ' Z';
+                const d = path.map((p, i) => `${i === 0 ? 'M' : 'L'} ${(p.x * scale).toFixed(3)} ${(p.y * scale).toFixed(3)}`).join(' ') + (path.closed !== false ? ' Z' : '');
                 svgStr += `  <path d="${d}" fill="none" stroke="#10b981" stroke-width="0.2" />\n`;
             });
             
