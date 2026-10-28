@@ -353,10 +353,18 @@
                                     <label for="tabEnable" class="label-text cursor-pointer" id="txt-label-tab-enable">自動橋位</label>
                                 </div>
                                 <div id="tabControls" class="space-y-2.5 hidden pl-6">
-                                    <div>
-                                        <label class="label-text block mb-1" id="txt-label-tooldia">刀具直徑 (mm)</label>
-                                        <input type="number" id="toolDiaInput" value="3.175" min="0.1" step="0.1" class="w-full">
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <div>
+                                            <label class="label-text block mb-1" id="txt-label-tabwidth">橋位寬度 (3~8 mm)</label>
+                                            <input type="number" id="tabWidthInput" value="5" min="3" max="8" step="0.5" class="w-full">
+                                        </div>
+                                        <div>
+                                            <label class="label-text block mb-1" id="txt-label-tabheight">橋位高度 (2~6 mm)</label>
+                                            <input type="number" id="tabHeightInput" value="3" min="2" max="6" step="0.5" class="w-full">
+                                        </div>
                                     </div>
+                                    <div id="tabHint" class="text-[10px] text-gray-400 leading-snug">橋位自動均分於各輪廓：≤200mm 2個、201~600mm 3個、>600mm 4個</div>
+                                    <div id="tabWarning" class="hidden text-[11px] leading-snug rounded border border-amber-500/60 bg-amber-500/10 text-amber-300 p-2 space-y-0.5"></div>
                                 </div>
                             </div>
                         </div>
@@ -398,8 +406,21 @@
                                 <p class="text-sm font-mono font-bold text-emerald-400" id="timeEst">0 min 0 sec</p>
                             </div>
                             <div class="text-right">
-                                <p class="text-[9px] text-emerald-500 font-bold uppercase tracking-wider" id="txt-info-dist">路徑長度</p>
-                                <p class="text-sm font-mono font-bold"><span id="distEst">0</span> <span class="text-[10px] text-gray-500">mm</span></p>
+                                <p class="hidden" id="txt-info-dist"></p>
+                                <table class="text-[11px] font-mono border-collapse ml-auto" id="boundsTable">
+                                    <thead>
+                                        <tr>
+                                            <th></th>
+                                            <th class="px-2 pb-1 text-[10px] font-bold text-emerald-500 tracking-wider text-right">min</th>
+                                            <th class="px-2 pb-1 text-[10px] font-bold text-emerald-500 tracking-wider text-right">max</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr><th class="pr-2 text-sm font-black text-emerald-400 text-right">X</th><td class="px-2 py-1 border border-dashed border-gray-500/60 text-right tabular-nums" id="bMinX">-</td><td class="px-2 py-1 border border-dashed border-gray-500/60 text-right tabular-nums" id="bMaxX">-</td></tr>
+                                        <tr><th class="pr-2 text-sm font-black text-emerald-400 text-right">Y</th><td class="px-2 py-1 border border-dashed border-gray-500/60 text-right tabular-nums" id="bMinY">-</td><td class="px-2 py-1 border border-dashed border-gray-500/60 text-right tabular-nums" id="bMaxY">-</td></tr>
+                                        <tr><th class="pr-2 text-sm font-black text-emerald-400 text-right">Z</th><td class="px-2 py-1 border border-dashed border-gray-500/60 text-right tabular-nums" id="bMinZ">-</td><td class="px-2 py-1 border border-dashed border-gray-500/60 text-right tabular-nums" id="bMaxZ">-</td></tr>
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                         <button id="downloadBtn" class="w-full bg-emerald-500 text-gray-900 py-3 rounded-lg font-black text-xs uppercase hover:bg-emerald-400 transition shadow-lg disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed" disabled>
@@ -436,7 +457,9 @@
             retractEnable: "抬刀高度調整 (Z > 0)",
             labelTargetRetract: "新抬刀高度 (0.1~5 mm)",
             tabEnable: "自動橋位",
-            labelToolDia: "刀具直徑 (mm)",
+            labelTabWidth: "橋位寬度 (3~8 mm)",
+            labelTabHeight: "橋位高度 (2~6 mm)",
+            tabHint: "橋位自動均分於各輪廓：≤200mm 2個、201~600mm 3個、>600mm 4個",
             secRefImg: "4. 參考底圖 (選填)",
             btnUploadImg: "選擇參考圖片",
             labelImgWidth: "圖片實際寬度 (mm)",
@@ -444,7 +467,7 @@
             btnCenter: "自動置中",
             btnUpdate: "更新預覽",
             infoTime: "預估時間",
-            infoDist: "路徑長度",
+            infoDist: "XYZ 邊界",
             btnDownload: "下載修改後G-code",
             unitMin: "分",
             unitSec: "秒",
@@ -475,7 +498,9 @@
             retractEnable: "Change Retract Height",
             labelTargetRetract: "New Retract Height (0.1~5 mm)",
             tabEnable: "Auto Tabs",
-            labelToolDia: "Tool Diameter (mm)",
+            labelTabWidth: "Tab Width (3~8 mm)",
+            labelTabHeight: "Tab Height (2~6 mm)",
+            tabHint: "Tabs are spread evenly per contour: <=200mm 2, 201~600mm 3, >600mm 4",
             secRefImg: "4. Reference Image (Optional)",
             btnUploadImg: "Choose Reference Image",
             labelImgWidth: "Image Width (mm)",
@@ -483,7 +508,7 @@
             btnCenter: "Auto Center",
             btnUpdate: "Update",
             infoTime: "Est. Time",
-            infoDist: "Total Path",
+            infoDist: "XYZ Bounds",
             btnDownload: "Download Processed G-code",
             unitMin: "min",
             unitSec: "sec",
@@ -494,7 +519,7 @@
     };
 
     let currentLang = 'zh';
-    let lastTimeSec = 0, lastDistance = 0;
+    let lastTimeSec = 0, lastBounds = null;
     let scene, camera, renderer, gcodeGroup, grid, originAxes, originMarker, cameraTarget;
     let originalGcode = "";
     let originalFileName = "output";
@@ -542,7 +567,10 @@
         document.getElementById('txt-label-target-retract').innerText = lang.labelTargetRetract;
 
         document.getElementById('txt-label-tab-enable').innerText = lang.tabEnable;
-        document.getElementById('txt-label-tooldia').innerText = lang.labelToolDia;
+        document.getElementById('txt-label-tabwidth').innerText = lang.labelTabWidth;
+        document.getElementById('txt-label-tabheight').innerText = lang.labelTabHeight;
+        document.getElementById('tabHint').innerText = lang.tabHint;
+        updateTabWarningUI();
         
         document.getElementById('txt-sec-refimg').innerText = lang.secRefImg;
         document.getElementById('txt-btn-upload-img').innerText = lang.btnUploadImg;
@@ -559,16 +587,22 @@
         document.getElementById('txt-legend-path').innerText = lang.legendPath;
         document.getElementById('txt-legend-tab').innerText = lang.legendTab;
 
-        displayStats(lastTimeSec, lastDistance);
+        displayStats(lastTimeSec, lastBounds);
     }
 
-    function displayStats(timeSec, dist) {
-        lastTimeSec = timeSec; lastDistance = dist;
+    function displayStats(timeSec, bnd) {
+        lastTimeSec = timeSec; lastBounds = bnd;
         const lang = i18n[currentLang];
         const mins = Math.floor(timeSec / 60);
         const secs = Math.round(timeSec % 60);
         document.getElementById('timeEst').innerText = `${mins} ${lang.unitMin} ${secs} ${lang.unitSec}`;
-        document.getElementById('distEst').innerText = dist.toFixed(2);
+        const ok = bnd && isFinite(bnd.minX);
+        // 數值最多顯示 4 位小數並去除多餘的 0 (例如 -10、34.9901)
+        const f = v => (ok && isFinite(v) ? String(parseFloat(v.toFixed(4))) : '-');
+        const set = (id, v) => { document.getElementById(id).innerText = f(v); };
+        set('bMinX', bnd && bnd.minX); set('bMaxX', bnd && bnd.maxX);
+        set('bMinY', bnd && bnd.minY); set('bMaxY', bnd && bnd.maxY);
+        set('bMinZ', bnd && bnd.minZ); set('bMaxZ', bnd && bnd.maxZ);
     }
 
     function toggleTheme() {
@@ -1267,262 +1301,353 @@
         });
     }
 
-    function splitSegmentWithTabs(seg, tabs, stepdown, R) {
-        if (seg.type !== 'G1') return [seg];
+    // ================= 橋位 (TAB) 計算 =================
+    // 規則：單一切割路徑總長 <=200mm → 2 個；201~600mm → 3 個；>600mm → 4 個
+    // 橋位沿「路徑弧長」均分，並在容許範圍內避開轉角，直線 (G1) 與圓弧 (G2/G3) 都可放置。
+    let lastTabWarnings = [];
 
-        const dx = seg.to.x - seg.from.x;
-        const dy = seg.to.y - seg.from.y;
-        const len = Math.sqrt(dx * dx + dy * dy);
-        if (len < 1e-4) return [seg];
+    function tabCountForLength(L) { return L <= 200 ? 2 : (L <= 600 ? 3 : 4); }
 
-        const ux = dx / len;
-        const uy = dy / len;
+    function getTabSettings() {
+        let w = parseFloat(document.getElementById('tabWidthInput')?.value);
+        let h = parseFloat(document.getElementById('tabHeightInput')?.value);
+        if (isNaN(w)) w = 5;
+        if (isNaN(h)) h = 3;
+        return { W: Math.max(3, Math.min(8, w)), H: Math.max(2, Math.min(6, h)) };
+    }
 
-        const hitTabs = [];
-        tabs.forEach(tabPt => {
-            const projT = ((tabPt.x - seg.from.x) * ux + (tabPt.y - seg.from.y) * uy);
-            if (projT > R && projT < len - R) {
-                const projX = seg.from.x + projT * ux;
-                const projY = seg.from.y + projT * uy;
-                const distToLine = Math.sqrt((tabPt.x - projX)**2 + (tabPt.y - projY)**2);
-                if (distToLine < 1e-3) {
-                    hitTabs.push({
-                        startT: Math.max(0, projT - R),
-                        endT: Math.min(len, projT + R)
-                    });
-                }
-            }
-        });
+    const TAB_MSG = {
+        zh: {
+            short: (v) => `${v.name}：路徑長度僅 ${v.L} mm，放不下橋位 (寬 ${v.W} mm)，此輪廓未加橋位`,
+            reduced: (v) => `${v.name}：路徑長度 ${v.L} mm 偏短，橋位由 ${v.n0} 個減為 ${v.n} 個`,
+            gap: (v) => `${v.name}：橋位間距過近，最小淨距僅 ${v.gap} mm (建議 ≥ ${v.min} mm)，工件強度與切削穩定性可能不足`,
+            near: (v) => `${v.name}：兩個橋位的直線距離僅 ${v.d} mm (建議 ≥ ${v.min} mm)，物件過小或過窄`,
+            ratio: (v) => `${v.name}：橋位佔路徑比例達 ${v.pct}%，工件幾乎被橋位固定，切斷後不易取下`,
+            high: (v) => `${v.name}：橋位高度 ${v.H} mm ≥ 加工深度 ${v.D} mm，橋位已達材料表面 (底部完全未切斷)`
+        },
+        en: {
+            short: (v) => `${v.name}: path is only ${v.L} mm, too short for a ${v.W} mm tab. No tab added`,
+            reduced: (v) => `${v.name}: path (${v.L} mm) is short, tab count reduced from ${v.n0} to ${v.n}`,
+            gap: (v) => `${v.name}: tabs are too close (min clear gap ${v.gap} mm, recommended >= ${v.min} mm)`,
+            near: (v) => `${v.name}: two tabs are only ${v.d} mm apart in straight line (recommended >= ${v.min} mm). Part is too small/narrow`,
+            ratio: (v) => `${v.name}: tabs occupy ${v.pct}% of the path, the part will be hard to remove`,
+            high: (v) => `${v.name}: tab height ${v.H} mm >= cutting depth ${v.D} mm, tab reaches the material surface (not cut through at all)`
+        }
+    };
 
-        if (hitTabs.length === 0) return [seg];
+    // ---- 幾何：線段 / 圓弧 ----
+    function segGeom(seg) {
+        const x0 = seg.from.x, y0 = seg.from.y, x1 = seg.to.x, y1 = seg.to.y;
+        if (seg.type === 'G1') {
+            const len = Math.hypot(x1 - x0, y1 - y0);
+            if (len < 1e-4) return null;
+            return { kind: 'L', x0, y0, x1, y1, len, ux: (x1 - x0) / len, uy: (y1 - y0) / len };
+        }
+        if (seg.type === 'G2' || seg.type === 'G3') {
+            const cw = seg.type === 'G2';
+            let cx, cy;
+            if (seg.I !== null || seg.J !== null) {
+                cx = x0 + (seg.I || 0); cy = y0 + (seg.J || 0);
+            } else if (seg.R !== null) {
+                const c = findArcCenter(seg.from, seg.to, null, null, seg.R, cw);
+                if (!c) return null;
+                cx = c.x; cy = c.y;
+            } else return null;
+            const r = Math.hypot(x0 - cx, y0 - cy);
+            if (r < 1e-4) return null;
+            const a0 = Math.atan2(y0 - cy, x0 - cx), a1 = Math.atan2(y1 - cy, x1 - cx);
+            let diff = a1 - a0;
+            if (cw) { if (diff >= 0) diff -= 2 * Math.PI; } else { if (diff <= 0) diff += 2 * Math.PI; }
+            return { kind: 'A', cx, cy, r, a0, dir: cw ? -1 : 1, len: Math.abs(diff) * r, x0, y0, x1, y1 };
+        }
+        return null;
+    }
 
-        hitTabs.sort((a, b) => a.startT - b.startT);
+    function geomPointAt(g, t) {
+        if (t <= 1e-9) return { x: g.x0, y: g.y0 };
+        if (t >= g.len - 1e-9) return { x: g.x1, y: g.y1 };
+        if (g.kind === 'L') return { x: g.x0 + g.ux * t, y: g.y0 + g.uy * t };
+        const a = g.a0 + g.dir * t / g.r;
+        return { x: g.cx + g.r * Math.cos(a), y: g.cy + g.r * Math.sin(a) };
+    }
 
-        const subSegs = [];
-        let curT = 0;
-        const tabHeight = Math.min(1.5, stepdown * 0.8);
+    function geomTangent(g, t) {
+        if (g.kind === 'L') return { x: g.ux, y: g.uy };
+        const a = g.a0 + g.dir * t / g.r;
+        return { x: -g.dir * Math.sin(a), y: g.dir * Math.cos(a) };
+    }
 
-        hitTabs.forEach(tab => {
-            if (tab.startT > curT + 1e-4) {
-                subSegs.push({
-                    from: { x: seg.from.x + curT * ux, y: seg.from.y + curT * uy, z: seg.from.z },
-                    to: { x: seg.from.x + tab.startT * ux, y: seg.from.y + tab.startT * uy, z: seg.to.z },
-                    f: seg.f,
-                    type: 'G1',
-                    isStartOrEndHome: false,
-                    isTab: false,
-                    lineIdx: seg.lineIdx,
-                    hasZ: seg.hasZ
-                });
-            }
-
-            const tabFromX = seg.from.x + tab.startT * ux;
-            const tabFromY = seg.from.y + tab.startT * uy;
-            const tabToX = seg.from.x + tab.endT * ux;
-            const tabToY = seg.from.y + tab.endT * uy;
-            const baseZ = seg.to.z;
-            const bridgeZ = baseZ + tabHeight;
-
-            subSegs.push({
-                from: { x: tabFromX, y: tabFromY, z: baseZ },
-                to: { x: tabFromX, y: tabFromY, z: bridgeZ },
-                f: seg.f,
-                type: 'G1',
-                isStartOrEndHome: false,
-                isTab: true,
-                lineIdx: seg.lineIdx,
-                hasZ: true
-            });
-
-            subSegs.push({
-                from: { x: tabFromX, y: tabFromY, z: bridgeZ },
-                to: { x: tabToX, y: tabToY, z: bridgeZ },
-                f: seg.f,
-                type: 'G1',
-                isStartOrEndHome: false,
-                isTab: true,
-                lineIdx: seg.lineIdx,
-                hasZ: true
-            });
-
-            subSegs.push({
-                from: { x: tabToX, y: tabToY, z: bridgeZ },
-                to: { x: tabToX, y: tabToY, z: baseZ },
-                f: seg.f,
-                type: 'G1',
-                isStartOrEndHome: false,
-                isTab: true,
-                lineIdx: seg.lineIdx,
-                hasZ: true
-            });
-
-            curT = tab.endT;
-        });
-
-        if (curT < len - 1e-4) {
-            subSegs.push({
-                from: { x: seg.from.x + curT * ux, y: seg.from.y + curT * uy, z: seg.from.z },
-                to: { x: seg.to.x, y: seg.to.y, z: seg.to.z },
-                f: seg.f,
-                type: 'G1',
-                isStartOrEndHome: false,
-                isTab: false,
-                lineIdx: seg.lineIdx,
-                hasZ: seg.hasZ
+    // 橋位片段 pc = {g, t0, t1} (位於幾何 g 的弧長 t0~t1) 與另一個幾何 g2 的重疊區間 (以 g2 弧長表示)
+    // 用於把同一個橋位套用到每一層 (各層幾何相同，但分段方式可能不同)
+    function geomOverlap(pc, g2) {
+        const g1 = pc.g, out = [];
+        const TOL = 0.005;
+        if (g1.kind === 'L' && g2.kind === 'L') {
+            const P0 = geomPointAt(g1, pc.t0), P1 = geomPointAt(g1, pc.t1);
+            const d0 = (P0.x - g2.x0) * g2.uy - (P0.y - g2.y0) * g2.ux;
+            const d1 = (P1.x - g2.x0) * g2.uy - (P1.y - g2.y0) * g2.ux;
+            if (Math.abs(d0) > TOL || Math.abs(d1) > TOL) return out;
+            let ta = (P0.x - g2.x0) * g2.ux + (P0.y - g2.y0) * g2.uy;
+            let tb = (P1.x - g2.x0) * g2.ux + (P1.y - g2.y0) * g2.uy;
+            if (ta > tb) { const t = ta; ta = tb; tb = t; }
+            const lo = Math.max(0, ta), hi = Math.min(g2.len, tb);
+            if (hi - lo > 1e-4) out.push([lo, hi]);
+            return out;
+        }
+        if (g1.kind === 'A' && g2.kind === 'A') {
+            if (Math.hypot(g1.cx - g2.cx, g1.cy - g2.cy) > 0.01 || Math.abs(g1.r - g2.r) > 0.01) return out;
+            const TWO = 2 * Math.PI;
+            const w = (pc.t1 - pc.t0) / g1.r;
+            const th0 = g1.a0 + g1.dir * pc.t0 / g1.r;
+            const th1 = g1.a0 + g1.dir * pc.t1 / g1.r;
+            const prog = th => { const v = g2.dir * (th - g2.a0); return ((v % TWO) + TWO) % TWO; };
+            const base = (g1.dir === g2.dir) ? prog(th0) : prog(th1);
+            const sweep2 = g2.len / g2.r;
+            [base - TWO, base].forEach(b => {
+                const lo = Math.max(0, b), hi = Math.min(sweep2, b + w);
+                if ((hi - lo) * g2.r > 1e-4) out.push([lo * g2.r, hi * g2.r]);
             });
         }
+        return out;
+    }
 
-        return subSegs;
+    // ---- 橋位規劃：對一條連續的切割路徑 (最終深度的 G1/G2/G3 片段) ----
+    function planTabsForGroup(segs, W, rampSegs) {
+        const items = [];
+        let L = 0;
+        segs.forEach(seg => {
+            const g = segGeom(seg);
+            if (!g) return;
+            items.push({ g, s0: L });
+            L += g.len;
+        });
+        const res = { L, tabs: [], warns: [], n: 0, n0: 0 };
+        if (!items.length) return res;
+
+        const first = items[0].g, last = items[items.length - 1].g;
+        const closed = Math.hypot(first.x0 - last.x1, first.y0 - last.y1) < 0.01;
+
+        // 轉角位置 (相鄰片段切線夾角 > 30°)
+        const corners = [];
+        const turnAt = (gA, gB) => {
+            const ta = geomTangent(gA, gA.len), tb = geomTangent(gB, 0);
+            const c = Math.max(-1, Math.min(1, ta.x * tb.x + ta.y * tb.y));
+            return Math.acos(c) * 180 / Math.PI;
+        };
+        for (let i = 1; i < items.length; i++) {
+            if (turnAt(items[i - 1].g, items[i].g) > 30) corners.push(items[i].s0);
+        }
+        if (closed && items.length > 0 && turnAt(last, first) > 30) corners.push(0, L);
+
+        // 禁區：其他層的斜向下刀段 (Z 有變化) 所涵蓋的路徑範圍，橋位要避開
+        const forbidden = [];
+        (rampSegs || []).forEach(rs => {
+            const rg = segGeom(rs);
+            if (!rg) return;
+            const pc = { g: rg, t0: 0, t1: rg.len };
+            items.forEach(it => {
+                if (it.g.kind !== rg.kind) return;
+                geomOverlap(pc, it.g).forEach(iv => forbidden.push([it.s0 + iv[0], it.s0 + iv[1]]));
+            });
+        });
+
+        // 橋位數量：依長度分級；若路徑太短放不下，則減少數量 (每個橋位之間至少留 2mm)
+        const n0 = tabCountForLength(L);
+        let n = n0;
+        const margin = 1.0;
+        while (n > 1 && (L - 2 * margin) / n < W + 2) n--;
+        if (L - 2 * margin < W + 0.5) { res.warns.push({ code: 'short' }); return res; }
+        res.n0 = n0;
+        if (n < n0) res.warns.push({ code: 'reduced', n0, n });
+        res.n = n;
+
+        const lo = W / 2 + margin, hi = L - W / 2 - margin;
+        const spacing = L / n;
+        const halfWin = Math.min(0.3 * spacing, 40);
+        const centers = [];
+        for (let k = 0; k < n; k++) {
+            const ideal = Math.max(lo, Math.min(hi, (k + 0.5) * spacing));
+            let best = ideal, bestScore = -Infinity;
+            const a = Math.max(lo, ideal - halfWin), b = Math.min(hi, ideal + halfWin);
+            for (let s = a; s <= b + 1e-9; s += 0.5) {
+                // 與最近轉角的淨距 (橋位邊緣到轉角)
+                let clear = 10;
+                for (let c = 0; c < corners.length; c++) {
+                    clear = Math.min(clear, Math.abs(s - corners[c]) - W / 2);
+                    if (clear < 0) break;
+                }
+                let score = Math.min(clear, 10) - 0.01 * Math.abs(s - ideal);
+                if (clear < 0) score -= 20;
+                for (let f = 0; f < forbidden.length; f++) {
+                    if (s + W / 2 > forbidden[f][0] && s - W / 2 < forbidden[f][1]) { score -= 100; break; }
+                }
+                if (score > bestScore) { bestScore = score; best = s; }
+            }
+            centers.push(best);
+        }
+
+        // 產生橋位 (含涵蓋的幾何片段)
+        centers.forEach(sc => {
+            const s0 = sc - W / 2, s1 = sc + W / 2;
+            const pieces = [];
+            let ctr = null;
+            items.forEach(it => {
+                const e = it.s0 + it.g.len;
+                if (sc >= it.s0 && sc <= e && !ctr) ctr = geomPointAt(it.g, sc - it.s0);
+                if (e <= s0 || it.s0 >= s1) return;
+                pieces.push({ g: it.g, t0: Math.max(0, s0 - it.s0), t1: Math.min(it.g.len, s1 - it.s0) });
+            });
+            res.tabs.push({ sc, s0, s1, center: ctr || { x: first.x0, y: first.y0 }, pieces });
+        });
+
+        // 橋位間距檢查
+        const minGap = Math.max(10, 2 * W);
+        let worstGap = Infinity, worstEuc = Infinity;
+        for (let i = 0; i < res.tabs.length; i++) {
+            const A = res.tabs[i];
+            const B = res.tabs[(i + 1) % res.tabs.length];
+            if (res.tabs.length < 2) break;
+            let gap = (i + 1 < res.tabs.length) ? (B.s0 - A.s1) : (closed ? (B.s0 + L - A.s1) : Infinity);
+            worstGap = Math.min(worstGap, gap);
+        }
+        for (let i = 0; i < res.tabs.length; i++) {
+            for (let j = i + 1; j < res.tabs.length; j++) {
+                worstEuc = Math.min(worstEuc, Math.hypot(res.tabs[i].center.x - res.tabs[j].center.x, res.tabs[i].center.y - res.tabs[j].center.y));
+            }
+        }
+        if (worstGap < minGap) res.warns.push({ code: 'gap', gap: worstGap.toFixed(1), min: minGap.toFixed(0) });
+        const minEuc = Math.max(12, 1.5 * W);
+        if (worstEuc < minEuc && worstGap >= minGap) res.warns.push({ code: 'near', d: worstEuc.toFixed(1), min: minEuc.toFixed(0) });
+        const ratio = res.tabs.length * W / L;
+        if (ratio > 0.4) res.warns.push({ code: 'ratio', pct: (ratio * 100).toFixed(0) });
+        return res;
+    }
+
+    // 把橋位套用到一個「平面 (Z 不變)」的 G1/G2/G3 片段：回傳切分後的片段陣列
+    function splitSegmentWithTabs(seg, tabs, bridgeZ, plungeF) {
+        const g = segGeom(seg);
+        if (!g) return [seg];
+        let iv = [];
+        tabs.forEach(tb => tb.pieces.forEach(pc => geomOverlap(pc, g).forEach(x => iv.push(x))));
+        if (!iv.length) return [seg];
+        iv.sort((a, b) => a[0] - b[0]);
+        const merged = [iv[0].slice()];
+        for (let i = 1; i < iv.length; i++) {
+            const m = merged[merged.length - 1];
+            if (iv[i][0] <= m[1] + 1e-4) m[1] = Math.max(m[1], iv[i][1]);
+            else merged.push(iv[i].slice());
+        }
+
+        const baseZ = seg.to.z;
+        const mk = (t0, t1, z0, z1, isTab, hasZ) => {
+            const A = geomPointAt(g, t0), B = geomPointAt(g, t1);
+            const s = {
+                from: { x: A.x, y: A.y, z: z0 }, to: { x: B.x, y: B.y, z: z1 },
+                f: seg.f, type: seg.type, I: null, J: null, R: null,
+                isStartOrEndHome: false, isTab: isTab, lineIdx: seg.lineIdx, hasZ: hasZ
+            };
+            if (g.kind === 'A') { s.I = g.cx - A.x; s.J = g.cy - A.y; }
+            return s;
+        };
+        const vert = (t, z0, z1, f) => {
+            const P = geomPointAt(g, t);
+            return {
+                from: { x: P.x, y: P.y, z: z0 }, to: { x: P.x, y: P.y, z: z1 },
+                f: f, type: 'G1', I: null, J: null, R: null,
+                isStartOrEndHome: false, isTab: true, lineIdx: seg.lineIdx, hasZ: true
+            };
+        };
+
+        const out = [];
+        let cur = 0;
+        let firstPiece = true;
+        merged.forEach(m => {
+            if (m[0] > cur + 1e-4) {
+                out.push(mk(cur, m[0], firstPiece ? seg.from.z : baseZ, baseZ, false, firstPiece ? seg.hasZ : false));
+                firstPiece = false;
+            }
+            out.push(vert(m[0], baseZ, bridgeZ, seg.f));
+            out.push(mk(m[0], m[1], bridgeZ, bridgeZ, true, true));
+            out.push(vert(m[1], bridgeZ, baseZ, plungeF));
+            firstPiece = false;
+            cur = m[1];
+        });
+        if (cur < g.len - 1e-4) out.push(mk(cur, g.len, baseZ, baseZ, false, false));
+        return out;
+    }
+
+    function updateTabWarningUI() {
+        const box = document.getElementById('tabWarning');
+        if (!box) return;
+        const enabled = document.getElementById('tabEnable') && document.getElementById('tabEnable').checked;
+        if (!enabled || lastTabWarnings.length === 0) {
+            box.classList.add('hidden');
+            box.innerHTML = '';
+            return;
+        }
+        box.classList.remove('hidden');
+        const title = currentLang === 'zh' ? '⚠ 橋位警告' : '⚠ Tab warnings';
+        const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+        box.innerHTML = `<div class="font-bold mb-1">${title}</div>` + lastTabWarnings.map(m => `<div>• ${esc(m)}</div>`).join('');
     }
 
     function applyTabsToPaths(pathData) {
+        lastTabWarnings = [];
         const tabEnable = document.getElementById('tabEnable') && document.getElementById('tabEnable').checked;
-        if (!tabEnable) return pathData;
+        if (!tabEnable) { updateTabWarningUI(); return pathData; }
 
-        const arcSegs = pathData.filter(seg => seg.type === 'G2' || seg.type === 'G3');
-        // 圓弧的圓心與半徑只算一次 (原本每次比對都重新計算)
-        const arcInfos = [];
-        arcSegs.forEach(arc => {
-            const c = findArcCenter(arc.from, arc.to, arc.I, arc.J, arc.R, arc.type === 'G2');
-            if (!c) return;
-            arcInfos.push({ cx: c.x, cy: c.y, r: Math.sqrt((arc.from.x - c.x)**2 + (arc.from.y - c.y)**2) });
-        });
-        const nearAnyArc = (a, b) => {
-            for (let k = 0; k < arcInfos.length; k++) {
-                const ai = arcInfos[k];
-                if (Math.abs(Math.sqrt((a.x - ai.cx)**2 + (a.y - ai.cy)**2) - ai.r) < 0.5 ||
-                    Math.abs(Math.sqrt((b.x - ai.cx)**2 + (b.y - ai.cy)**2) - ai.r) < 0.5) return true;
-            }
-            return false;
-        };
-        const toolDia = parseFloat(document.getElementById('toolDiaInput')?.value) || 3.175;
-        const tabWidth = toolDia + 6;
-        const R = tabWidth / 2;
-
+        const { W, H } = getTabSettings();
+        const T = TAB_MSG[currentLang] || TAB_MSG.zh;
+        const plungeF = detectFirstZFeedrate(pathData);
         const result = [];
         let currentRun = [];
+        let contourNo = 0;
+        const isXYCut = s => (s.type === 'G1' || s.type === 'G2' || s.type === 'G3');
 
         const flushRun = () => {
             if (currentRun.length === 0) return;
+            const Zd = Math.min(...currentRun.map(s => s.to.z));
+            if (!(Zd < -0.01)) { currentRun.forEach(s => result.push(s)); currentRun = []; return; }
 
-            const uniqueZ = [...new Set(currentRun.map(s => parseFloat(s.to.z.toFixed(4))))].sort((a, b) => b - a);
-            const Z_deepest = uniqueZ[uniqueZ.length - 1];
+            const isFinalFlat = s => isXYCut(s) && Math.abs(s.from.z - Zd) < 0.01 && Math.abs(s.to.z - Zd) < 0.01 && segGeom(s);
+            const rampSegs = currentRun.filter(s => isXYCut(s) && Math.abs(s.from.z - s.to.z) > 0.01 && segGeom(s));
 
-            let stepdown = 1.5; 
-            if (uniqueZ.length >= 2) {
-                stepdown = Math.abs(uniqueZ[uniqueZ.length - 1] - uniqueZ[uniqueZ.length - 2]);
-            } else if (uniqueZ.length === 1) {
-                stepdown = Math.max(1.0, Math.min(3.0, Math.abs(Z_deepest) * 0.5)); 
-            }
-            stepdown = Math.max(1.0, Math.min(3.0, stepdown)); 
+            // 以深度最深那一層的連續片段為一條「切割路徑」
+            const groups = [];
+            let grp = null;
+            currentRun.forEach(s => {
+                if (isFinalFlat(s)) {
+                    if (!grp) { grp = []; groups.push(grp); }
+                    grp.push(s);
+                } else grp = null;
+            });
 
-            const finalPassSegs = currentRun.filter(s => Math.abs(s.to.z - Z_deepest) < 0.01);
-
-            if (finalPassSegs.length > 0) {
-                const candidateSegs = [];
-                finalPassSegs.forEach(seg => {
-                    if (seg.type === 'G1') {
-                        const dx = seg.to.x - seg.from.x;
-                        const dy = seg.to.y - seg.from.y;
-                        const len = Math.sqrt(dx * dx + dy * dy);
-                        if (len > tabWidth + 1.0) {
-                            candidateSegs.push({
-                                seg: seg,
-                                len: len,
-                                midpoint: {
-                                    x: (seg.from.x + seg.to.x) / 2,
-                                    y: (seg.from.y + seg.to.y) / 2,
-                                    z: (seg.from.z + seg.to.z) / 2
-                                }
-                            });
-                        }
-                    }
-                });
-
-                candidateSegs.sort((a, b) => b.len - a.len);
-
-                const tabs = [];
-                const minDistanceBetweenTabs = 20.0;
-
-                for (const cand of candidateSegs) {
-                    const ptMid = { ...cand.midpoint };
-                    const L = cand.len;
-                    const u1 = 0.5 - R / L;
-                    const u2 = 0.5 + R / L;
-
-                    const pt1 = {
-                        x: cand.seg.from.x + u1 * (cand.seg.to.x - cand.seg.from.x),
-                        y: cand.seg.from.y + u1 * (cand.seg.to.y - cand.seg.from.y)
-                    };
-                    const pt2 = {
-                        x: cand.seg.from.x + u2 * (cand.seg.to.x - cand.seg.from.x),
-                        y: cand.seg.from.y + u2 * (cand.seg.to.y - cand.seg.from.y)
-                    };
-
-                    const nearArc = nearAnyArc(pt1, pt2);
-
-                    let foundSafeOffset = !nearArc;
-                    if (!foundSafeOffset) {
-                        const minT = R / L;
-                        const maxT = 1 - R / L;
-                        const span = maxT - minT;
-                        
-                        for (let step = 0; step <= 15; step++) {
-                            const tCenter = minT + (step / 15) * span;
-                            const testU1 = tCenter - R / L;
-                            const testU2 = tCenter + R / L;
-
-                            const testPt1 = {
-                                x: cand.seg.from.x + testU1 * (cand.seg.to.x - cand.seg.from.x),
-                                y: cand.seg.from.y + testU1 * (cand.seg.to.y - cand.seg.from.y)
-                            };
-                            const testPt2 = {
-                                x: cand.seg.from.x + testU2 * (cand.seg.to.x - cand.seg.from.x),
-                                y: cand.seg.from.y + testU2 * (cand.seg.to.y - cand.seg.from.y)
-                            };
-
-                            const testNearArc = nearAnyArc(testPt1, testPt2);
-
-                            if (!testNearArc) {
-                                ptMid.x = cand.seg.from.x + tCenter * (cand.seg.to.x - cand.seg.from.x);
-                                ptMid.y = cand.seg.from.y + tCenter * (cand.seg.to.y - cand.seg.from.y);
-                                foundSafeOffset = true;
-                                break;
-                            }
-                        }
-                    }
-
-                    if (!foundSafeOffset) continue;
-
-                    let tooClose = false;
-                    for (const existing of tabs) {
-                        const dist = Math.sqrt((ptMid.x - existing.x)**2 + (ptMid.y - existing.y)**2);
-                        if (dist < minDistanceBetweenTabs) {
-                            tooClose = true;
-                            break;
-                        }
-                    }
-
-                    if (!tooClose) {
-                        tabs.push(ptMid);
-                    }
-
-                    if (tabs.length >= 4) break;
+            const bridgeZ = Math.min(0, Zd + H);
+            const allTabs = [];
+            groups.forEach(gs => {
+                const plan = planTabsForGroup(gs, W, rampSegs);
+                if (plan.L < 3) return;  // 太短的零碎線段 (例如退刀小段) 不處理
+                contourNo++;
+                const name = (currentLang === 'zh' ? '輪廓 #' : 'Contour #') + contourNo +
+                    ` (X${gs[0].from.x.toFixed(1)} Y${gs[0].from.y.toFixed(1)})`;
+                const vars = { name, L: plan.L.toFixed(1), W, n0: plan.n0, n: plan.n };
+                plan.warns.forEach(w => lastTabWarnings.push(T[w.code](Object.assign({}, vars, w))));
+                if (bridgeZ > -0.001 && plan.tabs.length) {
+                    lastTabWarnings.push(T.high({ name, H, D: Math.abs(Zd).toFixed(1) }));
                 }
+                plan.tabs.forEach(t => allTabs.push(t));
+            });
 
-                currentRun.forEach(seg => {
-                    const isFinalPass = Math.abs(seg.to.z - Z_deepest) < 0.01;
-                    if (isFinalPass && tabs.length > 0 && seg.type !== 'G2' && seg.type !== 'G3') {
-                        const splitParts = splitSegmentWithTabs(seg, tabs, stepdown, R);
-                        for (let k = 0; k < splitParts.length; k++) result.push(splitParts[k]);
-                    } else {
-                        result.push(seg);
-                    }
-                });
-            } else {
-                for (let k = 0; k < currentRun.length; k++) result.push(currentRun[k]);
-            }
-
+            // 每一層只要深度低於橋位頂面，就要保留橋位 (橋高可大於每層下刀量)
+            currentRun.forEach(seg => {
+                const flat = Math.abs(seg.from.z - seg.to.z) < 0.01;
+                if (allTabs.length && flat && isXYCut(seg) && seg.to.z < bridgeZ - 0.001) {
+                    const parts = splitSegmentWithTabs(seg, allTabs, bridgeZ, plungeF);
+                    for (let k = 0; k < parts.length; k++) result.push(parts[k]);
+                } else {
+                    result.push(seg);
+                }
+            });
             currentRun = [];
         };
 
@@ -1536,6 +1661,7 @@
         });
         flushRun();
 
+        // 相鄰橋位之間 (橋位下降後立刻上升於同一點) 合併，避免多餘的 Z 動作
         const cleanResult = [];
         for (let i = 0; i < result.length; i++) {
             const cur = result[i];
@@ -1544,8 +1670,8 @@
                     const next = result[i + 1];
                     if (next.isTab && Math.abs(next.from.x - next.to.x) < 1e-4 && Math.abs(next.from.y - next.to.y) < 1e-4 && next.to.z > next.from.z) {
                         if (Math.abs(cur.to.x - next.from.x) < 1e-4 && Math.abs(cur.to.y - next.from.y) < 1e-4) {
-                            i++; 
-                            continue; 
+                            i++;
+                            continue;
                         }
                     }
                 }
@@ -1553,7 +1679,35 @@
             cleanResult.push(cur);
         }
 
+        updateTabWarningUI();
         return cleanResult;
+    }
+
+    // 將縮放 / 旋轉 / 偏移一次套用到路徑資料 (含圓弧 I/J/R)，之後的橋位與輸出都以「最終座標」計算
+    function transformPathData(pathData) {
+        const scale = parseFloat(document.getElementById('scaleInput').value) || 1;
+        const offX = parseFloat(document.getElementById('offsetX').value) || 0;
+        const offY = parseFloat(document.getElementById('offsetY').value) || 0;
+        const rotRad = (parseFloat(document.getElementById('rotationInput').value) || 0) * Math.PI / 180;
+        const cosR = Math.cos(rotRad), sinR = Math.sin(rotRad);
+        const T = (p, home) => home ? { ...p, x: 0, y: 0 } : {
+            ...p,
+            x: (p.x * cosR - p.y * sinR) * scale + offX,
+            y: (p.x * sinR + p.y * cosR) * scale + offY
+        };
+        return pathData.map((seg, idx) => {
+            const firstHome = idx === 0 && Math.abs(seg.from.x) < 1e-4 && Math.abs(seg.from.y) < 1e-4;
+            const out = { ...seg, from: T(seg.from, seg.isStartOrEndHome || firstHome), to: T(seg.to, seg.isStartOrEndHome) };
+            if (seg.type === 'G2' || seg.type === 'G3') {
+                if (seg.I !== null || seg.J !== null) {
+                    const rI = seg.I || 0, rJ = seg.J || 0;
+                    out.I = (rI * cosR - rJ * sinR) * scale;
+                    out.J = (rI * sinR + rJ * cosR) * scale;
+                }
+                if (seg.R !== null) out.R = seg.R * scale;
+            }
+            return out;
+        });
     }
 
     function compileSegmentsToGcode(segments, state) {
@@ -1567,10 +1721,153 @@
             };
         }
 
-        const scale = parseFloat(document.getElementById('scaleInput').value) || 1;
-        const offX = parseFloat(document.getElementById('offsetX').value) || 0;
-        const offY = parseFloat(document.getElementById('offsetY').value) || 0;
-        const rotRad = (parseFloat(document.getElementById('rotationInput').value) || 0) * Math.PI / 180;
+        const scale = 1, offX = 0, offY = 0, rotRad = 0;
+        const res = parseFloat(document.getElementById('resInput').value) || 0.1;
+        const cosR = Math.cos(rotRad), sinR = Math.sin(rotRad);
+        const rHeight = getRetractHeight();
+
+        const feedrateEnable = document.getElementById('feedrateEnable') && document.getElementById('feedrateEnable').checked;
+        const targetFeedrate = parseFloat(document.getElementById('targetFeedrateInput').value) || 1200;
+        const targetZFeedrate = parseFloat(document.getElementById('targetZFeedrateInput').value) || 400;
+
+        const gcodeLines = [];
+
+        segments.forEach((seg, idx) => {
+            let fZ = seg.to.z;
+            
+            if (fZ > 0.0001) {
+                fZ = rHeight;
+            }
+
+            let fX = 0, fY = 0;
+            if (seg.isStartOrEndHome) {
+                fX = 0; fY = 0;
+            } else {
+                fX = (seg.to.x * cosR - seg.to.y * sinR) * scale + offX;
+                fY = (seg.to.x * sinR + seg.to.y * cosR) * scale + offY;
+            }
+
+            const dXY = state.lastX !== null ? Math.sqrt((fX - state.lastX)**2 + (fY - state.lastY)**2) : Infinity;
+            
+            let zChanged = false;
+            if (state.lastZ === null) {
+                if (seg.hasZ || Math.abs(fZ) > 1e-4) {
+                    zChanged = true;
+                }
+            } else {
+                if (Math.abs(fZ - state.lastZ) > 0.0001) {
+                    zChanged = true;
+                }
+            }
+
+            const isLastMove = (idx === segments.length - 1);
+
+            if (state.lastX !== null && seg.type === 'G1' && !seg.isTab && dXY < res && !zChanged && !isLastMove) {
+                return; 
+            }
+
+            if (seg.type === 'G0') {
+                state.hasOutputXYFInCurrentCut = false;
+            }
+
+            let fFromX = 0, fFromY = 0;
+            if (seg.isStartOrEndHome) {
+                fFromX = 0; fFromY = 0;
+            } else {
+                fFromX = (seg.from.x * cosR - seg.from.y * sinR) * scale + offX;
+                fFromY = (seg.from.x * sinR + seg.from.y * cosR) * scale + offY;
+            }
+
+            const segmentPhysicalXYChanged = state.lastX === null || Math.sqrt((fX - fFromX)**2 + (fY - fFromY)**2) > 0.0001;
+            const isZOnlyMove = !segmentPhysicalXYChanged && zChanged;
+
+            let newlineParts = [];
+            newlineParts.push(seg.type);
+            
+            if (!isZOnlyMove) {
+                newlineParts.push('X' + formatNum(fX, 4));
+                newlineParts.push('Y' + formatNum(fY, 4));
+            }
+            
+            if (zChanged) {
+                newlineParts.push('Z' + formatNum(fZ, 4));
+            }
+
+            if (seg.type === 'G2' || seg.type === 'G3') {
+                if (seg.I !== null || seg.J !== null) {
+                    const rawI = seg.I || 0;
+                    const rawJ = seg.J || 0;
+                    let fI = (rawI * cosR - rawJ * sinR) * scale;
+                    let fJ = (rawI * sinR + rawJ * cosR) * scale;
+                    newlineParts.push('I' + formatNum(fI, 4));
+                    newlineParts.push('J' + formatNum(fJ, 4));
+                }
+                if (seg.R !== null) {
+                    let fR = seg.R * scale;
+                    newlineParts.push('R' + formatNum(fR, 4));
+                }
+            }
+
+            let segF = seg.f;
+            if (seg.type !== 'G0') {
+                const isXYMove = !isZOnlyMove && (seg.type === 'G1' || seg.type === 'G2' || seg.type === 'G3');
+                
+                if (isXYMove) {
+                    if (!state.hasOutputXYFInCurrentCut) {
+                        if (feedrateEnable) {
+                            segF = targetFeedrate;
+                        }
+                        state.hasOutputXYFInCurrentCut = true;
+                        if (state.activeFeedrate === null || Math.abs(segF - state.activeFeedrate) > 0.01) {
+                            newlineParts.push('F' + formatNum(segF, 2));
+                            state.activeFeedrate = segF;
+                        }
+                    } else {
+                        if (feedrateEnable) {
+                            segF = targetFeedrate;
+                        }
+                        if (state.activeFeedrate === null || Math.abs(segF - state.activeFeedrate) > 0.01) {
+                            newlineParts.push('F' + formatNum(segF, 2));
+                            state.activeFeedrate = segF;
+                        }
+                    }
+                } else {
+                    if (feedrateEnable) {
+                        segF = targetZFeedrate;
+                    }
+                    if (segF) {
+                        if (state.activeFeedrate === null || Math.abs(segF - state.activeFeedrate) > 0.01) {
+                            newlineParts.push('F' + formatNum(segF, 2));
+                            state.activeFeedrate = segF;
+                        }
+                    }
+                }
+            } else {
+                /* G0 快速移動：僅在純走 XY 軸（Z 軸無變動）時加入 F2000 */
+                const isPureXYMove = segmentPhysicalXYChanged && !zChanged;
+                if (isPureXYMove) {
+                    const g0Feedrate = 2000;
+                    if (state.activeFeedrate === null || Math.abs(g0Feedrate - state.activeFeedrate) > 0.01) {
+                        newlineParts.push('F' + formatNum(g0Feedrate, 2));
+                        state.activeFeedrate = g0Feedrate;
+                    }
+                }
+            }
+
+            gcodeLines.push(newlineParts.join(' '));
+            
+            state.lastX = fX; 
+            state.lastY = fY; 
+            state.lastZ = fZ;
+        });
+
+        return gcodeLines;
+    }
+
+    function processAndPreview() {
+        if (!originalGcode) return;
+        // 座標已在 transformPathData 轉為最終座標，這裡不再縮放/旋轉/偏移
+        const scale = 1, offX = 0, offY = 0, rotRad = 0;
         const res = parseFloat(document.getElementById('resInput').value) || 0.1;
         const cosR = Math.cos(rotRad), sinR = Math.sin(rotRad);
         const rHeight = getRetractHeight();
@@ -1726,7 +2023,8 @@
 
         pathData = applyThicknessAdjustment(pathData);
         pathData = applyFeedrateAdjustment(pathData);
-        pathData = applyTabsToPaths(pathData);
+        pathData = transformPathData(pathData);   // 先完成縮放/旋轉/偏移
+        pathData = applyTabsToPaths(pathData);    // 再以最終尺寸計算橋位
 
         if (gcodeGroup) { scene.remove(gcodeGroup); disposeObject(gcodeGroup); }
         gcodeGroup = new THREE.Group();
@@ -1734,6 +2032,7 @@
         const rapidVerts = [], cutVerts = [], tabVerts = [];
 
         let totalDist = 0, totalTime = 0, lastP = { x: 0, y: 0, z: 0 }, isF = true;
+        const bnd = { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity, minZ: Infinity, maxZ: -Infinity };
 
         const trans = (p, isHome) => {
             if (isHome) {
@@ -1781,6 +2080,15 @@
             totalDist += segD;
             if (seg.f > 0) totalTime += segD / (seg.f / 60);
 
+            if (!seg.isStartOrEndHome) {
+                for (let q = 0; q < points.length; q++) {
+                    const pq = points[q];
+                    if (pq.x < bnd.minX) bnd.minX = pq.x; if (pq.x > bnd.maxX) bnd.maxX = pq.x;
+                    if (pq.y < bnd.minY) bnd.minY = pq.y; if (pq.y > bnd.maxY) bnd.maxY = pq.y;
+                    if (pq.z < bnd.minZ) bnd.minZ = pq.z; if (pq.z > bnd.maxZ) bnd.maxZ = pq.z;
+                }
+            }
+
             const bucket = (seg.type === 'G0') ? rapidVerts : (seg.isTab ? tabVerts : cutVerts);
             for (let i = 1; i < points.length; i++) {
                 const a = points[i-1], b = points[i];
@@ -1827,7 +2135,7 @@
             updateThreeGrid();
         }
 
-        displayStats(totalTime, totalDist);
+        displayStats(totalTime, bnd);
         scene.add(gcodeGroup);
         document.getElementById('downloadBtn').disabled = false;
         requestRender();
@@ -1857,7 +2165,8 @@
 
         pathData = applyThicknessAdjustment(pathData);
         pathData = applyFeedrateAdjustment(pathData);
-        pathData = applyTabsToPaths(pathData);
+        pathData = transformPathData(pathData);   // 先完成縮放/旋轉/偏移
+        pathData = applyTabsToPaths(pathData);    // 再以最終尺寸計算橋位
 
         const processedContours = contourRanges.map(range => ({
             range: range,
@@ -2160,7 +2469,8 @@
         processAndPreview(); 
     });
 
-    document.getElementById('toolDiaInput').addEventListener('input', scheduleProcess);
+    document.getElementById('tabWidthInput').addEventListener('input', scheduleProcess);
+    document.getElementById('tabHeightInput').addEventListener('input', scheduleProcess);
     document.getElementById('applyBtn').addEventListener('click', processAndPreview);
     
     document.getElementById('centerBtn').addEventListener('click', () => {
@@ -2196,7 +2506,13 @@
     });
 
     document.getElementById('downloadBtn').addEventListener('click', () => {
-        const b = new Blob([generateGcode()], { type: 'text/plain' });
+        const gcodeText = generateGcode();
+        if (lastTabWarnings.length > 0) {
+            const head = currentLang === 'zh' ? '橋位有以下警告：' : 'Tab warnings:';
+            const tail = currentLang === 'zh' ? '仍要下載嗎？' : 'Download anyway?';
+            if (!confirm(head + '\n\n' + lastTabWarnings.map(m => '• ' + m).join('\n') + '\n\n' + tail)) return;
+        }
+        const b = new Blob([gcodeText], { type: 'text/plain' });
         const a = document.createElement('a'); const blobUrl = URL.createObjectURL(b); a.href = blobUrl;
         a.download = `${originalFileName}_re.gcode`; a.click();
         setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
