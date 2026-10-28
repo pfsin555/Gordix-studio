@@ -240,6 +240,20 @@
                                 <input type="checkbox" id="job-use-tab" class="w-4 h-4 accent-orange-600 rounded">
                                 <span class="text-xs font-bold text-slate-700 dark:text-slate-300" data-i18n="useTab">啟用橋位 (TAB)</span>
                             </label>
+                            <div id="tab-params" class="hidden mt-2 space-y-2">
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-[10px] text-slate-500 dark:text-slate-400 font-bold mb-1" data-i18n="tabWidth">橋位寬度 (3~8mm)</label>
+                                        <input type="number" id="tab-w" value="5" min="3" max="8" step="0.5">
+                                    </div>
+                                    <div>
+                                        <label class="block text-[10px] text-slate-500 dark:text-slate-400 font-bold mb-1" data-i18n="tabHeight">橋位高度 (2~6mm)</label>
+                                        <input type="number" id="tab-h" value="3" min="2" max="6" step="0.5">
+                                    </div>
+                                </div>
+                                <div class="text-[10px] text-slate-500 dark:text-slate-400 leading-snug" data-i18n="tabHint">橋位自動均分：路徑≤200mm 2個、201~600mm 3個、>600mm 4個</div>
+                                <div id="tab-warning" class="hidden text-[11px] leading-snug rounded border border-amber-500/60 bg-amber-500/10 text-amber-700 dark:text-amber-300 p-2 space-y-0.5"></div>
+                            </div>
                         </div>
 
                         <div id="milling-opts" class="space-y-4 pt-4 border-t border-slate-200 dark:border-slate-700">
@@ -444,115 +458,221 @@
             return Math.sqrt((p.x - projX) ** 2 + (p.y - projY) ** 2);
         }
 
-        // 智慧型橋位線段插入演算法：只有臨近 TAB 的線段才細分，其他線段保持完整，避免生成微小碎線
-        function insertTabsIntoPath(path, tabCenters, tabLength = 6) {
-            if (!tabCenters || tabCenters.length === 0) return path;
-            const R = tabLength / 2;
-            const result = [path[0]];
+        // ================= 橋位 (TAB) 計算 =================
+        // 規則：單一切割路徑總長 <=200mm → 2 個；201~600mm → 3 個；>600mm → 4 個
+        // 橋位沿路徑「弧長」均分並避開轉角 (圓弧已離散成折線，因此圓弧上同樣能放橋位)
+        function tabCountForLength(L) { return L <= 200 ? 2 : (L <= 600 ? 3 : 4); }
+
+        function readTabParams() {
+            let w = parseFloat(document.getElementById('tab-w').value);
+            let h = parseFloat(document.getElementById('tab-h').value);
+            if (isNaN(w)) w = 5;
+            if (isNaN(h)) h = 3;
+            return { tabW: Math.max(3, Math.min(8, w)), tabH: Math.max(2, Math.min(6, h)) };
+        }
+        function getTabTopZ(cfg) { return Math.min(0, -cfg.depth + (cfg.tabH || 3)); }
+
+        const tabCache = new WeakMap();
+
+        function planTabsForPath(path, W) {
+            const res = { L: 0, spans: [], warns: [], n: 0, n0: 0 };
+            if (!path || path.length < 3) return res;
+            const cum = [0];
+            for (let i = 1; i < path.length; i++) cum.push(cum[i - 1] + Math.hypot(path[i].x - path[i - 1].x, path[i].y - path[i - 1].y));
+            const L = cum[cum.length - 1];
+            res.L = L;
+            res.cum = cum;
+            const closed = Math.hypot(path[0].x - path[path.length - 1].x, path[0].y - path[path.length - 1].y) < 0.01;
+
+            const pointAtS = (s) => {
+                s = Math.max(0, Math.min(L, s));
+                let lo = 0, hi = cum.length - 1;
+                while (hi - lo > 1) { const m = (lo + hi) >> 1; if (cum[m] <= s) lo = m; else hi = m; }
+                const seg = cum[hi] - cum[lo];
+                const t = seg > 1e-9 ? (s - cum[lo]) / seg : 0;
+                return { x: path[lo].x + (path[hi].x - path[lo].x) * t, y: path[lo].y + (path[hi].y - path[lo].y) * t };
+            };
+
+            // 轉角：以 ±1mm 視窗計算前後方向夾角，> 35° 視為轉角 (折線上的圓弧每點轉角很小，不會被誤判)
+            const corners = [];
+            const look = 1.0;
+            for (let i = 1; i < path.length - 1; i++) {
+                const s = cum[i];
+                const pb = pointAtS(s - look), pa = pointAtS(s + look), p = path[i];
+                const v1x = p.x - pb.x, v1y = p.y - pb.y, v2x = pa.x - p.x, v2y = pa.y - p.y;
+                const n1 = Math.hypot(v1x, v1y), n2 = Math.hypot(v2x, v2y);
+                if (n1 < 1e-6 || n2 < 1e-6) continue;
+                const c = Math.max(-1, Math.min(1, (v1x * v2x + v1y * v2y) / (n1 * n2)));
+                if (Math.acos(c) * 180 / Math.PI > 35) {
+                    if (!corners.length || s - corners[corners.length - 1] > 0.5) corners.push(s);
+                }
+            }
+            if (closed) {
+                const pb = pointAtS(L - look), pa = pointAtS(look), p = path[0];
+                const v1x = p.x - pb.x, v1y = p.y - pb.y, v2x = pa.x - p.x, v2y = pa.y - p.y;
+                const n1 = Math.hypot(v1x, v1y), n2 = Math.hypot(v2x, v2y);
+                if (n1 > 1e-6 && n2 > 1e-6) {
+                    const c = Math.max(-1, Math.min(1, (v1x * v2x + v1y * v2y) / (n1 * n2)));
+                    if (Math.acos(c) * 180 / Math.PI > 35) corners.push(0, L);
+                }
+            }
+
+            const n0 = tabCountForLength(L);
+            let n = n0;
+            const margin = 1.0;
+            while (n > 1 && (L - 2 * margin) / n < W + 2) n--;
+            if (L - 2 * margin < W + 0.5) { res.warns.push({ code: 'short' }); return res; }
+            res.n0 = n0; res.n = n;
+            if (n < n0) res.warns.push({ code: 'reduced', n0, n });
+
+            const lo = W / 2 + margin, hi = L - W / 2 - margin;
+            const spacing = L / n;
+            const halfWin = Math.min(0.3 * spacing, 40);
+            const centers = [];
+            for (let k = 0; k < n; k++) {
+                const ideal = Math.max(lo, Math.min(hi, (k + 0.5) * spacing));
+                let best = ideal, bestScore = -Infinity;
+                const a = Math.max(lo, ideal - halfWin), b = Math.min(hi, ideal + halfWin);
+                for (let s = a; s <= b + 1e-9; s += 0.5) {
+                    let clear = 10;
+                    for (let c = 0; c < corners.length; c++) {
+                        clear = Math.min(clear, Math.abs(s - corners[c]) - W / 2);
+                        if (clear < 0) break;
+                    }
+                    let score = Math.min(clear, 10) - 0.01 * Math.abs(s - ideal);
+                    if (clear < 0) score -= 20;
+                    if (score > bestScore) { bestScore = score; best = s; }
+                }
+                centers.push(best);
+            }
+            centers.forEach(sc => res.spans.push({ s0: sc - W / 2, s1: sc + W / 2, sc, center: pointAtS(sc) }));
+
+            // 橋位間距檢查
+            const minGap = Math.max(10, 2 * W);
+            let worstGap = Infinity, worstEuc = Infinity;
+            const T = res.spans;
+            for (let i = 0; i < T.length && T.length >= 2; i++) {
+                const A = T[i], B = T[(i + 1) % T.length];
+                const gap = (i + 1 < T.length) ? (B.s0 - A.s1) : (closed ? (B.s0 + L - A.s1) : Infinity);
+                worstGap = Math.min(worstGap, gap);
+            }
+            for (let i = 0; i < T.length; i++) for (let j = i + 1; j < T.length; j++) {
+                worstEuc = Math.min(worstEuc, Math.hypot(T[i].center.x - T[j].center.x, T[i].center.y - T[j].center.y));
+            }
+            if (worstGap < minGap) res.warns.push({ code: 'gap', gap: worstGap.toFixed(1), min: minGap.toFixed(0) });
+            const minEuc = Math.max(12, 1.5 * W);
+            if (worstEuc < minEuc && worstGap >= minGap) res.warns.push({ code: 'near', d: worstEuc.toFixed(1), min: minEuc.toFixed(0) });
+            const ratio = T.length * W / L;
+            if (ratio > 0.4) res.warns.push({ code: 'ratio', pct: (ratio * 100).toFixed(0) });
+            res.pointAtS = pointAtS;
+            return res;
+        }
+
+        // 依規劃結果把橋位邊界插入路徑：回傳 {pts, flags}，flags[j]=true 表示該點需抬到橋位高度
+        // 橋位起訖點各插入「同 XY、不同旗標」的兩點，使 Z 升降為垂直動作，橋寬精確等於設定值
+        function buildTabbedPath(path, plan) {
+            const cum = plan.cum, spans = plan.spans;
+            const pts = [], flags = [];
+            const push = (p, f) => { pts.push({ x: p.x, y: p.y }); flags.push(f); };
+            push(path[0], false);
+            let inside = false;
             for (let i = 0; i < path.length - 1; i++) {
-                const p1 = path[i];
-                const p2 = path[i + 1];
-                const dx = p2.x - p1.x;
-                const dy = p2.y - p1.y;
-                const len = Math.sqrt(dx * dx + dy * dy);
-                if (len < 0.001) {
-                    result.push(p2);
-                    continue;
-                }
-
-                // 判斷此線段是否與任何橋位圓形區域相交或足夠接近
-                let intersects = false;
-                for (let j = 0; j < tabCenters.length; j++) {
-                    const tc = tabCenters[j];
-                    const dist = distToSegment(tc, p1, p2);
-                    if (dist < R + 0.1) { // 加上極小安全容差
-                        intersects = true;
-                        break;
-                    }
-                }
-
-                if (intersects) {
-                    // 僅針對與橋位接觸的線段進行高精細細分 (0.5mm 步長)
-                    const step = 0.5;
-                    const divisions = Math.ceil(len / step);
-                    for (let d = 1; d < divisions; d++) {
-                        const t = d / divisions;
-                        result.push({
-                            x: p1.x + dx * t,
-                            y: p1.y + dy * t
-                        });
-                    }
-                }
-                result.push(p2);
-            }
-            return result;
-        }
-
-        function getTabPointsForPath(path) {
-            if (!path || path.length < 3) return [];
-            
-            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-            path.forEach(pt => {
-                minX = Math.min(minX, pt.x);
-                maxX = Math.max(maxX, pt.x);
-                minY = Math.min(minY, pt.y);
-                maxY = Math.max(maxY, pt.y);
-            });
-            
-            const A = { x: minX, y: minY };
-            const B = { x: maxX, y: maxY };
-            const C = { x: minX, y: maxY };
-            const D = { x: maxX, y: minY };
-            
-            let ptA = path[0], ptB = path[0];
-            let minDistA = Infinity, minDistB = Infinity;
-            
-            path.forEach(pt => {
-                const distA = Math.pow(pt.x - A.x, 2) + Math.pow(pt.y - A.y, 2);
-                if (distA < minDistA) { minDistA = distA; ptA = pt; }
-                
-                const distB = Math.pow(pt.x - B.x, 2) + Math.pow(pt.y - B.y, 2);
-                if (distB < minDistB) { minDistB = distB; ptB = pt; }
-            });
-            
-            const centers = [ptA, ptB];
-            
-            let area = 0;
-            for (let i = 0; i < path.length; i++) {
-                let j = (i + 1) % path.length;
-                area += path[i].x * path[j].y;
-                area -= path[j].x * path[i].y;
-            }
-            area = Math.abs(area / 2);
-            
-            if (area > 1600) {
-                let ptC = path[0], ptD = path[0];
-                let minDistC = Infinity, minDistD = Infinity;
-                
-                path.forEach(pt => {
-                    const distC = Math.pow(pt.x - C.x, 2) + Math.pow(pt.y - C.y, 2);
-                    if (distC < minDistC) { minDistC = distC; ptC = pt; }
-                    
-                    const distD = Math.pow(pt.x - D.x, 2) + Math.pow(pt.y - D.y, 2);
-                    if (distD < minDistD) { minDistD = distD; ptD = pt; }
+                const sa = cum[i], sb = cum[i + 1];
+                const A = path[i], B = path[i + 1];
+                const segLen = sb - sa;
+                const events = [];
+                spans.forEach(sp => {
+                    if (sp.s0 >= sa && sp.s0 < sb) events.push({ s: sp.s0, start: true });
+                    if (sp.s1 > sa && sp.s1 <= sb) events.push({ s: sp.s1, start: false });
                 });
-                
-                const distToExisting = (p) => centers.some(c => Math.pow(p.x - c.x, 2) + Math.pow(p.y - c.y, 2) < 1.0);
-                if (!distToExisting(ptC)) centers.push(ptC);
-                if (!distToExisting(ptD)) centers.push(ptD);
+                events.sort((a, b) => a.s - b.s);
+                events.forEach(ev => {
+                    const t = segLen > 1e-9 ? (ev.s - sa) / segLen : 0;
+                    const P = { x: A.x + (B.x - A.x) * t, y: A.y + (B.y - A.y) * t };
+                    if (ev.start) { push(P, false); push(P, true); inside = true; }
+                    else { push(P, true); push(P, false); inside = false; }
+                });
+                const last = pts[pts.length - 1];
+                if (Math.hypot(last.x - B.x, last.y - B.y) > 1e-6) push(B, inside);
             }
-            
-            return centers;
+            return { pts, flags };
         }
 
-        function isPointInTab(pt, tabCenters, tabLength = 6) {
-            const halfLenSq = Math.pow(tabLength / 2, 2);
-            for (let i = 0; i < tabCenters.length; i++) {
-                const tc = tabCenters[i];
-                const distSq = Math.pow(pt.x - tc.x, 2) + Math.pow(pt.y - tc.y, 2);
-                if (distSq < halfLenSq) return true;
+        // 取得(含快取)某條路徑的橋位化結果；沒有橋位時回傳 null
+        function getTabbedPath(path, cfg) {
+            const W = cfg.tabW || 5;
+            let c = tabCache.get(path);
+            if (!c || c.W !== W) {
+                const plan = planTabsForPath(path, W);
+                c = { W, plan, built: plan.spans.length ? buildTabbedPath(path, plan) : null };
+                tabCache.set(path, c);
             }
-            return false;
+            return c.built;
+        }
+
+        const TAB_MSG = {
+            zh: {
+                short: v => `${v.name}：路徑長度僅 ${v.L} mm，放不下橋位 (寬 ${v.W} mm)，未加橋位`,
+                reduced: v => `${v.name}：路徑長度 ${v.L} mm 偏短，橋位由 ${v.n0} 個減為 ${v.n} 個`,
+                gap: v => `${v.name}：橋位間距過近，最小淨距僅 ${v.gap} mm (建議 ≥ ${v.min} mm)，工件強度與切削穩定性可能不足`,
+                near: v => `${v.name}：兩個橋位的直線距離僅 ${v.d} mm (建議 ≥ ${v.min} mm)，物件過小或過窄`,
+                ratio: v => `${v.name}：橋位佔路徑比例達 ${v.pct}%，工件幾乎被橋位固定，切斷後不易取下`,
+                high: v => `${v.name}：橋位高度 ${v.H} mm ≥ 加工深度 ${v.D} mm，橋位已達材料表面 (底部完全未切斷)`
+            },
+            en: {
+                short: v => `${v.name}: path is only ${v.L} mm, too short for a ${v.W} mm tab. No tab added`,
+                reduced: v => `${v.name}: path (${v.L} mm) is short, tab count reduced from ${v.n0} to ${v.n}`,
+                gap: v => `${v.name}: tabs are too close (min clear gap ${v.gap} mm, recommended >= ${v.min} mm)`,
+                near: v => `${v.name}: two tabs are only ${v.d} mm apart in a straight line (recommended >= ${v.min} mm). Part is too small/narrow`,
+                ratio: v => `${v.name}: tabs occupy ${v.pct}% of the path, the part will be hard to remove`,
+                high: v => `${v.name}: tab height ${v.H} mm >= cutting depth ${v.D} mm, tab reaches the material surface (not cut through)`
+            }
+        };
+
+        // 收集指定零件的橋位警告。options.cfg 可覆寫橋位寬/高 (使用介面上尚未套用的數值)
+        function collectTabWarnings(p, ovr) {
+            const cfg = Object.assign({}, p.jobConfig, ovr || {});
+            if (!cfg.useTab || (cfg.type !== 'outer' && cfg.type !== 'inner' && cfg.type !== 'pocket')) return [];
+            const W = Math.max(3, Math.min(8, cfg.tabW || 5));
+            const T = TAB_MSG[currentLang] || TAB_MSG.zh;
+            let paths;
+            if (p.toolpath && p.toolpath.length) paths = (cfg.type === 'pocket') ? (p.pocketContourPaths || []) : p.toolpath;
+            else paths = p.rawPath && p.rawPath.length > 2 ? [[...p.rawPath, p.rawPath[0]]] : [];
+            const out = [];
+            paths.forEach((path, i) => {
+                if (!path || path.length < 3) return;
+                const plan = planTabsForPath(path, W);
+                const name = `${(i18n[currentLang] || i18n.zh).partName} #${p.id}` + (paths.length > 1 ? `-${i + 1}` : '');
+                const vars = { name, L: plan.L.toFixed(1), W, n0: plan.n0, n: plan.n };
+                plan.warns.forEach(w => out.push(T[w.code](Object.assign({}, vars, w))));
+                if (cfg.depth > 0 && (cfg.tabH || 3) >= cfg.depth - 0.001 && plan.spans.length) {
+                    out.push(T.high({ name, H: cfg.tabH || 3, D: cfg.depth }));
+                }
+            });
+            return out;
+        }
+
+        function refreshTabWarnings() {
+            const box = document.getElementById('tab-warning');
+            if (!box) return;
+            const useTab = document.getElementById('job-use-tab').checked;
+            document.getElementById('tab-params').classList.toggle('hidden', !useTab);
+            let msgs = [];
+            if (useTab && selectedIndices.size > 0) {
+                const tp = readTabParams();
+                const depth = parseFloat(document.getElementById('mill-depth').value) || 3;
+                selectedIndices.forEach(idx => {
+                    const p = parts[idx];
+                    if (!p) return;
+                    const type = document.getElementById('job-type').value;
+                    msgs = msgs.concat(collectTabWarnings(p, { useTab: true, type, tabW: tp.tabW, tabH: tp.tabH, depth }));
+                });
+            }
+            if (!msgs.length) { box.classList.add('hidden'); box.innerHTML = ''; return; }
+            box.classList.remove('hidden');
+            const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+            const title = currentLang === 'zh' ? '⚠ 橋位警告' : '⚠ Tab warnings';
+            box.innerHTML = `<div class="font-bold mb-1">${title}</div>` + msgs.map(m => `<div>• ${esc(m)}</div>`).join('');
         }
 
         // --- 多國語言設定 ---
@@ -587,6 +707,9 @@
                 optInner: "內加工",
                 optPocket: "槽加工",
                 useTab: "啟用橋位 (TAB)",
+                tabWidth: "橋位寬度 (3~8mm)",
+                tabHeight: "橋位高度 (2~6mm)",
+                tabHint: "橋位自動均分：路徑≤200mm 2個、201~600mm 3個、>600mm 4個",
                 toolDia: "刀具直徑",
                 totalDepth: "加工深度",
                 stepDown: "每次下刀",
@@ -635,6 +758,9 @@
                 optInner: "Mill Inside",
                 optPocket: "Mill Pocket",
                 useTab: "Enable Tabs (Bridge)",
+                tabWidth: "Tab Width (3~8mm)",
+                tabHeight: "Tab Height (2~6mm)",
+                tabHint: "Tabs spread evenly: path <=200mm 2, 201~600mm 3, >600mm 4",
                 toolDia: "Tool Diameter",
                 totalDepth: "Total Depth",
                 stepDown: "Step Down",
@@ -664,6 +790,7 @@
                 if (i18n[currentLang][key]) el.innerHTML = i18n[currentLang][key];
             });
             renderPartList();
+            if (typeof refreshTabWarnings === 'function' && typeof selectedIndices !== 'undefined') refreshTabWarnings();
         }
 
         document.getElementById('lang-toggle').onclick = () => { 
@@ -1260,7 +1387,7 @@
                     originalDim: { w: pMaxX-pMinX, h: pMaxY-pMinY }, 
                     currentDim: { w: pMaxX-pMinX, h: pMaxY-pMinY }, 
                     visible: true, 
-                    jobConfig: { type: 'outer', f: 1000, d: 6.35, depth: 3.0, step: 1.0, overlap: 0.5, resolution: 0.1, useTab: false }, 
+                    jobConfig: { type: 'outer', f: 1000, d: 6.35, depth: 3.0, step: 1.0, overlap: 0.5, resolution: 0.1, useTab: false, tabW: 5, tabH: 3 }, 
                     toolpath: null, appliedMethod: null,
                     pocketContourPaths: null, pocketScanPaths: null
                 };
@@ -1383,7 +1510,7 @@
                 parts[idx].pocketContourPaths = null;
                 parts[idx].pocketScanPaths = null;
                 parts[idx].jobConfig = { 
-                    type: method, f: newF, d: newD, depth: newDepth, step: newStep, overlap: newOverlap, resolution: newRes, useTab: newUseTab 
+                    type: method, f: newF, d: newD, depth: newDepth, step: newStep, overlap: newOverlap, resolution: newRes, useTab: newUseTab, tabW: readTabParams().tabW, tabH: readTabParams().tabH 
                 };
                 parts[idx].appliedMethod = method; 
             });
@@ -1720,9 +1847,16 @@
                     document.getElementById(id).value = lastP.jobConfig[key] || lastP.jobConfig[id.split('-')[1]];
                 });
                 document.getElementById('job-use-tab').checked = !!lastP.jobConfig.useTab;
+                document.getElementById('tab-w').value = lastP.jobConfig.tabW || 5;
+                document.getElementById('tab-h').value = lastP.jobConfig.tabH || 3;
             } else { panel.classList.add('hidden'); hint.classList.remove('hidden'); }
             toggleMillingOptions();
+            refreshTabWarnings();
         }
+
+        ['job-use-tab','tab-w','tab-h','mill-depth','job-type'].forEach(id => {
+            document.getElementById(id).addEventListener(id === 'job-use-tab' || id === 'job-type' ? 'change' : 'input', refreshTabWarnings);
+        });
 
         document.getElementById('resize-w').oninput = (e) => {
             if(selectedIndices.size === 0) return;
@@ -1770,7 +1904,7 @@
                 parts[idx].toolpath = null;
                 parts[idx].pocketContourPaths = null;
                 parts[idx].pocketScanPaths = null;
-                parts[idx].jobConfig = { type: newType, f: newF, d: newD, depth: newDepth, step: newStep, overlap: newOverlap, resolution: newRes, useTab: newUseTab };
+                parts[idx].jobConfig = { type: newType, f: newF, d: newD, depth: newDepth, step: newStep, overlap: newOverlap, resolution: newRes, useTab: newUseTab, tabW: readTabParams().tabW, tabH: readTabParams().tabH };
                 parts[idx].currentDim = { w: parts[idx].originalDim.w * groupScale, h: parts[idx].originalDim.h * groupScale };
                 parts[idx].appliedMethod = newType; 
             });
@@ -1782,6 +1916,7 @@
             updateAllNestingDepths();
 
             renderPartList(); update3D(); updateStats();
+            refreshTabWarnings();
         };
 
         function calculateStandardToolpath(p, groupScale) {
@@ -2017,18 +2152,14 @@
                         const matTool = new THREE.LineBasicMaterial({ color: 0xfacc15, opacity: 1.0 - (i * 0.1), transparent: true });
                         p.toolpath.forEach(path => {
                             const isContourPath = (cfg.type === 'outer' || cfg.type === 'inner' || (contourSet !== null && contourSet.has(path)));
-                            const useTabThisPass = (cfg.useTab && (i === passes - 1) && isContourPath);
-                            if (useTabThisPass) {
-                                const tabLength = 6 + (cfg.d || 0); // TAB 移動長度 = 6mm + 刀具直徑
-                                const tabCenters = getTabPointsForPath(path);
-                                // 智慧型局部細分演算法：只細分鄰近 TAB 的地方，維持剩餘長路徑完整
-                                const subPath = insertTabsIntoPath(path, tabCenters, tabLength);
-                                const tabZVal = Math.min(0, currentZ + cfg.step);
-                                const zArr = new Float32Array(subPath.length);
-                                for (let k = 0; k < subPath.length; k++) {
-                                    zArr[k] = isPointInTab(subPath[k], tabCenters, tabLength) ? tabZVal : currentZ;
-                                }
-                                scene.add(new THREE.Line(makeLineGeometry(subPath, 0, zArr), matTool));
+                            // 每一層只要深度低於橋位頂面就要保留橋位 (橋高可大於每層下刀量)
+                            const layerZ = currentZ - 0.2;
+                            const tabInfo = (cfg.useTab && isContourPath && cfg.type !== 'laser' && layerZ < getTabTopZ(cfg) - 1e-6) ? getTabbedPath(path, cfg) : null;
+                            if (tabInfo) {
+                                const tabZVal = getTabTopZ(cfg) + 0.2;
+                                const zArr = new Float32Array(tabInfo.pts.length);
+                                for (let k = 0; k < tabInfo.pts.length; k++) zArr[k] = tabInfo.flags[k] ? tabZVal : currentZ;
+                                scene.add(new THREE.Line(makeLineGeometry(tabInfo.pts, 0, zArr), matTool));
                             } else {
                                 let geomTool = flatGeoms.get(path);
                                 if (!geomTool) { geomTool = makeLineGeometry(path, 0); flatGeoms.set(path, geomTool); }
@@ -2137,15 +2268,12 @@
                             phase.paths.forEach((path, pathIdx) => {
                                 if (path.length < 2) return;
                                 
-                                const useTabThisPass = (!isLaser && cfg.useTab && i === passes && phase.isContour);
-                                const tabLength = 6 + (cfg.d || 0); // TAB 移動長度 = 6mm + 刀具直徑
-                                const tabCenters = useTabThisPass ? getTabPointsForPath(path) : [];
-                                // 採用智慧型局部細分
-                                const finalPath = useTabThisPass ? insertTabsIntoPath(path, tabCenters, tabLength) : path;
-                                const tabZVal = useTabThisPass ? Math.min(0, targetZ + cfg.step) : targetZ;
+                                const tabInfo = (!isLaser && cfg.useTab && phase.isContour && targetZ < getTabTopZ(cfg) - 1e-6) ? getTabbedPath(path, cfg) : null;
+                                const finalPath = tabInfo ? tabInfo.pts : path;
+                                const tabZVal = tabInfo ? getTabTopZ(cfg) : targetZ;
 
                                 const start = finalPath[0];
-                                const startZ = useTabThisPass && isPointInTab(start, tabCenters, tabLength) ? tabZVal : targetZ;
+                                const startZ = tabInfo && tabInfo.flags[0] ? tabZVal : targetZ;
 
                                 let needRetract = true;
                                 if (i > 1 && pathIdx === 0 && lastPointOfPart) {
@@ -2188,7 +2316,7 @@
                                 let lastZ = startZ;
                                 for (let j = 1; j < finalPath.length; j++) {
                                     const pt = finalPath[j];
-                                    const ptZ = useTabThisPass && isPointInTab(pt, tabCenters, tabLength) ? tabZVal : targetZ;
+                                    const ptZ = tabInfo && tabInfo.flags[j] ? tabZVal : targetZ;
                                     const segmentDist = Math.sqrt(Math.pow(pt.x - finalPath[j - 1].x, 2) + Math.pow(pt.y - finalPath[j - 1].y, 2));
                                     const zDist = Math.abs(ptZ - lastZ);
                                     
@@ -2200,7 +2328,7 @@
                                 const lastPtInPath = finalPath[finalPath.length - 1];
                                 currentX = lastPtInPath.x;
                                 currentY = lastPtInPath.y;
-                                currentZ = useTabThisPass && isPointInTab(lastPtInPath, tabCenters, tabLength) ? tabZVal : targetZ;
+                                currentZ = tabInfo && tabInfo.flags[finalPath.length - 1] ? tabZVal : targetZ;
 
                                 lastPtInLayer = lastPtInPath;
                                 lastPointOfPart = lastPtInPath;
@@ -2233,6 +2361,15 @@
         // --- 產生 Gcode 輸出 ---
         document.getElementById('export-gcode').onclick = () => {
             if(parts.length === 0) return;
+            {
+                let tabMsgs = [];
+                parts.forEach(p => { if (p.visible && p.toolpath && p.toolpath.length) tabMsgs = tabMsgs.concat(collectTabWarnings(p)); });
+                if (tabMsgs.length) {
+                    const head = currentLang === 'zh' ? '橋位有以下警告：' : 'Tab warnings:';
+                    const tail = currentLang === 'zh' ? '仍要輸出 G-code 嗎？' : 'Export G-code anyway?';
+                    if (!confirm(head + '\n\n' + tabMsgs.map(m => '• ' + m).join('\n') + '\n\n' + tail)) return;
+                }
+            }
             let gc = ["; CNC V4.0", "G21", "G90", "G0 X0 Y0 F2000"];
             
             const orderPriority = { "laser": 0, "pocket": 1, "inner": 2, "outer": 3 };
@@ -2313,15 +2450,12 @@
                             phase.paths.forEach((path, pathIdx) => {
                                 if (path.length < 2) return;
                                 
-                                const useTabThisPass = (!isLaser && cfg.useTab && i === passes && phase.isContour);
-                                const tabLength = 6 + (cfg.d || 0); // TAB 移動長度 = 6mm + 刀具直徑
-                                const tabCenters = useTabThisPass ? getTabPointsForPath(path) : [];
-                                // 智慧型局部細分演算法
-                                const finalPath = useTabThisPass ? insertTabsIntoPath(path, tabCenters, tabLength) : path;
-                                const tabZVal = useTabThisPass ? Math.min(0, targetZ + cfg.step) : targetZ;
+                                const tabInfo = (!isLaser && cfg.useTab && phase.isContour && targetZ < getTabTopZ(cfg) - 1e-6) ? getTabbedPath(path, cfg) : null;
+                                const finalPath = tabInfo ? tabInfo.pts : path;
+                                const tabZVal = tabInfo ? getTabTopZ(cfg) : targetZ;
 
                                 const start = finalPath[0];
-                                const startZ = useTabThisPass && isPointInTab(start, tabCenters, tabLength) ? tabZVal : targetZ;
+                                const startZ = tabInfo && tabInfo.flags[0] ? tabZVal : targetZ;
 
                                 let needRetract = true;
                                 if (i > 1 && pathIdx === 0 && lastPointOfPart) {
@@ -2372,32 +2506,27 @@
                                 let lastZ = startZ;
                                 for (let j = 1; j < finalPath.length; j++) {
                                     const pt = finalPath[j];
-                                    const ptZ = useTabThisPass && isPointInTab(pt, tabCenters, tabLength) ? tabZVal : targetZ;
-                                    const fStr = (currentG1F !== cfg.f) ? ` F${cfg.f}` : "";
-                                    
-                                    if (Math.abs(ptZ - lastZ) > 0.001) {
+                                    const ptZ = tabInfo && tabInfo.flags[j] ? tabZVal : targetZ;
+                                    // 橋位起訖的垂直升降動作使用下刀速度 (F300)，其餘使用切削進給
+                                    const isVert = !!tabInfo && Math.abs(pt.x - finalPath[j - 1].x) < 1e-6 && Math.abs(pt.y - finalPath[j - 1].y) < 1e-6;
+                                    const feedNow = isVert ? 300 : cfg.f;
+                                    const fStr = (currentG1F !== feedNow) ? ` F${feedNow}` : "";
+
+                                    if (Math.abs(ptZ - lastZ) > 0.001 || Math.abs(currentZ - ptZ) > 0.001) {
                                         gc.push(`G1 X${pt.x.toFixed(3)} Y${pt.y.toFixed(3)} Z${ptZ.toFixed(3)}${fStr}`);
-                                        if (fStr) currentG1F = cfg.f;
-                                        lastZ = ptZ;
                                         currentZ = ptZ;
+                                        lastZ = ptZ;
                                     } else {
-                                        if (Math.abs(currentZ - ptZ) > 0.001) {
-                                            gc.push(`G1 X${pt.x.toFixed(3)} Y${pt.y.toFixed(3)} Z${ptZ.toFixed(3)}${fStr}`);
-                                            if (fStr) currentG1F = cfg.f;
-                                            currentZ = ptZ;
-                                            lastZ = ptZ;
-                                        } else {
-                                            gc.push(`G1 X${pt.x.toFixed(3)} Y${pt.y.toFixed(3)}${fStr}`);
-                                            if (fStr) currentG1F = cfg.f;
-                                        }
+                                        gc.push(`G1 X${pt.x.toFixed(3)} Y${pt.y.toFixed(3)}${fStr}`);
                                     }
+                                    if (fStr) currentG1F = feedNow;
                                 }
                                 if (isLaser) {
                                     gc.push("M05"); 
                                 }
                                 lastPtInLayer = finalPath[finalPath.length - 1];
                                 lastPointOfPart = lastPtInLayer;
-                                currentZ = useTabThisPass && isPointInTab(lastPtInLayer, tabCenters, tabLength) ? tabZVal : targetZ;
+                                currentZ = tabInfo && tabInfo.flags[finalPath.length - 1] ? tabZVal : targetZ;
                             });
                         }
                     });
