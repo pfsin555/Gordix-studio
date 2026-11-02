@@ -7,12 +7,11 @@ const ASSETS = [
   './draw.html',
   './Gcodetrans.html',
   './table_conf.html',
-  './Laser.html',
   './vc.html',    
   './manifest.json',
   './icon-192.png',
   './icon-512.png',
-  './tailwind.min.css' // 請將 Tailwind 下載至本地，取代外部 CDN
+  './tailwind.js'
 ];
 
 // 1. 安裝階段 (Install): 預先下載並快取所有 ASSETS
