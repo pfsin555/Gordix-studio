@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gordix-studio-v2'; // 更新版本號以觸發 activate 清除舊快取
+const CACHE_NAME = 'gordix-studio-v2.5'; // 更新版本號以觸發 activate 清除舊快取
 
 const ASSETS = [
   './', // 必須快取根目錄
