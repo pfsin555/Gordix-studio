@@ -4,19 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GORDIX STUDIO</title>
-    <!-- 引入與 1.html 相同之 Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="./tailwind.js"></script>
     <script>
         tailwind.config = {
             darkMode: 'class'
         }
     </script>
     <style>
-        /* 防止切換語言或主題時版面抖動，強制保留右側滾動條空間 */
         html {
             overflow-y: scroll;
         }
-        /* 極佳的平滑轉變動畫，但避免引發位置抖動的 transform 過渡 */
         .theme-transition {
             transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
         }
