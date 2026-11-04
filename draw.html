@@ -1629,6 +1629,236 @@
             return res;
         }
 
+        // =====================================================================
+        //  高品質點陣 → 向量：子像素輪廓 + 保角 Taubin 平滑 + 曲率自適應取點
+        //  (取代原本「沿像素中心描邊 → DP → Chaikin → 等弦長取樣」的流程)
+        // =====================================================================
+
+        // 以原圖灰階建立「墨水場」：值 > 0 代表墨水(比門檻暗)，邊界以線性內插定位到子像素
+        function buildInkField(src, w, h, threshold) {
+            const W = w + 2, H = h + 2;
+            // 外圍補一圈「紙」，數值取 -threshold 使純黑像素貼邊時，輪廓剛好落在影像邊界上
+            const f = new Float32Array(W * H).fill(-Math.max(1, threshold));
+            for (let y = 0; y < h; y++) {
+                let o = (y + 1) * W + 1, i = y * w * 4;
+                for (let x = 0; x < w; x++, o++, i += 4) {
+                    const a = src[i + 3] / 255;
+                    const b = (src[i] * 0.299 + src[i + 1] * 0.587 + src[i + 2] * 0.114) * a + 255 * (1 - a);
+                    f[o] = threshold - b;
+                }
+            }
+            return f;
+        }
+
+        // Marching Squares (含鞍點判斷)，墨水恆在行進方向右側；回傳閉合環(不重複起點)，座標為影像像素座標
+        function traceMarchingSquares(f, W, H) {
+            // 每個 case 的有向線段 [起始邊, 結束邊]；邊: 0=上 1=右 2=下 3=左
+            const T = 0, R = 1, B = 2, L = 3;
+            const TABLE = [
+                [], [[T, L]], [[R, T]], [[R, L]], [[B, R]], null, [[B, T]], [[B, L]],
+                [[L, B]], [[T, B]], null, [[R, B]], [[L, R]], [[T, R]], [[L, T]], []
+            ];
+            const next = new Map();
+            for (let y = 0; y < H - 1; y++) {
+                for (let x = 0; x < W - 1; x++) {
+                    const i = y * W + x;
+                    const v0 = f[i], v1 = f[i + 1], v2 = f[i + W + 1], v3 = f[i + W];
+                    const c = (v0 > 0 ? 1 : 0) | (v1 > 0 ? 2 : 0) | (v2 > 0 ? 4 : 0) | (v3 > 0 ? 8 : 0);
+                    if (c === 0 || c === 15) continue;
+                    let segs = TABLE[c];
+                    if (!segs) {
+                        const centerInk = (v0 + v1 + v2 + v3) > 0;
+                        if (c === 5) segs = centerInk ? [[T, R], [B, L]] : [[T, L], [B, R]];
+                        else segs = centerInk ? [[L, T], [R, B]] : [[R, T], [L, B]];
+                    }
+                    // 邊編號：水平邊 2*(y*W+x)、垂直邊 2*(y*W+x)+1
+                    const key = [2 * i, 2 * i + 1 + 2, 2 * (i + W), 2 * i + 1];
+                    for (const s of segs) next.set(key[s[0]], key[s[1]]);
+                }
+            }
+            const pos = k => {
+                const vert = k & 1, idx = (k - vert) / 2;
+                const x = idx % W, y = (idx - x) / W;
+                const va = f[idx], vb = vert ? f[idx + W] : f[idx + 1];
+                const t = va / (va - vb);
+                // 格點 g 對應像素中心 g-0.5
+                return vert ? { x: x - 0.5, y: y + t - 0.5 } : { x: x + t - 0.5, y: y - 0.5 };
+            };
+            const loops = [];
+            for (const startKey of next.keys()) {
+                if (!next.has(startKey)) continue;
+                const ring = [];
+                let k = startKey;
+                while (next.has(k)) {
+                    ring.push(pos(k));
+                    const nk = next.get(k);
+                    next.delete(k);
+                    k = nk;
+                }
+                if (ring.length >= 3 && k === startKey) loops.push(ring);
+            }
+            return loops;
+        }
+
+        function pathLengthOf(pts, closed) {
+            let L = 0;
+            for (let i = 1; i < pts.length; i++) L += Math.hypot(pts[i].x - pts[i-1].x, pts[i].y - pts[i-1].y);
+            if (closed && pts.length > 1) L += Math.hypot(pts[0].x - pts[pts.length-1].x, pts[0].y - pts[pts.length-1].y);
+            return L;
+        }
+
+        // 沿弧長等距重取樣 (閉合環不重複起點)
+        function resampleUniform(pts, closed, step) {
+            const src = closed ? pts.concat([pts[0]]) : pts;
+            const L = pathLengthOf(src, false);
+            if (L < 1e-9) return pts;
+            const count = Math.max(closed ? 8 : 2, Math.round(L / step));
+            const ds = L / count, total = closed ? count : count + 1;
+            const out = [];
+            let seg = 0, segStart = 0;
+            let segLen = Math.hypot(src[1].x - src[0].x, src[1].y - src[0].y);
+            for (let k = 0; k < total; k++) {
+                const target = k * ds;
+                while (seg < src.length - 2 && segStart + segLen < target) {
+                    segStart += segLen; seg++;
+                    segLen = Math.hypot(src[seg+1].x - src[seg].x, src[seg+1].y - src[seg].y);
+                }
+                const r = segLen > 0 ? Math.min(1, Math.max(0, (target - segStart) / segLen)) : 0;
+                out.push({ x: src[seg].x + (src[seg+1].x - src[seg].x) * r,
+                           y: src[seg].y + (src[seg+1].y - src[seg].y) * r });
+            }
+            if (!closed) out[out.length - 1] = { x: pts[pts.length-1].x, y: pts[pts.length-1].y };
+            return out;
+        }
+
+        function laplacianPass(xs, ys, nx, ny, closed, f, pinned) {
+            const n = xs.length, lo = closed ? 0 : 1, hi = closed ? n : n - 1;
+            nx.set(xs); ny.set(ys);
+            for (let i = lo; i < hi; i++) {
+                if (pinned && pinned[i]) continue;
+                const a = i === 0 ? n - 1 : i - 1, b = i === n - 1 ? 0 : i + 1;
+                nx[i] = xs[i] + f * ((xs[a] + xs[b]) * 0.5 - xs[i]);
+                ny[i] = ys[i] + f * ((ys[a] + ys[b]) * 0.5 - ys[i]);
+            }
+        }
+
+        // 偵測真正的尖角 (方形角、文字轉角…)，避免被平滑磨圓；圓弧的轉角會被「雙尺度檢查」排除
+        function detectCorners(pts, closed, step) {
+            const n = pts.length, pinned = new Uint8Array(n);
+            const k = Math.max(3, Math.round(4 / step)), k2 = Math.max(2, Math.round(k / 2));
+            if (n < 3 * k) return pinned;
+            let xs = Float64Array.from(pts, p => p.x), ys = Float64Array.from(pts, p => p.y);
+            let nx = new Float64Array(n), ny = new Float64Array(n);
+            for (let it = 0; it < 6; it++) {           // 先做暫時性平滑，抹掉階梯雜訊
+                laplacianPass(xs, ys, nx, ny, closed, 0.5, null);
+                [xs, nx] = [nx, xs]; [ys, ny] = [ny, ys];
+            }
+            const wrap = i => ((i % n) + n) % n;
+            const turn = (i, a) => {
+                const p = closed ? wrap(i - a) : i - a, q = closed ? wrap(i + a) : i + a;
+                const ax = xs[i] - xs[p], ay = ys[i] - ys[p], bx = xs[q] - xs[i], by = ys[q] - ys[i];
+                const la = Math.hypot(ax, ay), lb = Math.hypot(bx, by);
+                if (la < 1e-9 || lb < 1e-9) return 0;
+                return Math.acos(Math.max(-1, Math.min(1, (ax * bx + ay * by) / (la * lb))));
+            };
+            const THR = 40 * Math.PI / 180;
+            const t = new Float32Array(n);
+            const lo = closed ? 0 : k, hi = closed ? n : n - k;
+            for (let i = lo; i < hi; i++) {
+                const a = turn(i, k);
+                t[i] = (a > THR && turn(i, k2) > 0.55 * a) ? a : 0;
+            }
+            for (let i = lo; i < hi; i++) {
+                if (!t[i]) continue;
+                let isMax = true;
+                for (let d = -k; d <= k && isMax; d++) {
+                    if (!d) continue;
+                    const j = closed ? wrap(i + d) : i + d;
+                    if (j < lo || j >= hi) continue;
+                    if (t[j] > t[i] || (t[j] === t[i] && d < 0)) isMax = false;
+                }
+                if (isMax) pinned[i] = 1;
+            }
+            return pinned;
+        }
+
+        // 角點吸附：以角兩側的直線延伸求交點，把釘住的角移到真正的尖角位置 (避免方角被削成斜角)
+        function snapCorners(pts, pinned, closed) {
+            const n = pts.length, a = 3, b = 7;
+            if (n < 2 * b + 2) return;
+            const get = i => closed ? pts[((i % n) + n) % n] : pts[i];
+            for (let i = 0; i < n; i++) {
+                if (!pinned[i]) continue;
+                if (!closed && (i - b < 0 || i + b >= n)) continue;
+                const p1 = get(i - b), p2 = get(i - a), q1 = get(i + a), q2 = get(i + b);
+                const d1x = p2.x - p1.x, d1y = p2.y - p1.y, d2x = q2.x - q1.x, d2y = q2.y - q1.y;
+                const den = d1x * d2y - d1y * d2x;
+                const l1 = Math.hypot(d1x, d1y), l2 = Math.hypot(d2x, d2y);
+                if (l1 < 1e-6 || l2 < 1e-6 || Math.abs(den) / (l1 * l2) < 0.3) continue;
+                const t = ((q1.x - p1.x) * d2y - (q1.y - p1.y) * d2x) / den;
+                const X = { x: p1.x + d1x * t, y: p1.y + d1y * t };
+                if (Math.hypot(X.x - pts[i].x, X.y - pts[i].y) < 2.5) pts[i] = X;
+            }
+        }
+
+        // Taubin λ|μ 平滑：去除高頻鋸齒但不會像純 Laplacian/Chaikin 一樣讓圓越縮越小
+        function taubinSmooth(pts, closed, pinned, iters) {
+            const n = pts.length;
+            if (n < 3 || iters <= 0) return pts;
+            let xs = Float64Array.from(pts, p => p.x), ys = Float64Array.from(pts, p => p.y);
+            let nx = new Float64Array(n), ny = new Float64Array(n);
+            for (let it = 0; it < iters; it++) {
+                for (const f of [0.5, -0.53]) {
+                    laplacianPass(xs, ys, nx, ny, closed, f, pinned);
+                    [xs, nx] = [nx, xs]; [ys, ny] = [ny, ys];
+                }
+            }
+            return Array.from(xs, (x, i) => ({ x: Math.round(x * 1000) / 1000, y: Math.round(ys[i] * 1000) / 1000 }));
+        }
+
+        // 平滑度滑桿(0~6) 對應的 Taubin 迭代次數
+        const SMOOTH_ITERS = [0, 6, 12, 22, 36, 60, 100];
+
+        // 輪廓精修：等距重取樣 → 偵測尖角並釘住 → Taubin 平滑
+        // closed 環不得重複起點；pinStart 用於單線模式，讓與交點相接的起點保持不動
+        function refineContour(raw, closed, level, pinStart) {
+            let pts = raw;
+            if (closed && pts.length > 1) {
+                const a = pts[0], b = pts[pts.length - 1];
+                if (a.x === b.x && a.y === b.y) pts = pts.slice(0, -1);
+            }
+            if (pts.length < 3 || level <= 0) return pts;
+            const step = 0.75;
+            pts = resampleUniform(pts, closed, step);
+            // 周長過短的微小圖形(如小圓點)不做尖角偵測，避免把小圓誤判成菱形
+            const pinned = pathLengthOf(pts, closed) < 30 ? new Uint8Array(pts.length) : detectCorners(pts, closed, step);
+            snapCorners(pts, pinned, closed);
+            if (pinStart) pinned[0] = 1;
+            return taubinSmooth(pts, closed, pinned, SMOOTH_ITERS[Math.min(level, SMOOTH_ITERS.length - 1)]);
+        }
+
+        // 閉合環版 Douglas-Peucker
+        function simplifyRing(pts, eps) {
+            const n = pts.length;
+            if (n < 4) return pts;
+            let far = 1, best = -1;
+            for (let i = 1; i < n; i++) {
+                const d = (pts[i].x - pts[0].x) ** 2 + (pts[i].y - pts[0].y) ** 2;
+                if (d > best) { best = d; far = i; }
+            }
+            const a = simplifyPath(pts.slice(0, far + 1), eps);
+            const b = simplifyPath(pts.slice(far).concat([pts[0]]), eps);
+            return a.concat(b.slice(1, -1));
+        }
+
+        // 曲率自適應取點：直線只留端點、曲線依誤差容許量取點(小圓弧不再被切成粗多邊形)
+        // 容許誤差 ≈ 線段長的 2% (至少 0.08px)，解析度滑桿越大則越精簡
+        function finalizeContour(pts, closed, segPx, level) {
+            if (pts.length < 3) return pts;
+            const eps = level === 0 ? 0.35 : Math.max(0.08, segPx * 0.02);
+            return closed ? simplifyRing(pts, eps) : simplifyPath(pts, eps);
+        }
+
         // Classify connected ink regions by their maximum estimated local width.
         // Distance to background measures stroke thickness, not bounding-box size,
         // so large calendar frames can still be treated as thin strokes.
@@ -2013,33 +2243,23 @@
                 finalContours = [];
                 if (singleLineMode.checked) {
                     finalContours = traceHybridLines(mask, w, h, noiseMin, Math.min(1000, Math.max(1, Number(singleLineWidth.value) || 12))).map(raw => {
-                        let path = simplifyPath(raw, 0.5);
-                        path = smoothPathChaikin(path, smoothIters);
-                        path = resamplePath(path, segPxBitmap);
-                        path.closed = raw.closed;
+                        const closed = !!raw.closed;
+                        let path = refineContour(raw, closed, smoothIters, true);
+                        path = finalizeContour(path, closed, segPxBitmap, smoothIters);
+                        path.closed = closed;
                         return path;
+                    }).filter(p => p.length >= 2);
+                } else {
+                    // 子像素輪廓：優先使用原圖灰階(保留反鋸齒資訊)，否則退回二值畫布
+                    const useOrig = originalPixelData && originalPixelWidth === w && originalPixelHeight === h;
+                    const field = buildInkField(useOrig ? originalPixelData : pixels, w, h,
+                                                useOrig ? parseInt(thresholdSlider.value) : 128);
+                    traceMarchingSquares(field, w + 2, h + 2).forEach(raw => {
+                        if (pathLengthOf(raw, true) <= noiseMin) return;
+                        let path = refineContour(raw, true, smoothIters, false);
+                        path = finalizeContour(path, true, segPxBitmap, smoothIters);
+                        if (path.length >= 3) { path.closed = true; finalContours.push(path); }
                     });
-                } else for (let y = 1; y < h - 1; y++) {
-                    const row = y * w;
-                    for (let x = 1; x < w - 1; x++) {
-                        const idx = row + x;
-                        if (mask[idx] === 1 && !visited[idx]) {
-                            // 八鄰域只要有一個白色像素就是邊緣
-                            const isEdge = mask[idx - 1] === 0 || mask[idx + 1] === 0 ||
-                                           mask[idx - w] === 0 || mask[idx + w] === 0 ||
-                                           mask[idx - w - 1] === 0 || mask[idx - w + 1] === 0 ||
-                                           mask[idx + w - 1] === 0 || mask[idx + w + 1] === 0;
-                            if (isEdge) {
-                                const raw = traceContour(x, y, visited, isBlack, w, h);
-                                if (raw.length > noiseMin) {
-                                    let path = simplifyPath(raw, 0.5);
-                                    path = smoothPathChaikin(path, smoothIters);
-                                    path = resamplePath(path, segPxBitmap);
-                                    finalContours.push(path);
-                                }
-                            } else visited[idx] = 1;
-                        }
-                    }
                 }
             }
             
