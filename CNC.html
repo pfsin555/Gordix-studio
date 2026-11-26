@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CNC</title>
+    <title>Cut Converter / 轉檔工具 (切割) / データ変換（切削・切断）</title>
     <script src="./tailwind.js"></script>
     <script>
         // 設定 Tailwind CSS 以支援 class 模式的黑夜模式
@@ -77,6 +77,21 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link class="apple-touch-icon" href="icon-192.png">
+    <script src="lang-tabs.js"></script>
+    <script src="dxf-curves.js"></script>
+    <style>
+        /* ? ヘルプアイコンとツールチップ / help icon + tooltip */
+        .gx-help{position:relative;display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:9999px;
+            font:700 9px/1 system-ui,sans-serif;color:#64748b;border:1px solid currentColor;cursor:help;flex-shrink:0;user-select:none}
+        .dark .gx-help{color:#94a3b8}
+        .gx-help:hover,.gx-help:focus-visible{color:#ea580c;outline:none}
+        .gx-tip{position:absolute;bottom:calc(100% + 8px);left:-8px;z-index:50;width:240px;padding:8px 10px;border-radius:8px;
+            background:#0f172a;color:#f1f5f9;border:1px solid #334155;box-shadow:0 8px 24px rgba(0,0,0,.35);
+            font:500 11px/1.6 system-ui,-apple-system,"Hiragino Sans","Noto Sans JP","Noto Sans TC",sans-serif;text-align:left;white-space:normal;
+            opacity:0;visibility:hidden;transform:translateY(4px);transition:opacity .15s,transform .15s,visibility .15s;pointer-events:none}
+        .gx-tip::after{content:"";position:absolute;top:100%;left:12px;border:6px solid transparent;border-top-color:#0f172a}
+        .gx-help:hover .gx-tip,.gx-help:focus .gx-tip{opacity:1;visibility:visible;transform:translateY(0)}
+    </style>
 </head>
 <body class="flex flex-col min-h-screen">
     <div class="max-w-7xl mx-auto bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800 transition-colors duration-300">
@@ -88,7 +103,7 @@
         </div>
         <div class="flex gap-3 items-center">
             <!-- 返回上一頁按鈕 -->
-            <button onclick="if(window.history.length > 1) { window.history.back(); } else { window.location.href='index.html'; }" class="flex items-center justify-center text-slate-300 hover:text-orange-400 transition-colors font-bold bg-white/10 hover:bg-white/20 p-1.5 rounded-lg border border-white/20 cursor-pointer" title="返回上一頁 / Go Back">
+            <button onclick="if(window.history.length > 1) { window.history.back(); } else { window.location.href='index.html'; }" class="flex items-center justify-center text-slate-300 hover:text-orange-400 transition-colors font-bold bg-white/10 hover:bg-white/20 p-1.5 rounded-lg border border-white/20 cursor-pointer" title="Go Back / 返回上一頁 / 前のページに戻る">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <line x1="20" y1="12" x2="4" y2="12"></line>
                     <polyline points="10 18 4 12 10 6"></polyline>
@@ -101,11 +116,9 @@
                 </svg>
             </button>
             <!-- 語系切換按鈕 -->
-            <button id="lang-toggle" class="px-3 py-1.5 rounded-lg text-[11px] font-bold bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-all flex items-center gap-2">
-                <span>中文 / EN</span>
-            </button>
+            <div id="lang-tabs"></div>
             <!-- 書頁按鈕 (工藝參數) -->
-            <a href="params.html" class="flex items-center justify-center text-slate-300 hover:text-emerald-400 transition-colors bg-white/10 hover:bg-white/20 p-1.5 rounded-lg border border-white/20 cursor-pointer" title="工藝參數建議 / Parameters Guide">
+            <a href="params.html" class="flex items-center justify-center text-slate-300 hover:text-emerald-400 transition-colors bg-white/10 hover:bg-white/20 p-1.5 rounded-lg border border-white/20 cursor-pointer" title="Parameters Guide / 工藝參數建議 / 加工条件ガイド">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
                     <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
@@ -215,7 +228,10 @@
 
                         <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-[10px] text-slate-500 dark:text-slate-400 font-bold mb-1" data-i18n="resolution">解析度 (mm)</label>
+                                <div class="flex items-center gap-1 mb-1">
+                                    <label for="resolution" class="text-[10px] text-slate-500 dark:text-slate-400 font-bold" data-i18n="resolution">解析度 (mm)</label>
+                                    <span class="gx-help" tabindex="0" role="button" aria-label="?" aria-describedby="resolution-help">?<span id="resolution-help" role="tooltip" class="gx-tip" data-i18n="resolutionHelp">加工路徑（黃色線）上點與點之間的最小間距。與前一點距離小於此值（mm）的點會被省略。數值越小曲線越平滑，但 G-code 會變長。一般維持 0.1 即可（最小 0.1）。</span></span>
+                                </div>
                                 <input type="number" id="resolution" value="0.1" min="0.1" step="0.01">
                             </div>
                             <div>
@@ -626,6 +642,14 @@
                 near: v => `${v.name}: two tabs are only ${v.d} mm apart in a straight line (recommended >= ${v.min} mm). Part is too small/narrow`,
                 ratio: v => `${v.name}: tabs occupy ${v.pct}% of the path, the part will be hard to remove`,
                 high: v => `${v.name}: tab height ${v.H} mm >= cutting depth ${v.D} mm, tab reaches the material surface (not cut through)`
+            },
+            ja: {
+                short: v => `${v.name}：経路長が${v.L} mmしかなく、幅${v.W} mmのタブを配置できません。タブは追加されませんでした`,
+                reduced: v => `${v.name}：経路長（${v.L} mm）が短いため、タブ数を${v.n0}個から${v.n}個に減らしました`,
+                gap: v => `${v.name}：タブ同士が近すぎます（最小間隔 ${v.gap} mm、推奨 ${v.min} mm以上）`,
+                near: v => `${v.name}：2つのタブ間の直線距離は${v.d} mmです（推奨 ${v.min} mm以上）。パーツが小さすぎるか、幅が狭すぎます`,
+                ratio: v => `${v.name}：タブが経路の${v.pct}%を占めており、加工後にパーツを取り外しにくくなる可能性があります`,
+                high: v => `${v.name}：タブ高さ ${v.H} mm が加工深さ ${v.D} mm 以上です。タブが材料表面まで残り、タブ部分はまったく切断されません`
             }
         };
 
@@ -671,7 +695,7 @@
             if (!msgs.length) { box.classList.add('hidden'); box.innerHTML = ''; return; }
             box.classList.remove('hidden');
             const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
-            const title = currentLang === 'zh' ? '⚠ 橋位警告' : '⚠ Tab warnings';
+            const title = { zh: '⚠ 橋位警告', en: '⚠ Tab warnings', ja: '⚠ タブに関する警告' }[currentLang];
             box.innerHTML = `<div class="font-bold mb-1">${title}</div>` + msgs.map(m => `<div>• ${esc(m)}</div>`).join('');
         }
 
@@ -700,6 +724,7 @@
                 width: "寬度",
                 height: "高度",
                 resolution: "解析度",
+                resolutionHelp: "加工路徑（黃色線）上點與點之間的最小間距。與前一點距離小於此值（mm）的點會被省略。數值越小曲線越平滑，但 G-code 會變長。一般維持 0.1 即可（最小 0.1）。",
                 feedRate: "進給速率",
                 mode: "加工模式",
                 optLaser: "雷射切割",
@@ -751,6 +776,7 @@
                 width: "Width",
                 height: "Height",
                 resolution: "Resolution",
+                resolutionHelp: "Minimum spacing between points of the toolpath (yellow line). Points closer than this distance (mm) to the previous point are dropped. Smaller values give smoother curves but longer G-code. 0.1 works for most jobs (minimum 0.1).",
                 feedRate: "Feed Rate (F)",
                 mode: "Process Mode",
                 optLaser: "Laser Cutting",
@@ -778,11 +804,63 @@
                 layerPrefix: "Layer",
                 quickApply: "Quick Apply",
                 depthLevel: "Nesting Depth"
+            },
+            ja: {
+                appTitle: "データ変換（切削・切断）",
+                step1: "ステップ1：ファイル選択と解析",
+                chooseFile: "ファイルを選択",
+                noFile: "ファイルが選択されていません",
+                targetWidth: "全体幅 (mm)",
+                threshold: "白黒のしきい値",
+                smoothness: "簡略化",
+                smoothLeft: "← 詳細",
+                smoothRight: "滑らか・シンプル →",
+                reprocess: "ファイルを再解析",
+                step2: "ステップ2：パーツ一覧",
+                selectAll: "すべて選択 / 選択解除",
+                legendOriginal: "未選択パーツの輪郭",
+                legendSelected: "選択中パーツの輪郭",
+                legendToolpath: "加工経路（黄色）",
+                estTime: "推定加工時間",
+                downloadBtn: "ファイルをダウンロード",
+                jobSettings: "ステップ3：加工条件 (mm)",
+                groupSize: "選択中グループの寸法",
+                width: "幅",
+                height: "高さ",
+                resolution: "解像度",
+                resolutionHelp: "加工経路（黄色の線）の点と点の最小間隔です。前の点からこの距離（mm）より近い点は省かれます。小さいほど曲線がなめらかになりますが、Gコードが長くなります。通常は 0.1 のままで問題ありません（最小 0.1）。",
+                feedRate: "送り速度 (F)",
+                mode: "加工モード",
+                optLaser: "レーザー切断",
+                optOuter: "外側を切削",
+                optInner: "内側を切削",
+                optPocket: "ポケット加工",
+                useTab: "タブ（ブリッジ）を有効化",
+                tabWidth: "タブ幅 (3～8 mm)",
+                tabHeight: "タブ高さ (2～6 mm)",
+                tabHint: "タブを輪郭に均等配置：200 mm以下は2個、201～600 mmは3個、600 mm超は4個",
+                toolDia: "工具径",
+                totalDepth: "加工深さ",
+                stepDown: "1パスの切込み深さ",
+                overlap: "オーバーラップ率",
+                updateBtn: "加工経路を更新",
+                selectionHint: "一覧からパーツを選択して<br>加工条件を調整してください",
+                partName: "パーツ",
+                method: "加工方法",
+                notApplied: "未適用",
+                groupBy: "グループ化：",
+                groupNone: "グループ化しない",
+                groupMethodOpt: "加工方法でグループ化",
+                groupContainmentOpt: "内外関係でグループ化",
+                groupLayerOpt: "レイヤーでグループ化",
+                layerPrefix: "レイヤー",
+                quickApply: "一括適用",
+                depthLevel: "入れ子階層"
             }
         };
 
         // 讀取同步語系，預設繁中
-        let currentLang = localStorage.getItem('gordix-lang') || 'zh';
+        let currentLang = GordixLang.initial();
 
         function updateLanguage() {
             document.querySelectorAll('[data-i18n]').forEach(el => {
@@ -793,11 +871,10 @@
             if (typeof refreshTabWarnings === 'function' && typeof selectedIndices !== 'undefined') refreshTabWarnings();
         }
 
-        document.getElementById('lang-toggle').onclick = () => { 
-            currentLang = currentLang === 'zh' ? 'en' : 'zh'; 
-            localStorage.setItem('gordix-lang', currentLang);
-            updateLanguage(); 
-        };
+        GordixLang.mount(document.getElementById('lang-tabs'), currentLang, (l) => {
+            currentLang = l;
+            updateLanguage();
+        });
 
         // --- 全局變數 ---
         const fileInput = document.getElementById('file-input');
@@ -1275,33 +1352,11 @@
 
         // --- DXF 向量解析與圖層讀取 ---
         function parseDXF(dxfString, targetW, smoothTol) {
-            const parser = new DxfParser();
+            // 曲線 (SPLINE / ELLIPSE / bulge / INSERT) 由 dxf-curves.js 處理
             try {
-                const dxf = parser.parseSync(dxfString);
-                const paths = [];
-
-                dxf.entities.forEach(ent => {
-                    let pts = [];
-                    if (ent.type === 'LINE') {
-                        pts = [{x: ent.vertices[0].x, y: ent.vertices[0].y}, {x: ent.vertices[1].x, y: ent.vertices[1].y}];
-                    } else if (ent.type === 'LWPOLYLINE' || ent.type === 'POLYLINE') {
-                        ent.vertices.forEach(v => pts.push({x: v.x, y: v.y}));
-                        if (ent.shape) pts.push(pts[0]);
-                    } else if (ent.type === 'CIRCLE' || ent.type === 'ARC') {
-                        const start = ent.startAngle || 0, end = ent.endAngle !== undefined ? ent.endAngle : Math.PI*2;
-                        const r = ent.radius, steps = 64;
-                        for(let i=0; i<=steps; i++) {
-                            const a = start + (end-start)*(i/steps);
-                            pts.push({ x: ent.center.x + Math.cos(a)*r, y: ent.center.y + Math.sin(a)*r });
-                        }
-                    }
-                    if (pts.length > 1) {
-                        paths.push({
-                            points: simplifyPath(pts, smoothTol),
-                            layer: ent.layer || "Default"
-                        });
-                    }
-                });
+                const paths = GordixDXF.parse(dxfString).paths
+                    .filter(p => p.points.length > 1)
+                    .map(p => ({ points: simplifyPath(p.points, smoothTol), layer: p.layer || "Default" }));
                 return scaleVectorPaths(paths, targetW);
             } catch(e) {
                 console.error("DXF Parse Error", e);
@@ -1309,7 +1364,6 @@
             }
         }
 
-        // --- 縮放與置中輔助 ---
         function scaleVectorPaths(paths, targetW) {
             if (paths.length === 0) return [];
             let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
@@ -2365,8 +2419,8 @@
                 let tabMsgs = [];
                 parts.forEach(p => { if (p.visible && p.toolpath && p.toolpath.length) tabMsgs = tabMsgs.concat(collectTabWarnings(p)); });
                 if (tabMsgs.length) {
-                    const head = currentLang === 'zh' ? '橋位有以下警告：' : 'Tab warnings:';
-                    const tail = currentLang === 'zh' ? '仍要輸出 G-code 嗎？' : 'Export G-code anyway?';
+                    const head = { zh: '橋位有以下警告：', en: 'Tab warnings:', ja: 'タブに関する警告：' }[currentLang];
+                    const tail = { zh: '仍要輸出 G-code 嗎？', en: 'Export G-code anyway?', ja: 'このまま Gコードを書き出しますか？' }[currentLang];
                     if (!confirm(head + '\n\n' + tabMsgs.map(m => '• ' + m).join('\n') + '\n\n' + tail)) return;
                 }
             }

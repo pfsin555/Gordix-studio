@@ -24,6 +24,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link class="theme-transition" rel="apple-touch-icon" href="icon-192.png">
+    <script src="lang-tabs.js"></script>
 </head>
 <body class="bg-slate-50 dark:bg-slate-950 min-h-screen p-4 md:p-8 text-slate-800 dark:text-slate-200 font-sans theme-transition">
     <!-- 主卡片容器 (承襲 1.html 的外觀與風格) -->
@@ -41,15 +42,13 @@
             <!-- 右側控制區 (主題切換與語言切換) -->
             <div class="flex gap-3 items-center">
                 <!-- 明暗主題切換按鈕 -->
-                <button id="theme-toggle" onclick="toggleTheme()" class="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-white border border-white/10 transition-all flex items-center justify-center" aria-label="Toggle Theme">
+                <button id="theme-toggle" onclick="toggleTheme()" class="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-white border border-white/10 transition-all flex items-center justify-center" aria-label="Toggle Theme / 切換主題 / テーマ切替">
                     <svg id="theme-icon" class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
                         <!-- 圖示由 JS 動態注入 -->
                     </svg>
                 </button>
                 <!-- 語系切換 -->
-                <button onclick="toggleLanguage()" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-white/5 hover:bg-white/10 text-white border border-white/10 transition-all flex items-center gap-2">
-                    <span id="lang-text">中文 / EN</span>
-                </button>
+                <div id="lang-tabs"></div>
             </div>
         </div>
 
@@ -65,8 +64,8 @@
                             <path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/>
                         </svg>
                     </div>
-                    <h3 data-zh="桌長參數配置產生器" data-en="Table Configurator" class="text-lg font-bold text-slate-900 dark:text-white mb-2 transition-colors">桌長配置產生器</h3>
-                    <p data-zh="系統配置參數快速生成" data-en="Generate system config parameters" class="text-sm text-slate-500 dark:text-slate-400">系統配置參數快速生成</p>
+                    <h3 data-zh="桌長參數配置產生器" data-en="Table Configurator" data-ja="テーブル寸法設定" class="text-lg font-bold text-slate-900 dark:text-white mb-2 transition-colors">桌長配置產生器</h3>
+                    <p data-zh="系統配置參數快速生成" data-en="Generate system config parameters" data-ja="システム設定パラメーターを簡単に生成" class="text-sm text-slate-500 dark:text-slate-400">系統配置參數快速生成</p>
                 </a>
 
                 <!-- Tool 2: 轉檔工具(切割) (橘色) -->
@@ -76,8 +75,8 @@
                             <path d="M11 2h2v3h-2zm-2 4h6v1.5H9zm0 3.5l6-1.5v1.5l-6 1.5zm0 3.5l6-1.5v1.5l-6 1.5zm1 3l2 3 2-3z"/>
                         </svg>
                     </div>
-                    <h3 data-zh="轉檔工具 (切割)" data-en="Cut Converter" class="text-lg font-bold text-slate-900 dark:text-white mb-2 transition-colors">轉檔工具 (切割)</h3>
-                    <p data-zh="CNC與雷射切割專用" data-en="Optimized for CNC and laser cutting" class="text-sm text-slate-500 dark:text-slate-400">CNC與雷射切割專用</p>
+                    <h3 data-zh="轉檔工具 (切割)" data-en="Cut Converter" data-ja="データ変換（切削・切断）" class="text-lg font-bold text-slate-900 dark:text-white mb-2 transition-colors">轉檔工具 (切割)</h3>
+                    <p data-zh="CNC與雷射切割專用" data-en="Optimized for CNC and laser cutting" data-ja="CNC切削・レーザー切断用" class="text-sm text-slate-500 dark:text-slate-400">CNC與雷射切割專用</p>
                 </a>
 
                 <!-- Tool 3: 轉檔工具(繪圖) (藍色) -->
@@ -87,8 +86,8 @@
                             <path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm0 6c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zM11 2v4h2V2h-2zm0 16v4h2v-4h-2zm11-7h-4v2h4v-2zM6 11H2v2h4v-2z"/>
                         </svg>
                     </div>
-                    <h3 data-zh="轉檔工具 (繪圖)" data-en="Draw Converter" class="text-lg font-bold text-slate-900 dark:text-white mb-2 transition-colors">轉檔工具 (繪圖)</h3>
-                    <p data-zh="雷射雕刻與繪圖專用" data-en="Optimized for plotter and laser engraving" class="text-sm text-slate-500 dark:text-slate-400">雷射雕刻與繪圖專用</p>
+                    <h3 data-zh="轉檔工具 (繪圖)" data-en="Draw Converter" data-ja="データ変換（描画・彫刻）" class="text-lg font-bold text-slate-900 dark:text-white mb-2 transition-colors">轉檔工具 (繪圖)</h3>
+                    <p data-zh="雷射雕刻與繪圖專用" data-en="Optimized for plotter and laser engraving" data-ja="ペン描画・レーザー彫刻用" class="text-sm text-slate-500 dark:text-slate-400">雷射雕刻與繪圖專用</p>
                 </a>
 
                 <!-- Tool 4: V雕刻 (紅色) -->
@@ -98,8 +97,8 @@
                             <path d="M3 5h4l5 10 5-10h4L12 19z"/>
                         </svg>
                     </div>
-                    <h3 data-zh="V 雕刻" data-en="V-Carving" class="text-lg font-bold text-slate-900 dark:text-white mb-2 transition-colors">V 雕刻</h3>
-                    <p data-zh="提供圖片或向量轉V-carving用gcode" data-en="Convert images or vectors to V-carving G-code" class="text-sm text-slate-500 dark:text-slate-400">提供圖片或向量轉V-carving用gcode</p>
+                    <h3 data-zh="V 雕刻" data-en="V-Carving" data-ja="Vカービング" class="text-lg font-bold text-slate-900 dark:text-white mb-2 transition-colors">V 雕刻</h3>
+                    <p data-zh="提供圖片或向量轉V-carving用gcode" data-en="Convert images or vectors to V-carving G-code" data-ja="画像やベクターからVカービング用Gコードを生成" class="text-sm text-slate-500 dark:text-slate-400">提供圖片或向量轉V-carving用gcode</p>
                 </a>
 
                 <!-- Tool 5: Gcode (綠色) -->
@@ -109,8 +108,8 @@
                             <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
                         </svg>
                     </div>
-                    <h3 data-zh="Gcode 即時調整" data-en="Gcode Real-time Adjuster" class="text-lg font-bold text-slate-900 dark:text-white mb-2 transition-colors">Gcode 即時調整</h3>
-                    <p data-zh="即時編輯與校正 Gcode 內容" data-en="Live Gcode editing and correction" class="text-sm text-slate-500 dark:text-slate-400">即時編輯與校正 Gcode 內容</p>
+                    <h3 data-zh="Gcode 即時調整" data-en="Gcode Real-time Adjuster" data-ja="Gコード調整" class="text-lg font-bold text-slate-900 dark:text-white mb-2 transition-colors">Gcode 即時調整</h3>
+                    <p data-zh="即時編輯與校正 Gcode 內容" data-en="Live Gcode editing and correction" data-ja="Gコードをリアルタイムで編集・補正" class="text-sm text-slate-500 dark:text-slate-400">即時編輯與校正 Gcode 內容</p>
                 </a>
 
                 <!-- Tool 6: 參數指南 (紫色) -->
@@ -121,8 +120,8 @@
                             <path d="M12 4.5C10.55 3.42 8.35 3 6 3c-2.2 0-4.3.42-6 1.5v15c1.7-1.08 3.8-1.5 6-1.5 2.35 0 4.55.42 6 1.5 1.45-1.08 3.65-1.5 6-1.5 2.2 0 4.3.42 6 1.5v-15c-1.7-1.08-3.8-1.5-6-1.5-2.35 0-4.55.42-6 1.5zM11 17.5c-1.45-1.08-3.65-1.5-6-1.5-1.5 0-2.85.2-4 .5V6c1.15-.3 2.5-.5 4-.5 2.2 0 4.3.42 6 1.5v10.5zm12-11.5v10.5c-1.15-.3-2.5-.5-4-.5-2.35 0-4.55.42-6 1.5V7.5c1.45-1.08 3.65-1.5 6-1.5 1.5 0 2.85.2 4 .5z"/>
                         </svg>
                     </div>
-                    <h3 data-zh="參數指南" data-en="Parameter Guide" class="text-lg font-bold text-slate-900 dark:text-white mb-2 transition-colors">參數指南</h3>
-                    <p data-zh="各類材料加工參數建議與快速查詢" data-en="Processing parameters & reference guide for materials" class="text-sm text-slate-500 dark:text-slate-400">各類材料加工參數建議與快速查詢</p>
+                    <h3 data-zh="參數指南" data-en="Parameter Guide" data-ja="加工条件ガイド" class="text-lg font-bold text-slate-900 dark:text-white mb-2 transition-colors">參數指南</h3>
+                    <p data-zh="各類材料加工參數建議與快速查詢" data-en="Processing parameters & reference guide for materials" data-ja="材料別の加工条件と参考情報" class="text-sm text-slate-500 dark:text-slate-400">各類材料加工參數建議與快速查詢</p>
                 </a>
 
             </div>
@@ -130,7 +129,7 @@
 
         <!-- Footer -->
         <footer class="bg-slate-50 dark:bg-slate-900/50 p-6 text-center text-xs text-slate-500 dark:text-slate-500 border-t border-slate-100 dark:border-slate-800/60 theme-transition">
-            <p>&copy; 2026 GORDIX STUDIO || cubiio. All tools run locally in browser.</p>
+            <p>&copy; 2026 GORDIX STUDIO || cubiio. <span data-zh="所有工具皆在瀏覽器本機執行。" data-en="All tools run locally in browser." data-ja="すべてのツールはブラウザー内で動作し、ファイルは外部に送信されません。">All tools run locally in browser.</span></p>
         </footer>
     </div>
 
@@ -141,13 +140,11 @@
 
         // 語系載入、儲存與套用
         function initLanguage() {
-            const savedLang = localStorage.getItem('gordix-lang');
-            if (savedLang) {
-                currentLang = savedLang;
-            } else {
-                currentLang = 'zh'; // 預設繁中
-                localStorage.setItem('gordix-lang', currentLang);
-            }
+            currentLang = GordixLang.initial();
+            GordixLang.mount(document.getElementById('lang-tabs'), currentLang, (l) => {
+                currentLang = l;
+                applyLanguage();
+            });
             applyLanguage();
         }
 
@@ -157,17 +154,10 @@
                 el.textContent = el.getAttribute(`data-${currentLang}`);
             });
 
-            const btn = document.getElementById('lang-text');
-            if (btn) {
-                btn.textContent = currentLang === 'zh' ? '中文 / EN' : 'EN / 中文';
-            }
+            GordixLang.paint(currentLang);
         }
 
-        function toggleLanguage() {
-            currentLang = currentLang === 'zh' ? 'en' : 'zh';
-            applyLanguage();
-            localStorage.setItem('gordix-lang', currentLang);
-        }
+
 
         // 主題載入、儲存與套用
         function initTheme() {
@@ -225,7 +215,7 @@
                 }
             }
             if (e.key === 'gordix-lang') {
-                if (e.newValue) {
+                if (GordixLang.isValid(e.newValue)) {
                     currentLang = e.newValue;
                     applyLanguage();
                 }

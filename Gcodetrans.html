@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>G-code Editor & Viewer</title>
+    <title>Gcode Adjuster / Gcode 即時調整 / Gコード調整</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="./tailwind.js"></script>
     <script>
@@ -153,6 +153,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" href="icon-192.png">
+    <script src="lang-tabs.js"></script>
 </head>
 <body class="bg-slate-50 dark:bg-slate-950 min-h-screen p-4 md:p-8 text-slate-800 dark:text-slate-200 font-sans transition-colors duration-300">
     <div class="max-w-7xl mx-auto bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800 transition-colors duration-300">
@@ -166,7 +167,7 @@
             </div>
             <div class="flex gap-3 items-center">
                 <!-- 返回上一頁按鈕 -->
-                <button onclick="if(window.history.length > 1) { window.history.back(); } else { window.location.href='index.html'; }" class="flex items-center justify-center text-slate-300 hover:text-orange-400 transition-colors font-bold bg-white/10 hover:bg-white/20 p-1.5 rounded-lg border border-white/20 cursor-pointer" title="返回上一頁 / Go Back">
+                <button onclick="if(window.history.length > 1) { window.history.back(); } else { window.location.href='index.html'; }" class="flex items-center justify-center text-slate-300 hover:text-orange-400 transition-colors font-bold bg-white/10 hover:bg-white/20 p-1.5 rounded-lg border border-white/20 cursor-pointer" title="Go Back / 返回上一頁 / 前のページに戻る">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                         <line x1="20" y1="12" x2="4" y2="12"></line>
                         <polyline points="10 18 4 12 10 6"></polyline>
@@ -178,11 +179,9 @@
                     </svg>
                 </button>
                 <!-- 語系切換 -->
-                <button id="langBtn" onclick="toggleLanguage()" class="px-3 py-1.5 rounded-lg text-[11px] font-bold bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-all flex items-center gap-2">
-                    EN
-                </button>
+                <div id="lang-tabs"></div>
                 <!-- 工藝參數建議 -->
-                <a href="params.html" class="flex items-center justify-center text-slate-300 hover:text-emerald-400 transition-colors bg-white/10 hover:bg-white/20 p-1.5 rounded-lg border border-white/20 cursor-pointer" title="工藝參數建議 / Parameters Guide">
+                <a href="params.html" class="flex items-center justify-center text-slate-300 hover:text-emerald-400 transition-colors bg-white/10 hover:bg-white/20 p-1.5 rounded-lg border border-white/20 cursor-pointer" title="Parameters Guide / 工藝參數建議 / 加工条件ガイド">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                         <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
                         <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
@@ -515,6 +514,47 @@
             metricAlert: "G-code converted to metric (G21)",
             legendPath: "Tool Path",
             legendTab: "New Tabs"
+        },
+        ja: {
+            headerTitle: "Gコード調整",
+            langBtn: "日本語",
+            secUpload: "1. ファイルの読み込み",
+            btnUpload: "Gコードファイルを選択",
+            fileName: "ファイル",
+            secParams: "2. パラメーター（Z/F固定）",
+            labelScale: "拡大・縮小（XYのみ）",
+            labelOX: "Xオフセット",
+            labelOY: "Yオフセット",
+            labelRot: "回転（Z軸中心）",
+            labelRes: "解像度（XY最小移動量 mm）",
+            secAdvanced: "3. 詳細設定（切削経路のみ）",
+            thickEnable: "加工深さを変更",
+            labelOrigThickness: "元の加工深さ (mm)",
+            labelTargetThickness: "変更後の加工深さ (mm)",
+            labelTargetLayers: "切削層数",
+            feedrateEnable: "送り速度 (F) を変更",
+            labelTargetFeedrate: "XY送り速度 (mm/min)",
+            labelTargetZFeedrate: "Z軸送り速度 (mm/min)",
+            retractEnable: "退避高さを変更",
+            labelTargetRetract: "変更後の退避高さ (0.1～5 mm)",
+            tabEnable: "タブを自動配置",
+            labelTabWidth: "タブ幅 (3～8 mm)",
+            labelTabHeight: "タブ高さ (2～6 mm)",
+            tabHint: "各輪郭にタブを均等配置：200 mm以下は2個、201～600 mmは3個、600 mm超は4個",
+            secRefImg: "4. 参照画像（任意）",
+            btnUploadImg: "参照画像を選択",
+            labelImgWidth: "画像の実寸幅 (mm)",
+            labelImgOpacity: "不透明度",
+            btnCenter: "自動で中央に配置",
+            btnUpdate: "プレビューを更新",
+            infoTime: "推定時間",
+            infoDist: "XYZ範囲",
+            btnDownload: "編集後のGコードをダウンロード",
+            unitMin: "分",
+            unitSec: "秒",
+            metricAlert: "Gコードをメートル法 (G21) に変換しました",
+            legendPath: "加工経路",
+            legendTab: "追加したタブ"
         }
     };
 
@@ -533,16 +573,14 @@
     let refMesh = null;
     let refAspect = 1.0;
 
-    function toggleLanguage() {
-        currentLang = currentLang === 'zh' ? 'en' : 'zh';
-        localStorage.setItem('gordix-lang', currentLang);
+    function setLang(l) {
+        currentLang = l;
         updateLanguage();
     }
 
     function updateLanguage() {
         const lang = i18n[currentLang];
         document.getElementById('txt-header-title').innerText = lang.headerTitle;
-        document.getElementById('langBtn').innerText = lang.langBtn;
         document.getElementById('txt-sec-upload').innerText = lang.secUpload;
         document.getElementById('txt-btn-upload').innerText = lang.btnUpload;
         document.getElementById('txt-file-name').innerText = lang.fileName;
@@ -595,7 +633,7 @@
         const lang = i18n[currentLang];
         const mins = Math.floor(timeSec / 60);
         const secs = Math.round(timeSec % 60);
-        document.getElementById('timeEst').innerText = `${mins} ${lang.unitMin} ${secs} ${lang.unitSec}`;
+        document.getElementById('timeEst').innerText = currentLang !== 'ja' ? `${mins} ${lang.unitMin} ${secs} ${lang.unitSec}` : `${mins}${lang.unitMin}${secs}${lang.unitSec}`;
         const ok = bnd && isFinite(bnd.minX);
         // 數值最多顯示 4 位小數並去除多餘的 0 (例如 -10、34.9901)
         const f = v => (ok && isFinite(v) ? String(parseFloat(v.toFixed(4))) : '-');
@@ -1332,6 +1370,14 @@
             near: (v) => `${v.name}: two tabs are only ${v.d} mm apart in straight line (recommended >= ${v.min} mm). Part is too small/narrow`,
             ratio: (v) => `${v.name}: tabs occupy ${v.pct}% of the path, the part will be hard to remove`,
             high: (v) => `${v.name}: tab height ${v.H} mm >= cutting depth ${v.D} mm, tab reaches the material surface (not cut through at all)`
+        },
+        ja: {
+            short: (v) => `${v.name}：経路長が${v.L} mmしかなく、幅${v.W} mmのタブを配置できません。タブは追加されませんでした`,
+            reduced: (v) => `${v.name}：経路長（${v.L} mm）が短いため、タブ数を${v.n0}個から${v.n}個に減らしました`,
+            gap: (v) => `${v.name}：タブ同士が近すぎます（最小間隔 ${v.gap} mm、推奨 ${v.min} mm以上）`,
+            near: (v) => `${v.name}：2つのタブ間の直線距離は${v.d} mmです（推奨 ${v.min} mm以上）。パーツが小さすぎるか、幅が狭すぎます`,
+            ratio: (v) => `${v.name}：タブが経路の${v.pct}%を占めており、加工後にパーツを取り外しにくくなる可能性があります`,
+            high: (v) => `${v.name}：タブ高さ ${v.H} mm が加工深さ ${v.D} mm 以上です。タブが材料表面まで残り、タブ部分はまったく切断されません`
         }
     };
 
@@ -1586,7 +1632,7 @@
             return;
         }
         box.classList.remove('hidden');
-        const title = currentLang === 'zh' ? '⚠ 橋位警告' : '⚠ Tab warnings';
+        const title = { zh: '⚠ 橋位警告', en: '⚠ Tab warnings', ja: '⚠ タブに関する警告' }[currentLang];
         const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
         box.innerHTML = `<div class="font-bold mb-1">${title}</div>` + lastTabWarnings.map(m => `<div>• ${esc(m)}</div>`).join('');
     }
@@ -1628,7 +1674,7 @@
                 const plan = planTabsForGroup(gs, W, rampSegs);
                 if (plan.L < 3) return;  // 太短的零碎線段 (例如退刀小段) 不處理
                 contourNo++;
-                const name = (currentLang === 'zh' ? '輪廓 #' : 'Contour #') + contourNo +
+                const name = ({ zh: '輪廓 #', en: 'Contour #', ja: '輪郭 #' }[currentLang]) + contourNo +
                     ` (X${gs[0].from.x.toFixed(1)} Y${gs[0].from.y.toFixed(1)})`;
                 const vars = { name, L: plan.L.toFixed(1), W, n0: plan.n0, n: plan.n };
                 plan.warns.forEach(w => lastTabWarnings.push(T[w.code](Object.assign({}, vars, w))));
@@ -2508,8 +2554,8 @@
     document.getElementById('downloadBtn').addEventListener('click', () => {
         const gcodeText = generateGcode();
         if (lastTabWarnings.length > 0) {
-            const head = currentLang === 'zh' ? '橋位有以下警告：' : 'Tab warnings:';
-            const tail = currentLang === 'zh' ? '仍要下載嗎？' : 'Download anyway?';
+            const head = { zh: '橋位有以下警告：', en: 'Tab warnings:', ja: 'タブに関する警告：' }[currentLang];
+            const tail = { zh: '仍要下載嗎？', en: 'Download anyway?', ja: 'このままダウンロードしますか？' }[currentLang];
             if (!confirm(head + '\n\n' + lastTabWarnings.map(m => '• ' + m).join('\n') + '\n\n' + tail)) return;
         }
         const b = new Blob([gcodeText], { type: 'text/plain' });
@@ -2538,8 +2584,9 @@
         updateThemeIcon(savedTheme);
         updateThreeGrid();
         
-        currentLang = localStorage.getItem('gordix-lang') || 'zh';
-        updateLanguage(); 
+        currentLang = GordixLang.initial();
+        GordixLang.mount(document.getElementById('lang-tabs'), currentLang, setLang);
+        updateLanguage();  
     };
 </script>
     <script>

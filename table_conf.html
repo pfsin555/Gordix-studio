@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Table Configurator</title>
+    <title>Table Configurator / 桌長配置產生器 / テーブル寸法設定</title>
 <script src="./tailwind.js"></script>
     <style>
         :root {
@@ -269,6 +269,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" href="icon-192.png">
 
+    <script src="lang-tabs.js"></script>
 </head>
 <body class="p-2 md:p-8">
     <div class="max-w-7xl mx-auto">
@@ -279,7 +280,7 @@
             </div>
             <div class="flex gap-3 items-center">
                 <!-- 返回上一頁按鈕 -->
-                <button onclick="if(window.history.length > 1) { window.history.back(); } else { window.location.href='index.html'; }" class="flex items-center justify-center text-slate-300 hover:text-orange-400 transition-colors font-bold bg-white/10 hover:bg-white/20 p-1.5 rounded-lg border border-white/20 cursor-pointer" title="返回上一頁 / Go Back">
+                <button onclick="if(window.history.length > 1) { window.history.back(); } else { window.location.href='index.html'; }" class="flex items-center justify-center text-slate-300 hover:text-orange-400 transition-colors font-bold bg-white/10 hover:bg-white/20 p-1.5 rounded-lg border border-white/20 cursor-pointer" title="Go Back / 返回上一頁 / 前のページに戻る">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                         <line x1="20" y1="12" x2="4" y2="12"></line>
                         <polyline points="10 18 4 12 10 6"></polyline>
@@ -292,9 +293,7 @@
                     </svg>
                 </button>
                 <!-- 語言切換 -->
-                <button onclick="toggleLang()" class="px-4 py-1.5 rounded-lg text-[13px] font-bold bg-white/10 hover:bg-white/20 text-white border border-white/10 transition-all flex items-center justify-center gap-2">
-                    <span>中文 / EN</span>
-                </button>
+                <div id="lang-tabs"></div>
             </div>
         </header>
 
@@ -428,6 +427,21 @@
                 sideW: "Side W",
                 sideE: "Side E",
                 sideD: "Diagonal D"
+            },
+            ja: {
+                title: "テーブル寸法設定",
+                scaleX: "X倍率",
+                scaleY: "Y倍率",
+                listTitle: "テーブルデータ一覧",
+                rangeLabel: "加工座標範囲 (±X, ±Y) mm：",
+                download: "table.cfgを保存",
+                upload: "table.cfgを読み込む",
+                table: "テーブル",
+                sideN: "辺 N",
+                sideS: "辺 S",
+                sideW: "辺 W",
+                sideE: "辺 E",
+                sideD: "対角線 D"
             }
         };
 
@@ -470,9 +484,8 @@
             draw();
         }
 
-        function toggleLang() {
-            currentLang = currentLang === 'zh' ? 'en' : 'zh';
-            localStorage.setItem('gordix-lang', currentLang);
+        function setLang(l) {
+            currentLang = l;
             updateUI();
         }
 
@@ -834,13 +847,8 @@
         window.addEventListener('resize', draw);
         window.onload = () => {
             // 讀取並同步語系設定 (優先使用統一儲存鍵值 gordix-lang)
-            const savedLang = localStorage.getItem('gordix-lang');
-            if (savedLang === 'en' || savedLang === 'zh') {
-                currentLang = savedLang;
-            } else {
-                currentLang = 'zh'; // 預設繁體中文
-                localStorage.setItem('gordix-lang', 'zh');
-            }
+            currentLang = GordixLang.initial();
+            GordixLang.mount(document.getElementById('lang-tabs'), currentLang, setLang);
 
             // 讀取並同步主題設定 (優先使用統一儲存鍵值 gordix-theme)
             const savedTheme = localStorage.getItem('gordix-theme');
